@@ -25,6 +25,10 @@ function supabaseAdmin() {
   return _adminClient
 }
 
+function n8nOwnsSaluWebhook() {
+  return process.env.SALU_DASHBOARD_MODE === 'n8n-owned-whatsapp'
+}
+
 interface WhatsAppMessage {
   id: string
   from: string
@@ -80,6 +84,13 @@ interface WhatsAppWebhookEntry {
 
 // GET - Webhook verification
 export async function GET(request: Request) {
+  if (n8nOwnsSaluWebhook()) {
+    return NextResponse.json(
+      { error: 'WhatsApp webhook is owned by the Salu n8n workflows' },
+      { status: 409 },
+    )
+  }
+
   try {
     const { searchParams } = new URL(request.url)
     const mode = searchParams.get('hub.mode')
@@ -162,6 +173,13 @@ export async function GET(request: Request) {
 
 // POST - Receive messages
 export async function POST(request: Request) {
+  if (n8nOwnsSaluWebhook()) {
+    return NextResponse.json(
+      { error: 'WhatsApp webhook is owned by the Salu n8n workflows' },
+      { status: 409 },
+    )
+  }
+
   // Read raw body first so we can HMAC-verify the exact bytes Meta
   // signed. request.json() would re-encode and break the signature.
   const rawBody = await request.text()

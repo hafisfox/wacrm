@@ -1,225 +1,489 @@
-"use client"
-
-import { useCallback, useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import { useAuth } from '@/hooks/use-auth'
-import { formatCurrency } from '@/lib/currency'
+import Link from "next/link";
 import {
-  MessageSquare,
-  UserPlus,
-  DollarSign,
-  Send,
-} from 'lucide-react'
+  AlertTriangle,
+  CalendarCheck,
+  CheckCircle2,
+  Clock3,
+  CreditCard,
+  ExternalLink,
+  MessageSquareText,
+  Scissors,
+  UsersRound,
+  Workflow,
+} from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
-  loadActivity,
-  loadConversationsSeries,
-  loadMetrics,
-  loadPipelineDonut,
-  loadResponseTime,
-} from '@/lib/dashboard/queries'
-import type {
-  ActivityItem,
-  ConversationsSeriesPoint,
-  MetricsBundle,
-  PipelineDonutData,
-  ResponseTimeSummary,
-} from '@/lib/dashboard/types'
+  type SaluActivityRow,
+  type SaluBookingRow,
+  type SaluDashboardData,
+  type SaluPaymentQueueRow,
+  loadSaluDashboardData,
+} from "@/lib/salu/queries";
+import {
+  compactPhone,
+  formatDate,
+  formatDateTime,
+  formatPaise,
+  formatTime,
+} from "@/lib/salu/format";
+import { cn } from "@/lib/utils";
 
-import { MetricCard } from '@/components/dashboard/metric-card'
-import { SkeletonCard } from '@/components/dashboard/skeleton'
-import { QuickActions } from '@/components/dashboard/quick-actions'
-import { ConversationsChart } from '@/components/dashboard/conversations-chart'
-import { PipelineDonut } from '@/components/dashboard/pipeline-donut'
-import { ResponseTimeChart } from '@/components/dashboard/response-time-chart'
-import { ActivityFeed } from '@/components/dashboard/activity-feed'
+export const dynamic = "force-dynamic";
 
-type RangeDays = 7 | 30 | 90
+export default async function DashboardPage() {
+  let data: SaluDashboardData;
 
-export default function DashboardPage() {
-  const { defaultCurrency } = useAuth()
-  const [metrics, setMetrics] = useState<MetricsBundle | null>(null)
-  const [metricsLoading, setMetricsLoading] = useState(true)
+  try {
+    data = await loadSaluDashboardData();
+  } catch (error) {
+    return <SetupError error={error} />;
+  }
 
-  const [range, setRange] = useState<RangeDays>(30)
-  // Keep a cache per range so switching tabs doesn't re-fetch what we
-  // already have. Ranges the user hasn't opened yet stay null and
-  // trigger a fetch on first view.
-  const [series, setSeries] = useState<Record<RangeDays, ConversationsSeriesPoint[] | null>>({
-    7: null,
-    30: null,
-    90: null,
-  })
-  const [seriesLoading, setSeriesLoading] = useState(true)
-
-  const [pipeline, setPipeline] = useState<PipelineDonutData | null>(null)
-  const [pipelineLoading, setPipelineLoading] = useState(true)
-
-  const [responseTime, setResponseTime] = useState<ResponseTimeSummary | null>(null)
-  const [responseTimeLoading, setResponseTimeLoading] = useState(true)
-
-  const [activity, setActivity] = useState<ActivityItem[] | null>(null)
-  const [activityLoading, setActivityLoading] = useState(true)
-
-  const loadAll = useCallback(() => {
-    const db = createClient()
-
-    // Kick everything off in parallel. Each block has its own
-    // setState + finally so a slow query doesn't hold up faster
-    // sections — each widget shows its own skeleton independently.
-    void loadMetrics(db)
-      .then((m) => setMetrics(m))
-      .catch((err) => console.error('[dashboard] metrics failed:', err))
-      .finally(() => setMetricsLoading(false))
-
-    void loadConversationsSeries(db, 30)
-      .then((s) => setSeries((prev) => ({ ...prev, 30: s })))
-      .catch((err) => console.error('[dashboard] series failed:', err))
-      .finally(() => setSeriesLoading(false))
-
-    void loadPipelineDonut(db)
-      .then((p) => setPipeline(p))
-      .catch((err) => console.error('[dashboard] pipeline failed:', err))
-      .finally(() => setPipelineLoading(false))
-
-    void loadResponseTime(db)
-      .then((r) => setResponseTime(r))
-      .catch((err) => console.error('[dashboard] response time failed:', err))
-      .finally(() => setResponseTimeLoading(false))
-
-    // Fetch up to 50 so the biggest page-size option in the feed
-    // (50 rows) is already in memory — switching sizes then becomes
-    // a pure client-side slice with no extra round trip.
-    void loadActivity(db, 50)
-      .then((a) => setActivity(a))
-      .catch((err) => console.error('[dashboard] activity failed:', err))
-      .finally(() => setActivityLoading(false))
-  }, [])
-
-  useEffect(() => {
-    loadAll()
-  }, [loadAll])
-
-  // Range switch handler — kept in an event callback (not an effect)
-  // so the setState calls stay out of the react-hooks/set-state-in-effect
-  // rule's way. The cached bucket check means switching back to a
-  // previously-viewed range is instant and doesn't re-fetch.
-  const handleRangeChange = useCallback(
-    (r: RangeDays) => {
-      setRange(r)
-      if (series[r] !== null) return
-      setSeriesLoading(true)
-      const db = createClient()
-      loadConversationsSeries(db, r)
-        .then((s) => setSeries((prev) => ({ ...prev, [r]: s })))
-        .catch((err) => console.error('[dashboard] series failed:', err))
-        .finally(() => setSeriesLoading(false))
-    },
-    [series],
-  )
+  const salonName = data.config?.salon_name || "Salu Salon";
 
   return (
     <div className="space-y-5">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-white">Dashboard</h1>
-        <p className="mt-1 text-sm text-slate-400">
-          Live analytics across conversations, contacts, deals, broadcasts, and automations.
-        </p>
-      </div>
-
-      {/* Metric cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {metricsLoading || !metrics ? (
-          Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
-        ) : (
-          <>
-            <MetricCard
-              title="Active Conversations"
-              value={metrics.activeConversations.current.toLocaleString()}
-              icon={MessageSquare}
-              delta={{
-                sign: metrics.activeConversations.previous,
-                label: deltaLabel(metrics.activeConversations.previous, 'new today vs yesterday'),
-              }}
-            />
-            <MetricCard
-              title="New Contacts Today"
-              value={metrics.newContactsToday.current.toLocaleString()}
-              icon={UserPlus}
-              delta={{
-                sign:
-                  metrics.newContactsToday.current - metrics.newContactsToday.previous,
-                label: deltaLabel(
-                  metrics.newContactsToday.current - metrics.newContactsToday.previous,
-                  'vs yesterday',
-                ),
-              }}
-            />
-            <MetricCard
-              title="Open Deals Value"
-              value={formatCurrency(metrics.openDealsValue, defaultCurrency)}
-              icon={DollarSign}
-              subtitle={`${metrics.openDealsCount} open deal${metrics.openDealsCount === 1 ? '' : 's'}`}
-            />
-            <MetricCard
-              title="Messages Sent Today"
-              value={metrics.messagesSentToday.current.toLocaleString()}
-              icon={Send}
-              delta={{
-                sign:
-                  metrics.messagesSentToday.current - metrics.messagesSentToday.previous,
-                label: deltaLabel(
-                  metrics.messagesSentToday.current - metrics.messagesSentToday.previous,
-                  'vs yesterday',
-                ),
-              }}
-            />
-          </>
-        )}
-      </div>
-
-      {/* Quick actions */}
-      <QuickActions />
-
-      {/* Charts row */}
-      {/* items-stretch (the grid default) stretches the two columns to
-          match the tallest sibling; adding h-full on each wrapper and
-          on the inner panels makes both cards actually fill that
-          stretched height so their rounded borders line up. Without
-          this, the pipeline card rendered at its natural (shorter)
-          height while the line chart drove the row height. */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
-        <div className="h-full lg:col-span-3">
-          <ConversationsChart
-            series={series}
-            loading={seriesLoading}
-            range={range}
-            onRangeChange={handleRangeChange}
-          />
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-2xl font-bold text-white">{salonName}</h1>
+            <StatusBadge tone={data.n8n.ok ? "good" : "warn"}>
+              {data.n8n.ok
+                ? "n8n live"
+                : data.n8n.configured
+                  ? "n8n needs review"
+                  : "n8n not configured"}
+            </StatusBadge>
+          </div>
+          <p className="mt-1 text-sm text-slate-400">
+            WhatsApp bookings, deposits, customer memory, and automation health.
+          </p>
         </div>
-        <div className="h-full lg:col-span-2">
-          <PipelineDonut
-            data={pipeline}
-            loading={pipelineLoading}
-            currency={defaultCurrency}
-          />
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" render={<Link href="/inbox" />}>
+            <MessageSquareText className="h-4 w-4" />
+            Inbox
+          </Button>
+          <Button variant="outline" render={<Link href="/contacts" />}>
+            <UsersRound className="h-4 w-4" />
+            Customers
+          </Button>
+          {process.env.N8N_URL ? (
+            <Button
+              variant="outline"
+              render={<a href={process.env.N8N_URL} target="_blank" rel="noreferrer" />}
+            >
+              <ExternalLink className="h-4 w-4" />
+              n8n
+            </Button>
+          ) : null}
         </div>
       </div>
 
-      {/* Response time */}
-      <ResponseTimeChart data={responseTime} loading={responseTimeLoading} />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricTile
+          icon={CalendarCheck}
+          label="Today"
+          value={data.metrics.today_bookings.toLocaleString("en-IN")}
+          detail={`${data.metrics.upcoming_confirmed.toLocaleString("en-IN")} upcoming confirmed`}
+        />
+        <MetricTile
+          icon={CreditCard}
+          label="Pending Deposits"
+          value={data.metrics.pending_payment_holds.toLocaleString("en-IN")}
+          detail={`${formatPaise(data.metrics.paid_today_paise)} paid today`}
+          tone={data.metrics.pending_payment_holds ? "warn" : "normal"}
+        />
+        <MetricTile
+          icon={AlertTriangle}
+          label="Needs Attention"
+          value={data.metrics.needs_attention.toLocaleString("en-IN")}
+          detail={`${data.metrics.human_mode_sessions.toLocaleString("en-IN")} human handoff sessions`}
+          tone={data.metrics.needs_attention ? "danger" : "normal"}
+        />
+        <MetricTile
+          icon={MessageSquareText}
+          label="WhatsApp Today"
+          value={data.metrics.messages_today.toLocaleString("en-IN")}
+          detail={`${data.metrics.customers_seen_7d.toLocaleString("en-IN")} customers seen in 7 days`}
+        />
+      </div>
 
-      {/* Activity feed */}
-      <ActivityFeed items={activity} loading={activityLoading} />
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <Panel
+          title="Today Schedule"
+          action={<StatusBadge tone="neutral">{formatDate(todayKey())}</StatusBadge>}
+        >
+          <BookingList bookings={data.todaySchedule} />
+        </Panel>
+
+        <Panel
+          title="Attention Queue"
+          action={<StatusBadge tone={data.opsQueue.length ? "warn" : "good"}>{data.opsQueue.length}</StatusBadge>}
+        >
+          <PaymentQueue rows={data.opsQueue} />
+        </Panel>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        <Panel title="WhatsApp Activity" className="xl:col-span-2">
+          <ActivityList rows={data.recentActivity} />
+        </Panel>
+
+        <Panel title="Customer Pulse">
+          <div className="divide-y divide-slate-800">
+            {data.customers.map((customer) => (
+              <Link
+                key={customer.phone}
+                href="/contacts"
+                className="block py-3 transition-colors hover:bg-slate-800/40"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-white">
+                      {customer.customer_name || compactPhone(customer.phone)}
+                    </p>
+                    <p className="mt-1 truncate text-xs text-slate-500">
+                      {customer.last_customer_message || customer.profile_summary || "No recent note"}
+                    </p>
+                  </div>
+                  <span className="shrink-0 text-xs text-slate-500">
+                    {customer.last_seen_at ? formatDateTime(customer.last_seen_at) : ""}
+                  </span>
+                </div>
+              </Link>
+            ))}
+            {!data.customers.length ? <EmptyLine text="No customer profiles yet." /> : null}
+          </div>
+        </Panel>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        <Panel title="Setup Health" className="xl:col-span-2">
+          <SetupHealth data={data} />
+        </Panel>
+        <Panel title="n8n Workflows">
+          <div className="space-y-2">
+            {data.n8n.workflows.map((workflow) => (
+              <div
+                key={workflow.name}
+                className="flex items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950/50 px-3 py-2"
+              >
+                <span className="min-w-0 truncate text-sm text-slate-300">{workflow.name}</span>
+                <StatusBadge tone={workflow.active ? "good" : "danger"}>
+                  {workflow.active ? "active" : "off"}
+                </StatusBadge>
+              </div>
+            ))}
+            {data.n8n.error ? (
+              <p className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-200">
+                {data.n8n.error}
+              </p>
+            ) : null}
+          </div>
+        </Panel>
+      </div>
     </div>
-  )
+  );
 }
 
-// ------------------------------------------------------------
+function MetricTile({
+  icon: Icon,
+  label,
+  value,
+  detail,
+  tone = "normal",
+}: {
+  icon: typeof CalendarCheck;
+  label: string;
+  value: string;
+  detail: string;
+  tone?: "normal" | "warn" | "danger";
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-xl border bg-slate-900 p-5",
+        tone === "warn" && "border-amber-500/30",
+        tone === "danger" && "border-red-500/30",
+        tone === "normal" && "border-slate-800",
+      )}
+    >
+      <div className="flex items-start justify-between">
+        <p className="text-sm font-medium text-slate-400">{label}</p>
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-800 text-slate-500">
+          <Icon className="h-4 w-4" />
+        </div>
+      </div>
+      <p className="mt-3 text-[28px] leading-none font-bold tabular-nums text-white">
+        {value}
+      </p>
+      <p className="mt-2 text-sm text-slate-500">{detail}</p>
+    </div>
+  );
+}
 
-function deltaLabel(delta: number, suffix: string): string {
-  if (delta === 0) return `No change ${suffix}`
-  const sign = delta > 0 ? '+' : ''
-  return `${sign}${delta.toLocaleString()} ${suffix}`
+function Panel({
+  title,
+  action,
+  className,
+  children,
+}: {
+  title: string;
+  action?: React.ReactNode;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className={cn("rounded-xl border border-slate-800 bg-slate-900", className)}>
+      <div className="flex items-center justify-between gap-3 border-b border-slate-800 px-4 py-3">
+        <h2 className="text-sm font-semibold text-white">{title}</h2>
+        {action}
+      </div>
+      <div className="p-4">{children}</div>
+    </section>
+  );
+}
+
+function BookingList({ bookings }: { bookings: SaluBookingRow[] }) {
+  if (!bookings.length) return <EmptyLine text="No appointments on the board for today." />;
+
+  return (
+    <div className="divide-y divide-slate-800">
+      {bookings.map((booking) => (
+        <div key={booking.booking_id} className="grid gap-3 py-3 sm:grid-cols-[88px_1fr_auto]">
+          <div className="flex items-center gap-2 text-sm font-semibold text-white">
+            <Clock3 className="h-4 w-4 text-slate-500" />
+            {formatTime(booking.appointment_time)}
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium text-white">
+              {booking.customer_name || compactPhone(booking.phone)}
+            </p>
+            <p className="mt-1 truncate text-xs text-slate-500">
+              {booking.service_labels || booking.service_label || "Service"} with{" "}
+              {booking.stylist_name || "stylist"}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+            <StatusBadge tone={booking.status === "confirmed" ? "good" : "warn"}>
+              {booking.status}
+            </StatusBadge>
+            <StatusBadge tone={booking.payment_status === "paid" ? "good" : "neutral"}>
+              {booking.payment_status || "no payment"}
+            </StatusBadge>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function PaymentQueue({ rows }: { rows: SaluPaymentQueueRow[] }) {
+  if (!rows.length) return <EmptyLine text="No active payment or refund issues." />;
+
+  return (
+    <div className="space-y-3">
+      {rows.map((row) => (
+        <div key={`${row.booking_id}-${row.reference_id}`} className="rounded-lg border border-slate-800 bg-slate-950/50 p-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-white">
+                {row.customer_name || compactPhone(row.phone)}
+              </p>
+              <p className="mt-1 text-xs text-slate-500">
+                {formatDate(row.appointment_date)} at {formatTime(row.appointment_time)} ·{" "}
+                {row.service_labels || row.service_label || "Service"}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2 sm:justify-end">
+              <StatusBadge tone={issueTone(row.status, row.payment_status)}>
+                {row.status}
+              </StatusBadge>
+              <StatusBadge tone={issueTone(row.payment_status_row || row.payment_status, "")}>
+                {row.payment_status_row || row.payment_status || "payment"}
+              </StatusBadge>
+            </div>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+            <span>{formatPaise(row.amount_paise)} deposit</span>
+            {row.expires_at || row.hold_expires_at ? (
+              <span>expires {formatDateTime(row.expires_at || row.hold_expires_at)}</span>
+            ) : null}
+            {row.reference_id ? <span>ref {row.reference_id}</span> : null}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ActivityList({ rows }: { rows: SaluActivityRow[] }) {
+  if (!rows.length) return <EmptyLine text="No WhatsApp events recorded yet." />;
+
+  return (
+    <div className="divide-y divide-slate-800">
+      {rows.map((row) => (
+        <div key={row.event_id} className="grid gap-3 py-3 sm:grid-cols-[160px_1fr_auto]">
+          <div className="text-xs text-slate-500">{formatDateTime(row.created_at)}</div>
+          <div className="min-w-0">
+            <p className="truncate text-sm text-white">
+              {row.raw_text || row.summary || row.intent || row.event_type}
+            </p>
+            <p className="mt-1 truncate text-xs text-slate-500">
+              {compactPhone(row.phone)} · {row.route || "route"} · {row.intent || "intent"}
+            </p>
+          </div>
+          <StatusBadge tone={row.status === "processed" ? "good" : "neutral"}>
+            {row.event_type || row.status}
+          </StatusBadge>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function SetupHealth({ data }: { data: SaluDashboardData }) {
+  const items = [
+    { label: "Active services", value: data.setupHealth.active_services, tone: "good" as const },
+    { label: "Active stylists", value: data.setupHealth.active_stylists, tone: "good" as const },
+    {
+      label: "Missing stylist photos",
+      value: data.setupHealth.stylists_missing_images,
+      tone: data.setupHealth.stylists_missing_images ? ("warn" as const) : ("good" as const),
+    },
+    { label: "Stylist service mappings", value: data.setupHealth.active_stylist_services, tone: "good" as const },
+    { label: "Salon availability rules", value: data.setupHealth.availability_rules, tone: "neutral" as const },
+    { label: "Stylist availability rules", value: data.setupHealth.stylist_availability_rules, tone: "neutral" as const },
+    {
+      label: "Stale pending holds",
+      value: data.setupHealth.stale_pending_holds,
+      tone: data.setupHealth.stale_pending_holds ? ("danger" as const) : ("good" as const),
+    },
+    {
+      label: "Failed/refund payments",
+      value: data.setupHealth.failed_payments,
+      tone: data.setupHealth.failed_payments ? ("danger" as const) : ("good" as const),
+    },
+  ];
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {items.map((item) => (
+          <div
+            key={item.label}
+            className="flex items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950/50 px-3 py-2"
+          >
+            <span className="text-sm text-slate-400">{item.label}</span>
+            <StatusBadge tone={item.tone}>{item.value.toLocaleString("en-IN")}</StatusBadge>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+        <div className="rounded-lg border border-slate-800 bg-slate-950/50 p-3">
+          <div className="mb-2 flex items-center gap-2 text-sm font-medium text-white">
+            <Scissors className="h-4 w-4 text-slate-500" />
+            Sheet Sync
+          </div>
+          <div className="space-y-2">
+            {data.syncRuns.slice(0, 4).map((run) => (
+              <div key={`${run.tab_name}-${run.created_at}`} className="flex items-center justify-between gap-3 text-xs">
+                <span className="truncate text-slate-400">{run.tab_name || run.source}</span>
+                <span className="text-slate-500">
+                  {run.status} · {run.row_count} rows · {formatDateTime(run.created_at)}
+                </span>
+              </div>
+            ))}
+            {!data.syncRuns.length ? <EmptyLine text="No sheet sync runs recorded." /> : null}
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-slate-800 bg-slate-950/50 p-3">
+          <div className="mb-2 flex items-center gap-2 text-sm font-medium text-white">
+            <Workflow className="h-4 w-4 text-slate-500" />
+            Sync State
+          </div>
+          <div className="space-y-2">
+            {data.syncState.slice(0, 4).map((state) => (
+              <div key={state.sync_name} className="flex items-center justify-between gap-3 text-xs">
+                <span className="truncate text-slate-400">{state.sync_name}</span>
+                <span className="text-slate-500">
+                  {state.last_status || "seen"} · {formatDateTime(state.updated_at)}
+                </span>
+              </div>
+            ))}
+            {!data.syncState.length ? <EmptyLine text="No sync watermarks recorded." /> : null}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SetupError({ error }: { error: unknown }) {
+  return (
+    <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-5">
+      <div className="flex items-start gap-3">
+        <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-300" />
+        <div>
+          <h1 className="text-lg font-semibold text-white">Dashboard setup needs attention</h1>
+          <p className="mt-2 text-sm text-red-100">
+            {error instanceof Error ? error.message : "Unable to load Salu dashboard data."}
+          </p>
+          <p className="mt-3 text-sm text-slate-300">
+            Run <code className="rounded bg-slate-950 px-1.5 py-0.5">npm run setup:salu-env</code>, then{" "}
+            <code className="rounded bg-slate-950 px-1.5 py-0.5">npm run check:salu-setup</code>.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatusBadge({
+  tone,
+  children,
+}: {
+  tone: "good" | "warn" | "danger" | "neutral";
+  children: React.ReactNode;
+}) {
+  return (
+    <Badge
+      variant="outline"
+      className={cn(
+        "capitalize",
+        tone === "good" && "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
+        tone === "warn" && "border-amber-500/30 bg-amber-500/10 text-amber-300",
+        tone === "danger" && "border-red-500/30 bg-red-500/10 text-red-300",
+        tone === "neutral" && "border-slate-700 bg-slate-800 text-slate-300",
+      )}
+    >
+      {tone === "good" ? <CheckCircle2 className="h-3 w-3" /> : null}
+      {children}
+    </Badge>
+  );
+}
+
+function EmptyLine({ text }: { text: string }) {
+  return <p className="py-4 text-sm text-slate-500">{text}</p>;
+}
+
+function issueTone(status: string, paymentStatus: string) {
+  const combined = `${status} ${paymentStatus}`.toLowerCase();
+  if (combined.includes("refund") || combined.includes("failed")) return "danger";
+  if (combined.includes("pending") || combined.includes("expired")) return "warn";
+  return "neutral";
+}
+
+function todayKey() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
 }

@@ -36,6 +36,9 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
+    "setup:salu-env": "node scripts/sync-salu-env.mjs",
+    "setup:salu-db": "node scripts/apply-wacrm-migrations.mjs",
+    "check:salu-setup": "node scripts/check-salu-setup.mjs",
     "test:watch": "vitest"
   },
   "dependencies": {
@@ -52,6 +55,7 @@
     "date-fns": "^4.4.0",
     "lucide-react": "^1.17.0",
     "next": "16.2.6",
+    "pg": "^8.21.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "recharts": "^3.8.1",
@@ -63,6 +67,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^25",
+    "@types/pg": "^8.20.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
