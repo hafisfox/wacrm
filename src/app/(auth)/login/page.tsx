@@ -1,20 +1,24 @@
-"use client";
+'use client';
 
-import { Suspense, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Suspense, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import { createClient } from '@/lib/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { MessageSquare, UsersRound } from "lucide-react";
+} from '@/components/ui/card';
+import { MessageSquare, UsersRound } from 'lucide-react';
+
+function isEmailNotConfirmed(message: string): boolean {
+  return message.toLowerCase().includes('email not confirmed');
+}
 
 // `useSearchParams` opts the component out of static prerendering
 // unless it sits under a Suspense boundary. We split the form into
@@ -34,10 +38,10 @@ function LoginPageInner() {
   // Forwarded from `/join/<token>` when the visitor already has an
   // account. After a successful sign-in we send them to the join
   // page to accept rather than to /dashboard.
-  const inviteToken = searchParams.get("invite");
+  const inviteToken = searchParams.get('invite');
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -48,21 +52,67 @@ function LoginPageInner() {
     setError(null);
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const goNext = () => {
+      if (inviteToken) {
+        router.push(`/join/${encodeURIComponent(inviteToken)}`);
+      } else {
+        router.push('/dashboard');
+      }
+    };
 
-    if (error) {
-      setError(error.message);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        if (isEmailNotConfirmed(error.message)) {
+          const confirmRes = await fetch('/api/auth/confirm-login', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              email,
+              password,
+            }),
+          });
+
+          if (!confirmRes.ok) {
+            const payload = (await confirmRes.json().catch(() => ({}))) as {
+              error?: string;
+            };
+            setError(payload.error || error.message);
+            setLoading(false);
+            return;
+          }
+
+          const { error: retryError } = await supabase.auth.signInWithPassword({
+            email: email.trim().toLowerCase(),
+            password,
+          });
+
+          if (retryError) {
+            setError(retryError.message);
+            setLoading(false);
+            return;
+          }
+
+          goNext();
+          return;
+        }
+
+        setError(error.message);
+        setLoading(false);
+        return;
+      }
+
+      goNext();
+    } catch (err) {
+      console.error('[login] request failed:', err);
+      setError('Could not reach the auth service');
       setLoading(false);
-      return;
-    }
-
-    if (inviteToken) {
-      router.push(`/join/${encodeURIComponent(inviteToken)}`);
-    } else {
-      router.push("/dashboard");
     }
   };
 
@@ -70,20 +120,20 @@ function LoginPageInner() {
     <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4">
       <Card className="w-full max-w-md border-slate-800 bg-slate-900">
         <CardHeader className="items-center text-center">
-          <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+          <div className="bg-primary/10 mb-2 flex h-12 w-12 items-center justify-center rounded-xl">
             {inviteToken ? (
-              <UsersRound className="h-6 w-6 text-primary" />
+              <UsersRound className="text-primary h-6 w-6" />
             ) : (
-              <MessageSquare className="h-6 w-6 text-primary" />
+              <MessageSquare className="text-primary h-6 w-6" />
             )}
           </div>
           <CardTitle className="text-xl text-white">
-            {inviteToken ? "Sign in to accept" : "Welcome back"}
+            {inviteToken ? 'Sign in to accept' : 'Welcome back'}
           </CardTitle>
           <CardDescription className="text-slate-400">
             {inviteToken
               ? "Sign in and we'll take you to the invitation."
-              : "Sign in to your account"}
+              : 'Sign in to your account'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -105,7 +155,7 @@ function LoginPageInner() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="border-slate-700 bg-slate-800 text-white placeholder:text-slate-500 focus-visible:border-primary focus-visible:ring-primary/20"
+                className="focus-visible:border-primary focus-visible:ring-primary/20 border-slate-700 bg-slate-800 text-white placeholder:text-slate-500"
               />
             </div>
 
@@ -116,7 +166,7 @@ function LoginPageInner() {
                 </Label>
                 <Link
                   href="/forgot-password"
-                  className="text-sm text-primary hover:text-primary/80"
+                  className="text-primary hover:text-primary/80 text-sm"
                 >
                   Forgot password?
                 </Link>
@@ -128,26 +178,26 @@ function LoginPageInner() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="border-slate-700 bg-slate-800 text-white placeholder:text-slate-500 focus-visible:border-primary focus-visible:ring-primary/20"
+                className="focus-visible:border-primary focus-visible:ring-primary/20 border-slate-700 bg-slate-800 text-white placeholder:text-slate-500"
               />
             </div>
 
             <Button
               type="submit"
               disabled={loading}
-              className="mt-2 h-10 w-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 mt-2 h-10 w-full disabled:opacity-50"
             >
-              {loading ? "Signing in..." : "Sign in"}
+              {loading ? 'Signing in...' : 'Sign in'}
             </Button>
           </form>
 
           <p className="mt-6 text-center text-sm text-slate-400">
-            Don&apos;t have an account?{" "}
+            Don&apos;t have an account?{' '}
             <Link
               href={
                 inviteToken
                   ? `/signup?invite=${encodeURIComponent(inviteToken)}`
-                  : "/signup"
+                  : '/signup'
               }
               className="text-primary hover:text-primary/80"
             >

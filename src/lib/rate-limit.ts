@@ -59,7 +59,7 @@ function sweepExpired(now: number) {
 
 export function checkRateLimit(
   key: string,
-  { limit, windowMs }: RateLimitOptions,
+  { limit, windowMs }: RateLimitOptions
 ): RateLimitResult {
   const now = Date.now();
 
@@ -73,7 +73,12 @@ export function checkRateLimit(
 
   if (!entry || entry.resetAt <= now) {
     buckets.set(key, { count: 1, resetAt: now + windowMs });
-    return { success: true, remaining: limit - 1, reset: now + windowMs, limit };
+    return {
+      success: true,
+      remaining: limit - 1,
+      reset: now + windowMs,
+      limit,
+    };
   }
 
   if (entry.count >= limit) {
@@ -94,7 +99,10 @@ export function checkRateLimit(
  * draft-ietf-httpapi-ratelimit-headers). Callers just `return` this.
  */
 export function rateLimitResponse(result: RateLimitResult): NextResponse {
-  const retryAfterSec = Math.max(1, Math.ceil((result.reset - Date.now()) / 1000));
+  const retryAfterSec = Math.max(
+    1,
+    Math.ceil((result.reset - Date.now()) / 1000)
+  );
   return NextResponse.json(
     {
       error: 'Rate limit exceeded',
@@ -108,7 +116,7 @@ export function rateLimitResponse(result: RateLimitResult): NextResponse {
         'X-RateLimit-Remaining': String(result.remaining),
         'X-RateLimit-Reset': String(Math.ceil(result.reset / 1000)),
       },
-    },
+    }
   );
 }
 
@@ -134,6 +142,13 @@ export const RATE_LIMITS = {
    *  successful redemption mutates two profiles and an invite row, so
    *  the abuse surface is "spam join attempts." */
   invitationRedeem: { limit: 10, windowMs: 60_000 },
+  /** Public account signup. Creating users is intentionally available
+   *  before auth, but it still needs a small per-IP budget because it
+   *  uses the service-role Auth API under the hood. */
+  signup: { limit: 5, windowMs: 60_000 },
+  /** Password-verified confirmation recovery for users created before
+   *  instant signup was enabled. */
+  confirmLogin: { limit: 10, windowMs: 60_000 },
   /** Admin-only account / member-management actions: create/revoke
    *  invitation, rename account, change member role, remove member,
    *  transfer ownership. 30/min per user is comfortably above any
