@@ -28,6 +28,8 @@ export interface SaluBookingRow {
   customer_name: string;
   service_labels: string;
   service_label: string;
+  service_assignments_summary: string;
+  stylist_names: string;
   stylist_name: string;
   appointment_date: string;
   appointment_time: string;
@@ -270,6 +272,8 @@ async function loadTodaySchedule() {
         customer_name,
         service_labels,
         service_label,
+        service_assignments_summary,
+        stylist_names,
         stylist_name,
         appointment_date::text,
         to_char(appointment_time, 'HH24:MI') as appointment_time,
@@ -298,6 +302,8 @@ async function loadOpsQueue() {
         b.customer_name,
         b.service_labels,
         b.service_label,
+        b.service_assignments_summary,
+        b.stylist_names,
         b.stylist_name,
         b.appointment_date::text,
         to_char(b.appointment_time, 'HH24:MI') as appointment_time,

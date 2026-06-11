@@ -263,8 +263,11 @@ function BookingList({ bookings }: { bookings: SaluBookingRow[] }) {
               {booking.customer_name || compactPhone(booking.phone)}
             </p>
             <p className="mt-1 truncate text-xs text-slate-500">
-              {booking.service_labels || booking.service_label || "Service"} with{" "}
-              {booking.stylist_name || "stylist"}
+              {booking.service_assignments_summary ||
+                [
+                  booking.service_labels || booking.service_label || "Service",
+                  booking.stylist_names || booking.stylist_name ? `with ${booking.stylist_names || booking.stylist_name}` : "",
+                ].filter(Boolean).join(" ")}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2 sm:justify-end">
@@ -295,7 +298,7 @@ function PaymentQueue({ rows }: { rows: SaluPaymentQueueRow[] }) {
               </p>
               <p className="mt-1 text-xs text-slate-500">
                 {formatDate(row.appointment_date)} at {formatTime(row.appointment_time)} ·{" "}
-                {row.service_labels || row.service_label || "Service"}
+                {row.service_assignments_summary || row.service_labels || row.service_label || "Service"}
               </p>
             </div>
             <div className="flex flex-wrap gap-2 sm:justify-end">
