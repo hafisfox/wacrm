@@ -16,6 +16,58 @@ import {
 } from '@/lib/rate-limit'
 import type { MessageTemplate } from '@/types'
 import { isMessageTemplate } from '@/lib/whatsapp/template-row-guard'
+import { setSaluHumanMode } from '@/lib/salu/crm'
+
+async function sendN8nOwnedTextMessage({
+  to,
+  text,
+  contextMessageId,
+}: {
+  to: string
+  text: string
+  contextMessageId?: string
+}) {
+  const explicitUrl = process.env.SALU_N8N_MANUAL_SEND_WEBHOOK_URL
+  const n8nBase = process.env.N8N_URL?.replace(/\/$/, '')
+  const url = explicitUrl || (n8nBase ? `${n8nBase}/webhook/salu-dashboard-send` : '')
+
+  if (!url) {
+    throw new Error('N8N_URL or SALU_N8N_MANUAL_SEND_WEBHOOK_URL is required for n8n-owned WhatsApp sends')
+  }
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Salu-Source': 'dashboard',
+      ...(process.env.N8N_API_KEY
+        ? { 'X-N8N-API-KEY': process.env.N8N_API_KEY }
+        : {}),
+    },
+    body: JSON.stringify({
+      phone: to,
+      text,
+      context_message_id: contextMessageId,
+    }),
+  })
+
+  const payload = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    throw new Error(payload?.error || payload?.message || `n8n webhook HTTP ${res.status}`)
+  }
+
+  const messageId =
+    payload?.messages?.[0]?.id ||
+    payload?.message_id ||
+    payload?.id ||
+    ''
+
+  if (!messageId) {
+    throw new Error('n8n send succeeded but did not return a WhatsApp message id')
+  }
+
+  return { messageId }
+}
 
 export async function POST(request: Request) {
   try {
@@ -130,21 +182,24 @@ export async function POST(request: Request) {
       .eq('account_id', accountId)
       .single()
 
-    if (configError || !config) {
+    const useN8nOwnedSend =
+      process.env.SALU_DASHBOARD_MODE === 'n8n-owned-whatsapp' && !config
+
+    if ((configError || !config) && !useN8nOwnedSend) {
       return NextResponse.json(
         { error: 'WhatsApp not configured. Please set up your WhatsApp integration first.' },
         { status: 400 }
       )
     }
 
-    const accessToken = decrypt(config.access_token)
+    const accessToken = config ? decrypt(config.access_token) : ''
 
     // Self-heal legacy CBC-encrypted tokens. Fire-and-forget: we
     // return from the send without waiting, so a failed upgrade just
     // means the next send tries again. The upgrade is idempotent —
     // concurrent sends both produce valid GCM ciphertexts of the same
     // plaintext, last write wins.
-    if (isLegacyFormat(config.access_token)) {
+    if (config && isLegacyFormat(config.access_token)) {
       void supabase
         .from('whatsapp_config')
         .update({ access_token: encrypt(accessToken) })
@@ -210,6 +265,12 @@ export async function POST(request: Request) {
     // crashing the send-builder later in the stack.
     let templateRow: MessageTemplate | null = null
     if (message_type === 'template' && template_name) {
+      if (!config && useN8nOwnedSend) {
+        return NextResponse.json(
+          { error: 'Template sends require a dashboard WhatsApp config. Text replies are available through n8n-owned mode.' },
+          { status: 400 },
+        )
+      }
       const { data } = await supabase
         .from('message_templates')
         .select('*')
@@ -230,9 +291,21 @@ export async function POST(request: Request) {
     }
 
     const attempt = async (phone: string): Promise<string> => {
+      if (!config && useN8nOwnedSend) {
+        if (message_type !== 'text') {
+          throw new Error('Only text replies are supported through the n8n-owned send fallback')
+        }
+        const result = await sendN8nOwnedTextMessage({
+          to: phone,
+          text: content_text,
+          contextMessageId,
+        })
+        return result.messageId
+      }
+
       if (message_type === 'template') {
         const result = await sendTemplateMessage({
-          phoneNumberId: config.phone_number_id,
+          phoneNumberId: config!.phone_number_id,
           accessToken,
           to: phone,
           templateName: template_name,
@@ -247,7 +320,7 @@ export async function POST(request: Request) {
         return result.messageId
       }
       const result = await sendTextMessage({
-        phoneNumberId: config.phone_number_id,
+        phoneNumberId: config!.phone_number_id,
         accessToken,
         to: phone,
         text: content_text,
@@ -367,6 +440,23 @@ export async function POST(request: Request) {
     } catch (err) {
       console.error(
         '[flows] pause-on-agent-send threw:',
+        err instanceof Error ? err.message : err,
+      )
+    }
+
+    // Salu keeps booking logic in n8n, so a dashboard agent reply must
+    // pause that customer-facing automation too. Best-effort only: the
+    // WhatsApp message has already been delivered and saved locally, so
+    // a Salu DB hiccup should not hide the successful send from the UI.
+    try {
+      await setSaluHumanMode(
+        workingPhone || contact.phone,
+        true,
+        'dashboard_agent_replied',
+      )
+    } catch (err) {
+      console.error(
+        '[salu] pause-on-agent-send failed:',
         err instanceof Error ? err.message : err,
       )
     }

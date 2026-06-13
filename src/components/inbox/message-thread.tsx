@@ -87,6 +87,8 @@ interface MessageThreadProps {
    * working; the button is only rendered when this is provided.
    */
   onRefresh?: () => void;
+  /** Called after a manual message/template send succeeds. */
+  onMessageSent?: () => void;
 }
 
 function formatDateSeparator(dateStr: string): string {
@@ -129,7 +131,7 @@ const STATUS_OPTIONS: { label: string; value: ConversationStatus; color: string 
  * if we ever switch the asset, both spots update together.
  */
 const DOODLE_BG_CLASSES =
-  "bg-slate-950 bg-[url('/inbox-doodle.svg')] bg-repeat";
+  "bg-[#0b141a] bg-[url('/inbox-doodle.svg')] bg-repeat";
 
 export function MessageThread({
   conversation,
@@ -143,6 +145,7 @@ export function MessageThread({
   onBack,
   resyncToken = 0,
   onRefresh,
+  onMessageSent,
 }: MessageThreadProps) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -463,6 +466,7 @@ export function MessageThread({
         // with the real DB row. If realtime hasn't arrived yet, at least
         // flip status to 'sent' so the UI stops showing "sending".
         onUpdateMessage(tempId, { status: "sent" });
+        onMessageSent?.();
       } catch (err) {
         console.error("Failed to send message:", err);
         const reason = err instanceof Error ? err.message : "network error";
@@ -470,7 +474,7 @@ export function MessageThread({
         onUpdateMessage(tempId, { status: "failed" });
       }
     },
-    [conversation, onNewMessage, onUpdateMessage]
+    [conversation, onMessageSent, onNewMessage, onUpdateMessage]
   );
 
   const handleStatusChange = useCallback(
@@ -552,6 +556,7 @@ export function MessageThread({
         }
 
         onUpdateMessage(tempId, { status: "sent" });
+        onMessageSent?.();
       } catch (err) {
         console.error("Failed to send template:", err);
         const reason = err instanceof Error ? err.message : "network error";
@@ -559,7 +564,7 @@ export function MessageThread({
         onUpdateMessage(tempId, { status: "failed" });
       }
     },
-    [conversation, onNewMessage, onUpdateMessage],
+    [conversation, onMessageSent, onNewMessage, onUpdateMessage],
   );
 
   // Build a quick id → Message map so reply quotes can be rendered without
@@ -696,7 +701,7 @@ export function MessageThread({
   if (!conversation || !contact) {
     return (
       <div className={cn("flex flex-1 flex-col items-center justify-center", DOODLE_BG_CLASSES)}>
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-800">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#202c33]">
           <MessageSquare className="h-8 w-8 text-slate-600" />
         </div>
         <h3 className="mt-4 text-sm font-medium text-slate-400">
@@ -724,7 +729,7 @@ export function MessageThread({
     <div className={cn("flex flex-1 flex-col", DOODLE_BG_CLASSES)}>
       {/* Header — solid bg-slate-900 sits on top of the doodle so the
           name/avatar/dropdowns stay legible. */}
-      <div className="flex items-center justify-between gap-2 border-b border-slate-800 bg-slate-900 px-3 py-3 sm:px-4">
+      <div className="flex items-center justify-between gap-2 border-b border-[#233138] bg-[#111b21] px-3 py-3 sm:px-4">
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
           {/* Back-to-list button — mobile only. Hidden on lg+ where the
               conversation list is always visible next to the thread. */}
@@ -733,25 +738,25 @@ export function MessageThread({
               type="button"
               onClick={onBack}
               aria-label="Back to conversations"
-              className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md text-slate-300 hover:bg-slate-800 hover:text-white lg:hidden"
+              className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md text-[#aebac1] hover:bg-[#202c33] hover:text-white lg:hidden"
             >
               <ArrowLeft className="h-5 w-5" />
             </button>
           )}
-          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-slate-700 text-sm font-medium text-white">
+          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-[#2a3942] text-sm font-medium text-white">
             {displayName.charAt(0).toUpperCase()}
           </div>
           <div className="min-w-0">
             <h2 className="truncate text-sm font-semibold text-white">{displayName}</h2>
-            <p className="truncate text-xs text-slate-400">{contact.phone}</p>
+            <p className="truncate text-xs text-[#8696a0]">{contact.phone}</p>
           </div>
           {/* Session timer badge — hidden on the narrowest phones so
               the name + back arrow keep their room. */}
           <Badge
             variant="outline"
             className={cn(
-              "ml-1 hidden gap-1 border-slate-700 text-[10px] sm:inline-flex sm:ml-2",
-              sessionInfo.expired ? "text-red-400" : "text-primary"
+                "ml-1 hidden gap-1 border-[#2a3942] bg-[#202c33] text-[10px] sm:inline-flex sm:ml-2",
+                sessionInfo.expired ? "text-red-300" : "text-[#00a884]"
             )}
           >
             <Clock className="h-3 w-3" />
@@ -773,7 +778,7 @@ export function MessageThread({
               aria-label="Refresh conversation"
               title="Refresh"
               className={cn(
-                "inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-800 hover:text-white disabled:opacity-60",
+                "inline-flex h-7 w-7 items-center justify-center rounded-md text-[#aebac1] transition-colors hover:bg-[#202c33] hover:text-white disabled:opacity-60",
               )}
             >
               <RefreshCw
@@ -785,7 +790,7 @@ export function MessageThread({
           {/* Status dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger className={cn(
-                  "inline-flex items-center justify-center h-7 gap-1 px-2 text-xs rounded-md hover:bg-slate-800",
+                  "inline-flex items-center justify-center h-7 gap-1 px-2 text-xs rounded-md hover:bg-[#202c33]",
                   currentStatus?.color ?? "text-slate-400"
                 )}>
                 {currentStatus?.label ?? "Status"}
@@ -793,7 +798,7 @@ export function MessageThread({
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="end"
-              className="border-slate-700 bg-slate-800"
+              className="border-[#233138] bg-[#202c33]"
             >
               {STATUS_OPTIONS.map((opt) => (
                 <DropdownMenuItem
@@ -811,7 +816,7 @@ export function MessageThread({
           <DropdownMenu>
             <DropdownMenuTrigger
               className={cn(
-                "inline-flex items-center justify-center h-7 gap-1 px-2 text-xs rounded-md hover:bg-slate-800",
+                "inline-flex items-center justify-center h-7 gap-1 px-2 text-xs rounded-md hover:bg-[#202c33]",
                 assignedAgentId ? "text-primary" : "text-slate-400"
               )}
             >
@@ -821,7 +826,7 @@ export function MessageThread({
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="end"
-              className="border-slate-700 bg-slate-800"
+              className="border-[#233138] bg-[#202c33]"
             >
               {profiles.length === 0 ? (
                 <DropdownMenuItem disabled className="text-sm text-slate-500">
@@ -883,7 +888,7 @@ export function MessageThread({
               <div key={group.date}>
                 {/* Date separator */}
                 <div className="mb-4 flex items-center justify-center">
-                  <span className="rounded-full bg-slate-800 px-3 py-1 text-[10px] font-medium text-slate-400">
+              <span className="rounded-md bg-[#182229] px-3 py-1 text-[11px] font-medium text-[#8696a0]">
                     {formatDateSeparator(group.date)}
                   </span>
                 </div>

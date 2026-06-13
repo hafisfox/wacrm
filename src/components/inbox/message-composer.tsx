@@ -84,7 +84,7 @@ export function MessageComposer({
   );
 
   return (
-    <div className="border-t border-slate-800 bg-slate-900 p-3">
+    <div className="border-t border-[#233138] bg-[#202c33] px-3 py-3">
       {replyTo && (
         <div className="mb-2">
           <ReplyQuote
@@ -96,13 +96,13 @@ export function MessageComposer({
       )}
       {sessionExpired && (
         <div className="mb-2 flex items-center justify-between rounded-lg bg-amber-500/10 px-3 py-2">
-          <p className="text-xs text-amber-400">
+          <p className="text-xs text-amber-300">
             24-hour session expired. Use a template to re-engage.
           </p>
           <Button
             variant="ghost"
             size="sm"
-            className="h-7 text-xs text-amber-400 hover:text-amber-300"
+            className="h-7 text-xs text-amber-300 hover:text-amber-200"
             onClick={onOpenTemplates}
           >
             <LayoutTemplate className="mr-1 h-3 w-3" />
@@ -118,7 +118,7 @@ export function MessageComposer({
           canAct={!readOnly}
           gateReason="send messages"
           title={readOnly ? undefined : "Send template"}
-          className="h-9 w-9 shrink-0 p-0 text-slate-400 hover:text-white"
+          className="h-10 w-10 shrink-0 rounded-full p-0 text-[#aebac1] hover:bg-[#2a3942] hover:text-white"
           onClick={onOpenTemplates}
         >
           <LayoutTemplate className="h-4 w-4" />
@@ -134,7 +134,7 @@ export function MessageComposer({
               ? "Read-only — viewers can browse but not reply"
               : sessionExpired
                 ? "Session expired - use a template"
-                : "Type a message... (Shift+Enter for new line)"
+                : "Type a message"
           }
           disabled={sessionExpired || readOnly}
           rows={1}
@@ -143,7 +143,7 @@ export function MessageComposer({
           // The placeholder text also surfaces the read-only state.
           title={readOnly ? "Read-only — your role can't send messages" : undefined}
           className={cn(
-            "flex-1 resize-none rounded-xl border border-slate-700 bg-slate-800 px-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none transition-colors focus:border-primary/50",
+            "flex-1 resize-none rounded-full border border-transparent bg-[#2a3942] px-4 py-2.5 text-[15px] text-[#e9edef] placeholder-[#8696a0] outline-none transition-colors focus:border-transparent",
             (sessionExpired || readOnly) && "cursor-not-allowed opacity-50"
           )}
         />
@@ -154,7 +154,7 @@ export function MessageComposer({
           gateReason="send messages"
           disabled={!text.trim() || sessionExpired || sending}
           onClick={handleSend}
-          className="h-9 w-9 shrink-0 bg-primary p-0 hover:bg-primary/90 disabled:opacity-40"
+          className="h-10 w-10 shrink-0 rounded-full bg-[#00a884] p-0 text-[#111b21] hover:bg-[#06cf9c] disabled:opacity-40"
         >
           <Send className="h-4 w-4" />
         </GatedButton>
@@ -163,7 +163,7 @@ export function MessageComposer({
       {/* Hint sits outside the flex row so its height doesn't push
           `items-end` buttons below the textarea. Indented to line up
           under the textarea left edge (w-9 button + gap-2 = 44px). */}
-      <p className="mt-1 pl-11 text-[10px] text-slate-600">
+      <p className="mt-1 pl-12 text-[10px] text-[#667781]">
         Type &apos;/&apos; for quick replies
       </p>
     </div>
