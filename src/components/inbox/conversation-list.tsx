@@ -1,20 +1,20 @@
-"use client";
+'use client';
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { createClient } from "@/lib/supabase/client";
-import { cn } from "@/lib/utils";
-import type { Conversation, ConversationStatus } from "@/types";
-import { Search, ChevronDown, MessageSquarePlus, MoreVertical } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
-import { Input } from "@/components/ui/input";
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { createClient } from '@/lib/supabase/client';
+import { cn } from '@/lib/utils';
+import type { Conversation, ConversationStatus } from '@/types';
+import { Search, ChevronDown } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
+import { Input } from '@/components/ui/input';
+import { humanizeSaluTranscriptText } from '@/lib/salu/transcript';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
+} from '@/components/ui/dropdown-menu';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface ConversationListProps {
   activeConversationId: string | null;
@@ -31,20 +31,20 @@ interface ConversationListProps {
 }
 
 const STATUS_COLORS: Record<ConversationStatus, string> = {
-  open: "bg-[#00a884]",
-  pending: "bg-amber-500",
-  closed: "bg-[#8696a0]",
+  open: 'bg-[#00a884]',
+  pending: 'bg-amber-500',
+  closed: 'bg-[#8696a0]',
 };
 
 const FILTER_OPTIONS: {
   label: string;
-  value: ConversationStatus | "all" | "unread";
+  value: ConversationStatus | 'all' | 'unread';
 }[] = [
-  { label: "All", value: "all" },
-  { label: "Unread", value: "unread" },
-  { label: "Open", value: "open" },
-  { label: "Pending", value: "pending" },
-  { label: "Closed", value: "closed" },
+  { label: 'All', value: 'all' },
+  { label: 'Unread', value: 'unread' },
+  { label: 'Open', value: 'open' },
+  { label: 'Pending', value: 'pending' },
+  { label: 'Closed', value: 'closed' },
 ];
 
 export function ConversationList({
@@ -54,8 +54,10 @@ export function ConversationList({
   onConversationsLoaded,
   resyncToken = 0,
 }: ConversationListProps) {
-  const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<ConversationStatus | "all" | "unread">("all");
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState<ConversationStatus | 'all' | 'unread'>(
+    'all'
+  );
   const [loading, setLoading] = useState(true);
 
   // Keep the latest callback in a ref so the fetch effect below can
@@ -81,15 +83,15 @@ export function ConversationList({
 
     (async () => {
       const { data, error } = await supabase
-        .from("conversations")
-        .select("*, contact:contacts(*)")
-        .order("last_message_at", { ascending: false });
+        .from('conversations')
+        .select('*, contact:contacts(*)')
+        .order('last_message_at', { ascending: false });
 
       if (cancelled) return;
 
       if (error) {
         // Supabase errors have non-enumerable properties — log fields explicitly
-        console.error("Failed to fetch conversations:", {
+        console.error('Failed to fetch conversations:', {
           message: error.message,
           details: error.details,
           hint: error.hint,
@@ -114,18 +116,19 @@ export function ConversationList({
   const filtered = useMemo(() => {
     let result = conversations;
 
-    if (filter === "unread") {
+    if (filter === 'unread') {
       result = result.filter((c) => c.unread_count > 0);
-    } else if (filter !== "all") {
+    } else if (filter !== 'all') {
       result = result.filter((c) => c.status === filter);
     }
 
     if (search.trim()) {
       const q = search.toLowerCase();
       result = result.filter((c) => {
-        const name = c.contact?.name?.toLowerCase() ?? "";
-        const phone = c.contact?.phone?.toLowerCase() ?? "";
-        const lastMsg = c.last_message_text?.toLowerCase() ?? "";
+        const name = c.contact?.name?.toLowerCase() ?? '';
+        const phone = c.contact?.phone?.toLowerCase() ?? '';
+        const lastMsg =
+          humanizeSaluTranscriptText(c.last_message_text)?.toLowerCase() ?? '';
         return name.includes(q) || phone.includes(q) || lastMsg.includes(q);
       });
     }
@@ -151,43 +154,25 @@ export function ConversationList({
 
   return (
     <div className="flex h-full w-full flex-col border-r border-[#233138] bg-[#111b21] lg:w-[360px]">
-      <div className="flex h-[61px] items-center justify-between border-b border-[#233138] px-4">
+      <div className="flex h-[61px] shrink-0 items-center border-b border-[#233138] px-4">
         <h2 className="text-xl font-semibold text-[#e9edef]">WhatsApp</h2>
-        <div className="flex items-center gap-1 text-[#aebac1]">
-          <button
-            type="button"
-            aria-label="New chat"
-            title="New chat"
-            className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-[#202c33]"
-          >
-            <MessageSquarePlus className="h-5 w-5" />
-          </button>
-          <button
-            type="button"
-            aria-label="More"
-            title="More"
-            className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-[#202c33]"
-          >
-            <MoreVertical className="h-5 w-5" />
-          </button>
-        </div>
       </div>
       {/* Search + Filter */}
-      <div className="space-y-3 border-b border-[#233138] p-3">
+      <div className="shrink-0 space-y-3 border-b border-[#233138] p-3">
         <div className="relative">
-          <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8696a0]" />
+          <Search className="absolute top-1/2 left-4 h-4 w-4 -translate-y-1/2 text-[#8696a0]" />
           <Input
             value={search}
             onChange={handleSearchChange}
-            placeholder="Search or start a new chat"
+            placeholder="Search conversations"
             className="h-10 rounded-full border-transparent bg-[#202c33] pl-11 text-sm text-[#e9edef] placeholder-[#8696a0] focus:border-transparent focus:ring-0"
           />
         </div>
 
         <DropdownMenu>
           <DropdownMenuTrigger className="inline-flex h-8 items-center justify-center gap-1 rounded-full border border-[#2a3942] px-3 text-xs font-medium text-[#aebac1] hover:bg-[#202c33] hover:text-white">
-              {activeFilter?.label ?? "All"}
-              <ChevronDown className="h-3 w-3" />
+            {activeFilter?.label ?? 'All'}
+            <ChevronDown className="h-3 w-3" />
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="start"
@@ -198,10 +183,8 @@ export function ConversationList({
                 key={opt.value}
                 onClick={() => setFilter(opt.value)}
                 className={cn(
-                  "text-sm",
-                  filter === opt.value
-                    ? "text-[#00a884]"
-                    : "text-[#d1d7db]"
+                  'text-sm',
+                  filter === opt.value ? 'text-[#00a884]' : 'text-[#d1d7db]'
                 )}
               >
                 {opt.label}
@@ -220,7 +203,7 @@ export function ConversationList({
       <ScrollArea className="min-h-0 flex-1">
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            <div className="border-primary h-5 w-5 animate-spin rounded-full border-2 border-t-transparent" />
           </div>
         ) : filtered.length === 0 ? (
           <div className="px-4 py-12 text-center">
@@ -255,7 +238,7 @@ function ConversationItem({
   onSelect,
 }: ConversationItemProps) {
   const contact = conversation.contact;
-  const displayName = contact?.name || contact?.phone || "Unknown";
+  const displayName = contact?.name || contact?.phone || 'Unknown';
   const initials = displayName.charAt(0).toUpperCase();
 
   const handleClick = useCallback(() => {
@@ -266,14 +249,15 @@ function ConversationItem({
     ? formatDistanceToNow(new Date(conversation.last_message_at), {
         addSuffix: false,
       })
-    : "";
+    : '';
+  const preview = humanizeSaluTranscriptText(conversation.last_message_text);
 
   return (
     <button
       onClick={handleClick}
       className={cn(
-        "flex w-full items-start gap-3 px-3 py-3 text-left transition-colors hover:bg-[#202c33]",
-        isActive && "bg-[#2a3942]"
+        'flex w-full items-start gap-3 px-3 py-3 text-left transition-colors hover:bg-[#202c33]',
+        isActive && 'bg-[#2a3942]'
       )}
     >
       {/* Avatar */}
@@ -299,7 +283,7 @@ function ConversationItem({
         </div>
         <div className="mt-0.5 flex items-center justify-between gap-2">
           <p className="truncate text-sm text-[#8696a0]">
-            {conversation.last_message_text || "No messages yet"}
+            {preview || 'No messages yet'}
           </p>
           <div className="flex shrink-0 items-center gap-1.5">
             {conversation.unread_count > 0 && (
@@ -309,7 +293,7 @@ function ConversationItem({
             )}
             <span
               className={cn(
-                "h-2 w-2 rounded-full",
+                'h-2 w-2 rounded-full',
                 STATUS_COLORS[conversation.status]
               )}
               title={conversation.status}

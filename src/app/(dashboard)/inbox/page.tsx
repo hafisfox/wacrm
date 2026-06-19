@@ -1,10 +1,13 @@
-import { Suspense } from "react";
+import { Suspense } from 'react';
 
-import { InboxClient } from "./inbox-client";
+import { InboxClient } from './inbox-client';
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
 
 export default function InboxPage() {
+  const n8nOwnedWhatsapp =
+    process.env.SALU_DASHBOARD_MODE === 'n8n-owned-whatsapp';
+
   return (
     <Suspense
       fallback={
@@ -13,7 +16,7 @@ export default function InboxPage() {
         </div>
       }
     >
-      <InboxClient />
+      <InboxClient n8nOwnedWhatsapp={n8nOwnedWhatsapp} />
     </Suspense>
   );
 }

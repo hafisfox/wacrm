@@ -1,12 +1,13 @@
-"use client";
+'use client';
 
-import { useState, useRef, useCallback, KeyboardEvent } from "react";
-import { Send, LayoutTemplate } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { GatedButton } from "@/components/ui/gated-button";
-import { useCan } from "@/hooks/use-can";
-import { cn } from "@/lib/utils";
-import { ReplyQuote } from "./reply-quote";
+import { useState, useRef, useCallback, KeyboardEvent } from 'react';
+import Link from 'next/link';
+import { Send, LayoutTemplate } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { GatedButton } from '@/components/ui/gated-button';
+import { useCan } from '@/hooks/use-can';
+import { cn } from '@/lib/utils';
+import { ReplyQuote } from './reply-quote';
 
 interface ReplyDraft {
   /** Internal UUID of the message being replied to — sent back through onSend. */
@@ -16,58 +17,60 @@ interface ReplyDraft {
 }
 
 interface MessageComposerProps {
-  conversationId: string;
   sessionExpired: boolean;
   onSend: (text: string, replyToId?: string) => void;
   onOpenTemplates: () => void;
   replyTo?: ReplyDraft | null;
   onClearReply?: () => void;
+  templatesAvailable?: boolean;
+  sendingAvailable?: boolean;
 }
 
 export function MessageComposer({
-  conversationId,
   sessionExpired,
   onSend,
   onOpenTemplates,
   replyTo,
   onClearReply,
+  templatesAvailable = true,
+  sendingAvailable = true,
 }: MessageComposerProps) {
-  const [text, setText] = useState("");
+  const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   // Viewers (read-only role) can browse the inbox but never send.
   // For solo users this is always true — single-owner accounts pass
   // every capability — so the disabled branch is a no-op there.
-  const canSend = useCan("send-messages");
+  const canSend = useCan('send-messages');
   const readOnly = !canSend;
 
   const adjustHeight = useCallback(() => {
     const el = textareaRef.current;
     if (!el) return;
-    el.style.height = "auto";
+    el.style.height = 'auto';
     // Max 4 lines (~96px)
     el.style.height = `${Math.min(el.scrollHeight, 96)}px`;
   }, []);
 
   const handleSend = useCallback(async () => {
     const trimmed = text.trim();
-    if (!trimmed || sending || sessionExpired) return;
+    if (!trimmed || sending || sessionExpired || !sendingAvailable) return;
 
     setSending(true);
     try {
       onSend(trimmed, replyTo?.id);
-      setText("");
+      setText('');
       if (textareaRef.current) {
-        textareaRef.current.style.height = "auto";
+        textareaRef.current.style.height = 'auto';
       }
     } finally {
       setSending(false);
     }
-  }, [text, sending, sessionExpired, onSend, replyTo?.id]);
+  }, [text, sending, sessionExpired, sendingAvailable, onSend, replyTo?.id]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.key === "Enter" && !e.shiftKey) {
+      if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         handleSend();
       }
@@ -84,7 +87,7 @@ export function MessageComposer({
   );
 
   return (
-    <div className="border-t border-[#233138] bg-[#202c33] px-3 py-3">
+    <div className="shrink-0 border-t border-[#233138] bg-[#202c33] px-3 py-3">
       {replyTo && (
         <div className="mb-2">
           <ReplyQuote
@@ -96,18 +99,31 @@ export function MessageComposer({
       )}
       {sessionExpired && (
         <div className="mb-2 flex items-center justify-between rounded-lg bg-amber-500/10 px-3 py-2">
-          <p className="text-xs text-amber-300">
-            24-hour session expired. Use a template to re-engage.
+          <p className="min-w-0 text-xs text-amber-300">
+            {templatesAvailable
+              ? '24-hour session expired. Use a template to re-engage.'
+              : '24-hour session expired. Connect Meta to send a template.'}
           </p>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 text-xs text-amber-300 hover:text-amber-200"
-            onClick={onOpenTemplates}
-          >
-            <LayoutTemplate className="mr-1 h-3 w-3" />
-            Templates
-          </Button>
+          {templatesAvailable ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 shrink-0 text-xs text-amber-300 hover:text-amber-200"
+              onClick={onOpenTemplates}
+            >
+              <LayoutTemplate className="mr-1 h-3 w-3" />
+              Templates
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 shrink-0 text-xs text-amber-300 hover:text-amber-200"
+              render={<Link href="/settings?tab=whatsapp" />}
+            >
+              Connect Meta
+            </Button>
+          )}
         </div>
       )}
 
@@ -117,7 +133,14 @@ export function MessageComposer({
           size="sm"
           canAct={!readOnly}
           gateReason="send messages"
-          title={readOnly ? undefined : "Send template"}
+          title={
+            readOnly
+              ? undefined
+              : templatesAvailable
+                ? 'Send template'
+                : 'Connect Meta to send templates'
+          }
+          disabled={!templatesAvailable}
           className="h-10 w-10 shrink-0 rounded-full p-0 text-[#aebac1] hover:bg-[#2a3942] hover:text-white"
           onClick={onOpenTemplates}
         >
@@ -131,20 +154,27 @@ export function MessageComposer({
           onKeyDown={handleKeyDown}
           placeholder={
             readOnly
-              ? "Read-only — viewers can browse but not reply"
-              : sessionExpired
-                ? "Session expired - use a template"
-                : "Type a message"
+              ? 'Read-only — viewers can browse but not reply'
+              : !sendingAvailable
+                ? 'Connect WhatsApp to reply'
+                : sessionExpired
+                  ? templatesAvailable
+                    ? 'Session expired - use a template'
+                    : 'Session expired - connect Meta to continue'
+                  : 'Type a message'
           }
-          disabled={sessionExpired || readOnly}
+          disabled={sessionExpired || readOnly || !sendingAvailable}
           rows={1}
           // Textarea keeps its own inline title — the GatedButton
           // wrapping pattern doesn't apply to non-button inputs.
           // The placeholder text also surfaces the read-only state.
-          title={readOnly ? "Read-only — your role can't send messages" : undefined}
+          title={
+            readOnly ? "Read-only — your role can't send messages" : undefined
+          }
           className={cn(
-            "flex-1 resize-none rounded-full border border-transparent bg-[#2a3942] px-4 py-2.5 text-[15px] text-[#e9edef] placeholder-[#8696a0] outline-none transition-colors focus:border-transparent",
-            (sessionExpired || readOnly) && "cursor-not-allowed opacity-50"
+            'flex-1 resize-none rounded-full border border-transparent bg-[#2a3942] px-4 py-2.5 text-[15px] text-[#e9edef] placeholder-[#8696a0] transition-colors outline-none focus:border-transparent',
+            (sessionExpired || readOnly || !sendingAvailable) &&
+              'cursor-not-allowed opacity-50'
           )}
         />
 
@@ -152,7 +182,9 @@ export function MessageComposer({
           size="sm"
           canAct={!readOnly}
           gateReason="send messages"
-          disabled={!text.trim() || sessionExpired || sending}
+          disabled={
+            !text.trim() || sessionExpired || sending || !sendingAvailable
+          }
           onClick={handleSend}
           className="h-10 w-10 shrink-0 rounded-full bg-[#00a884] p-0 text-[#111b21] hover:bg-[#06cf9c] disabled:opacity-40"
         >
@@ -164,7 +196,7 @@ export function MessageComposer({
           `items-end` buttons below the textarea. Indented to line up
           under the textarea left edge (w-9 button + gap-2 = 44px). */}
       <p className="mt-1 pl-12 text-[10px] text-[#667781]">
-        Type &apos;/&apos; for quick replies
+        Enter to send. Shift+Enter for a new line
       </p>
     </div>
   );

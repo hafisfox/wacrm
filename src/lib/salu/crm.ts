@@ -1,10 +1,10 @@
-import type { QueryResultRow } from "pg";
+import type { QueryResultRow } from 'pg';
 
-import { saluQuery } from "./db";
+import { saluQuery } from './db';
 
-export type SaluCrmSenderType = "customer" | "agent" | "bot";
-export type SaluCrmContentType = "text" | "interactive";
-export type SaluCrmMessageStatus = "sent" | "delivered";
+export type SaluCrmSenderType = 'customer' | 'agent' | 'bot';
+export type SaluCrmContentType = 'text' | 'interactive';
+export type SaluCrmMessageStatus = 'sent' | 'delivered';
 
 export interface SaluMessageEventLike {
   event_type?: string | null;
@@ -122,14 +122,16 @@ export interface SaluCustomerDetails {
 }
 
 const INTERNAL_EVENT_TYPES = new Set([
-  "payment_webhook",
-  "payment_sweeper",
-  "schema_setup",
-  "setup",
+  'payment_claim',
+  'payment_link',
+  'payment_webhook',
+  'payment_sweeper',
+  'schema_setup',
+  'setup',
 ]);
 
 function textValue(value: unknown): string {
-  return typeof value === "string" ? value.trim() : "";
+  return typeof value === 'string' ? value.trim() : '';
 }
 
 function firstText(...values: unknown[]): string {
@@ -137,68 +139,90 @@ function firstText(...values: unknown[]): string {
     const text = textValue(value);
     if (text) return text;
   }
-  return "";
+  return '';
 }
 
 export function normalizeSaluPhoneKey(phone: string): string {
-  return phone.replace(/\D/g, "");
+  return phone.replace(/\D/g, '');
 }
 
 export function canonicalSaluPhone(phone: string): string {
   const key = normalizeSaluPhoneKey(phone);
-  return key ? `+${key}` : "";
+  return key ? `+${key}` : '';
 }
 
 export function mapSaluEventToCrmMessage(
-  event: SaluMessageEventLike,
+  event: SaluMessageEventLike
 ): SaluCrmMessageMapping {
   const payload = event.payload ?? {};
   const eventType = textValue(event.event_type).toLowerCase();
   const route = textValue(event.route).toLowerCase();
   const direction = textValue(payload.direction).toLowerCase();
 
-  if (INTERNAL_EVENT_TYPES.has(eventType) && direction !== "outbound") {
+  if (INTERNAL_EVENT_TYPES.has(eventType) && direction !== 'outbound') {
     return {
       mirrored: false,
-      reason: "internal_event",
-      senderType: "bot",
-      contentType: "text",
-      status: "sent",
-      contentText: "",
+      reason: 'internal_event',
+      senderType: 'bot',
+      contentType: 'text',
+      status: 'sent',
+      contentText: '',
     };
   }
 
-  let senderType = textValue(payload.sender_type).toLowerCase() as SaluCrmSenderType;
-  if (!["customer", "agent", "bot"].includes(senderType)) {
+  let senderType = textValue(
+    payload.sender_type
+  ).toLowerCase() as SaluCrmSenderType;
+  if (!['customer', 'agent', 'bot'].includes(senderType)) {
     senderType =
-      direction === "outbound" ||
-      route === "outbound" ||
-      ["bot_message", "outbound_message", "outbound_bot", "template_message"].includes(eventType)
-        ? "bot"
-        : "customer";
+      direction === 'outbound' ||
+      route === 'outbound' ||
+      [
+        'bot_message',
+        'outbound_message',
+        'outbound_bot',
+        'template_message',
+      ].includes(eventType)
+        ? 'bot'
+        : 'customer';
   }
 
   const contentType: SaluCrmContentType =
-    eventType === "flow_reply" ? "interactive" : "text";
-  const contentText =
+    eventType === 'flow_reply' ? 'interactive' : 'text';
+  let contentText =
     firstText(
       event.raw_text,
       payload.text,
       payload.body,
       event.summary,
       event.intent,
-      event.event_type,
-    ) || "[WhatsApp event]";
+      event.event_type
+    ) || '[WhatsApp event]';
+
+  if (eventType === 'flow_reply' && !textValue(event.raw_text)) {
+    contentText =
+      firstText(payload.text, payload.body) ||
+      {
+        payment_pending: 'Booking details submitted',
+        cancel: 'Cancellation request submitted',
+        weekend_not_bookable: 'Selected date is unavailable',
+      }[textValue(event.intent).toLowerCase()] ||
+      'WhatsApp Flow submitted';
+  }
 
   return {
     mirrored: true,
     senderType,
     contentType,
-    status: senderType === "customer" ? "delivered" : "sent",
+    status: senderType === 'customer' ? 'delivered' : 'sent',
     contentText,
     interactiveReplyId:
-      contentType === "interactive"
-        ? firstText(payload.interactive_reply_id, payload.button_id, event.intent)
+      contentType === 'interactive'
+        ? firstText(
+            payload.interactive_reply_id,
+            payload.button_id,
+            event.intent
+          )
         : undefined,
   };
 }
@@ -209,11 +233,11 @@ interface BookingRow extends QueryResultRow, SaluCustomerBooking {}
 interface PaymentRow extends QueryResultRow, SaluCustomerPayment {}
 
 export async function loadSaluCustomerDetails(
-  phone: string,
+  phone: string
 ): Promise<SaluCustomerDetails> {
   const phoneKey = normalizeSaluPhoneKey(phone);
   if (!phoneKey) {
-    throw new Error("A valid phone number is required.");
+    throw new Error('A valid phone number is required.');
   }
 
   const [sessions, profiles, bookings, payments] = await Promise.all([
@@ -246,7 +270,7 @@ export async function loadSaluCustomerDetails(
         where regexp_replace(phone, '\\D', '', 'g') = $1
         limit 1
       `,
-      [phoneKey],
+      [phoneKey]
     ),
     saluQuery<ProfileRow>(
       `
@@ -272,7 +296,7 @@ export async function loadSaluCustomerDetails(
         where regexp_replace(phone, '\\D', '', 'g') = $1
         limit 1
       `,
-      [phoneKey],
+      [phoneKey]
     ),
     saluQuery<BookingRow>(
       `
@@ -305,7 +329,7 @@ export async function loadSaluCustomerDetails(
           updated_at desc
         limit 8
       `,
-      [phoneKey],
+      [phoneKey]
     ),
     saluQuery<PaymentRow>(
       `
@@ -330,7 +354,7 @@ export async function loadSaluCustomerDetails(
           updated_at desc
         limit 8
       `,
-      [phoneKey],
+      [phoneKey]
     ),
   ]);
 
@@ -342,12 +366,12 @@ export async function loadSaluCustomerDetails(
     active_booking:
       bookings.find(
         (booking) =>
-          ["pending", "confirmed"].includes(booking.status) &&
-          Boolean(booking.starts_at),
+          ['pending', 'confirmed'].includes(booking.status) &&
+          Boolean(booking.starts_at)
       ) ?? null,
     bookings,
     pending_payment:
-      payments.find((payment) => payment.status === "pending") ?? null,
+      payments.find((payment) => payment.status === 'pending') ?? null,
     payments,
   };
 }
@@ -355,12 +379,12 @@ export async function loadSaluCustomerDetails(
 export async function setSaluHumanMode(
   phone: string,
   humanMode: boolean,
-  reason = "dashboard_takeover",
+  reason = 'dashboard_takeover'
 ): Promise<SaluCustomerSession> {
   const canonicalPhone = canonicalSaluPhone(phone);
   const phoneKey = normalizeSaluPhoneKey(phone);
   if (!canonicalPhone || !phoneKey) {
-    throw new Error("A valid phone number is required.");
+    throw new Error('A valid phone number is required.');
   }
 
   const rows = await saluQuery<SessionRow>(
@@ -417,7 +441,7 @@ export async function setSaluHumanMode(
         coalesce(handoff_started_at::text, '') as handoff_started_at,
         updated_at::text
     `,
-    [canonicalPhone, phoneKey, humanMode, reason],
+    [canonicalPhone, phoneKey, humanMode, reason]
   );
 
   return rows[0];
