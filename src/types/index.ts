@@ -97,6 +97,8 @@ export interface Contact {
   name?: string;
   email?: string;
   company?: string;
+  whatsapp_user_id?: string;
+  source_metadata?: Record<string, unknown>;
   avatar_url?: string;
   created_at: string;
   updated_at: string;
@@ -151,6 +153,13 @@ export interface Conversation {
   last_message_text?: string;
   last_message_at?: string;
   unread_count: number;
+  handoff_state?: 'none' | 'requested' | 'active' | 'resolved';
+  handoff_priority?: 'normal' | 'urgent';
+  handoff_reason?: string;
+  handoff_category?: string;
+  handoff_requested_at?: string;
+  handoff_resolved_at?: string;
+  bot_paused?: boolean;
   created_at: string;
   updated_at: string;
   contact?: Contact;
@@ -180,6 +189,7 @@ export interface Message {
   template_name?: string;
   message_id?: string;
   status: MessageStatus;
+  metadata?: Record<string, unknown>;
   created_at: string;
   reply_to_message_id?: string;
   /**

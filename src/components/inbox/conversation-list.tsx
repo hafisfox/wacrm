@@ -38,9 +38,10 @@ const STATUS_COLORS: Record<ConversationStatus, string> = {
 
 const FILTER_OPTIONS: {
   label: string;
-  value: ConversationStatus | 'all' | 'unread';
+  value: ConversationStatus | 'all' | 'unread' | 'needs_human';
 }[] = [
   { label: 'All', value: 'all' },
+  { label: 'Needs human', value: 'needs_human' },
   { label: 'Unread', value: 'unread' },
   { label: 'Open', value: 'open' },
   { label: 'Pending', value: 'pending' },
@@ -55,7 +56,7 @@ export function ConversationList({
   resyncToken = 0,
 }: ConversationListProps) {
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState<ConversationStatus | 'all' | 'unread'>(
+  const [filter, setFilter] = useState<ConversationStatus | 'all' | 'unread' | 'needs_human'>(
     'all'
   );
   const [loading, setLoading] = useState(true);
@@ -116,7 +117,11 @@ export function ConversationList({
   const filtered = useMemo(() => {
     let result = conversations;
 
-    if (filter === 'unread') {
+    if (filter === 'needs_human') {
+      result = result.filter(
+        (c) => c.bot_paused || c.handoff_state === 'requested' || c.handoff_state === 'active'
+      );
+    } else if (filter === 'unread') {
       result = result.filter((c) => c.unread_count > 0);
     } else if (filter !== 'all') {
       result = result.filter((c) => c.status === filter);
@@ -276,9 +281,16 @@ function ConversationItem({
       {/* Content */}
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
-          <span className="truncate text-[15px] font-medium text-[#e9edef]">
-            {displayName}
-          </span>
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="truncate text-[15px] font-medium text-[#e9edef]">
+              {displayName}
+            </span>
+            {(conversation.bot_paused || conversation.handoff_state === 'requested' || conversation.handoff_state === 'active') && (
+              <span className="shrink-0 rounded-full bg-red-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-300">
+                Needs human
+              </span>
+            )}
+          </div>
           <span className="shrink-0 text-[11px] text-[#8696a0]">{timeAgo}</span>
         </div>
         <div className="mt-0.5 flex items-center justify-between gap-2">

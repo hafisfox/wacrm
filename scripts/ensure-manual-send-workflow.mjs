@@ -2,7 +2,7 @@ import { mergedEnv } from './env-utils.mjs';
 
 const WORKFLOW_NAME = 'Salu WhatsApp - Dashboard Manual Send';
 const WEBHOOK_PATH = 'salu-dashboard-send';
-const PHONE_NUMBER_ID = '1175796395607450';
+const DEFAULT_PHONE_NUMBER_ID = '1175796395607450';
 
 function request(baseUrl, apiKey, path, options = {}) {
   return fetch(`${baseUrl}${path}`, {
@@ -61,22 +61,23 @@ async function listCredentials(baseUrl, apiKey) {
   return credentials;
 }
 
-async function ensureDashboardWebhookCredential(baseUrl, apiKey, credentials) {
+async function ensureDashboardWebhookCredential(baseUrl, apiKey, credentials, webhookSecret) {
   const existing = credentials.find(
     (credential) =>
       credential.type === 'httpHeaderAuth' &&
-      credential.name === 'Salu Dashboard Send API Key',
+      credential.name === 'Salu Dashboard Manual Send Secret',
   );
   if (existing) return existing;
 
   const credential = await request(baseUrl, apiKey, '/api/v1/credentials', {
     method: 'POST',
     body: JSON.stringify({
-      name: 'Salu Dashboard Send API Key',
+      name: 'Salu Dashboard Manual Send Secret',
       type: 'httpHeaderAuth',
       data: {
-        name: 'X-N8N-API-KEY',
-        value: apiKey,
+        name: 'X-Salu-Webhook-Secret',
+        value: webhookSecret,
+        allowedHttpRequestDomains: 'none',
       },
     }),
   });
@@ -84,7 +85,7 @@ async function ensureDashboardWebhookCredential(baseUrl, apiKey, credentials) {
   return credential;
 }
 
-function workflowJson(metaCredential, webhookCredential) {
+function workflowJson(metaCredential, webhookCredential, phoneNumberId) {
   return {
     name: WORKFLOW_NAME,
     nodes: [
@@ -148,7 +149,7 @@ return [{ json: { payload } }];`,
         position: [-80, 0],
         parameters: {
           method: 'POST',
-          url: `https://graph.facebook.com/v22.0/${PHONE_NUMBER_ID}/messages`,
+          url: `https://graph.facebook.com/v22.0/${phoneNumberId}/messages`,
           authentication: 'genericCredentialType',
           genericAuthType: 'httpHeaderAuth',
           sendHeaders: true,
@@ -209,7 +210,12 @@ return [{ json: { payload } }];`,
 const env = mergedEnv();
 const baseUrl = String(env.N8N_URL || '').replace(/\/$/, '');
 const apiKey = env.N8N_API_KEY || '';
+const webhookSecret = env.SALU_N8N_MANUAL_SEND_TOKEN || '';
+const phoneNumberId = env.WHATSAPP_PHONE_NUMBER_ID || DEFAULT_PHONE_NUMBER_ID;
 if (!baseUrl || !apiKey) throw new Error('Missing N8N_URL or N8N_API_KEY');
+if (!webhookSecret || webhookSecret.length < 32) {
+  throw new Error('SALU_N8N_MANUAL_SEND_TOKEN is required and must contain at least 32 characters');
+}
 
 const credentials = await listCredentials(baseUrl, apiKey);
 const metaCredential = credentials.find(
@@ -224,11 +230,12 @@ const webhookCredential = await ensureDashboardWebhookCredential(
   baseUrl,
   apiKey,
   credentials,
+  webhookSecret,
 );
 
 const workflows = await listWorkflows(baseUrl, apiKey);
 const existing = workflows.find((workflow) => workflow.name === WORKFLOW_NAME);
-const payload = workflowJson(metaCredential, webhookCredential);
+const payload = workflowJson(metaCredential, webhookCredential, phoneNumberId);
 let workflow;
 
 if (existing) {

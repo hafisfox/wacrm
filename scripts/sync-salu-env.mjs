@@ -43,6 +43,10 @@ const values = {
   ),
   N8N_URL: first(existing.N8N_URL, rootEnv.N8N_URL),
   N8N_API_KEY: first(existing.N8N_API_KEY, rootEnv.N8N_API_KEY),
+  SALU_N8N_MANUAL_SEND_TOKEN: first(
+    existing.SALU_N8N_MANUAL_SEND_TOKEN,
+    rootEnv.SALU_N8N_MANUAL_SEND_TOKEN,
+  ),
   NEXT_PUBLIC_SITE_URL: first(existing.NEXT_PUBLIC_SITE_URL, 'http://localhost:3000'),
   ENCRYPTION_KEY: encryptionKey(),
   META_APP_SECRET: first(

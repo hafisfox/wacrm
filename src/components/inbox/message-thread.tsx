@@ -778,6 +778,11 @@ export function MessageThread({
             </h2>
             <p className="truncate text-xs text-[#8696a0]">{contact.phone}</p>
           </div>
+          {(conversation.bot_paused || conversation.handoff_state === 'requested' || conversation.handoff_state === 'active') && (
+            <Badge className="ml-1 shrink-0 border border-red-400/40 bg-red-500/20 text-[10px] font-semibold text-red-200 hover:bg-red-500/20">
+              Needs human
+            </Badge>
+          )}
           {/* Session timer badge — hidden on the narrowest phones so
               the name + back arrow keep their room. */}
           <Badge

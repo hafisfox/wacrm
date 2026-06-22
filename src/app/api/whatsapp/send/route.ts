@@ -16,7 +16,7 @@ import {
 } from '@/lib/rate-limit'
 import type { MessageTemplate } from '@/types'
 import { isMessageTemplate } from '@/lib/whatsapp/template-row-guard'
-import { setSaluHumanMode } from '@/lib/salu/crm'
+import { logSaluAgentMessage, setSaluHumanMode } from '@/lib/salu/crm'
 
 async function sendN8nOwnedTextMessage({
   to,
@@ -40,8 +40,8 @@ async function sendN8nOwnedTextMessage({
     headers: {
       'Content-Type': 'application/json',
       'X-Salu-Source': 'dashboard',
-      ...(process.env.N8N_API_KEY
-        ? { 'X-N8N-API-KEY': process.env.N8N_API_KEY }
+      ...(process.env.SALU_N8N_MANUAL_SEND_TOKEN
+        ? { 'X-Salu-Webhook-Secret': process.env.SALU_N8N_MANUAL_SEND_TOKEN }
         : {}),
     },
     body: JSON.stringify({
@@ -329,6 +329,26 @@ export async function POST(request: Request) {
       return result.messageId
     }
 
+    // Acquire the automation pause before a human reply leaves the system.
+    // A failed pause is a hard stop: sending while the bot can still answer
+    // would create two competing operators in the same conversation.
+    try {
+      await setSaluHumanMode(
+        workingPhone || contact.phone,
+        true,
+        'dashboard_agent_replied',
+      )
+    } catch (err) {
+      console.error(
+        '[salu] pre-send pause failed:',
+        err instanceof Error ? err.message : err,
+      )
+      return NextResponse.json(
+        { error: 'Could not pause automation. The message was not sent.' },
+        { status: 503 },
+      )
+    }
+
     try {
       const variants = phoneVariants(sanitizedPhone)
       let lastError: unknown = null
@@ -410,6 +430,14 @@ export async function POST(request: Request) {
         last_message_text: content_text || `[${message_type}]`,
         last_message_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        status: 'pending',
+        handoff_state: 'active',
+        handoff_priority: 'urgent',
+        handoff_reason: 'Agent replied from the dashboard',
+        handoff_category: 'dashboard_manual',
+        handoff_requested_at: conversation.handoff_requested_at || new Date().toISOString(),
+        handoff_resolved_at: null,
+        bot_paused: true,
       })
       .eq('id', conversation_id)
 
@@ -444,19 +472,20 @@ export async function POST(request: Request) {
       )
     }
 
-    // Salu keeps booking logic in n8n, so a dashboard agent reply must
-    // pause that customer-facing automation too. Best-effort only: the
-    // WhatsApp message has already been delivered and saved locally, so
-    // a Salu DB hiccup should not hide the successful send from the UI.
+    // Mirror the agent message into Salu history as well. The CRM row is
+    // already authoritative for the UI, so a mirror failure is recorded
+    // without pretending the successful WhatsApp send failed.
     try {
-      await setSaluHumanMode(
-        workingPhone || contact.phone,
-        true,
-        'dashboard_agent_replied',
-      )
+      await logSaluAgentMessage({
+        phone: workingPhone || contact.phone,
+        messageId: waMessageId,
+        text: content_text || `[${message_type}]`,
+        senderId: user.id,
+        contentType: message_type,
+      })
     } catch (err) {
       console.error(
-        '[salu] pause-on-agent-send failed:',
+        '[salu] agent-message mirror failed:',
         err instanceof Error ? err.message : err,
       )
     }

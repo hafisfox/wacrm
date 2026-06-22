@@ -22,10 +22,13 @@ npm run dev
 
 `setup:salu-env` generates an ignored `.env.local` from the parent Salu `.env`.
 
-`setup:salu-db` applies the additive upstream wacrm migrations to the same Supabase database so login/signup and team roles work. It does not modify the `salu` schema.
+`setup:salu-db` applies the additive dashboard migrations to the same Supabase database. Apply root `sql/003_salu_handoff_capture.sql` first because dashboard migration `025_salu_handoff_capture.sql` bridges those new Salu columns into CRM.
 
 ## Production Notes
 
 - Do not point Meta's WhatsApp webhook at `/api/whatsapp/webhook` in this app. Keep it on the live n8n WhatsApp trigger.
 - The n8n health card uses `N8N_URL` and `N8N_API_KEY` only to read workflow status.
 - Salu customer, booking, payment, and message data remain source-of-truth in `salu.*`.
+- Every valid inbound message is visible in CRM from the ingress capture, including messages received while the bot is paused.
+- `Needs human` shows urgent, owner/admin-assigned conversations on desktop and mobile. Agent replies acquire the Salu pause before WhatsApp send; `Resume bot` is the only resume mechanism.
+- n8n-owned manual replies require `SALU_N8N_MANUAL_SEND_TOKEN` in both this app and the `Salu WhatsApp - Dashboard Manual Send` webhook credential.

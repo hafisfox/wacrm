@@ -48,6 +48,10 @@ export interface SaluCustomerSession {
   last_customer_message: string;
   last_inbound_at: string;
   handoff_started_at: string;
+  unclear_turn_count: number;
+  handoff_reason: string;
+  handoff_category: string;
+  handoff_event_id: string;
   updated_at: string;
 }
 
@@ -396,6 +400,10 @@ export async function setSaluHumanMode(
         last_intent,
         summary,
         handoff_started_at,
+        unclear_turn_count,
+        handoff_reason,
+        handoff_category,
+        handoff_event_id,
         updated_at
       )
       values (
@@ -405,17 +413,29 @@ export async function setSaluHumanMode(
         case when $3 then 'manual_takeover' else 'bot_resumed' end,
         $4,
         case when $3 then now() else null end,
+        0,
+        case when $3 then $4 else '' end,
+        case when $3 then 'dashboard_manual' else '' end,
+        '',
         now()
       )
       on conflict (phone) do update
       set
         human_mode = excluded.human_mode,
+        active_flow = case when excluded.human_mode then '' else salu.customer_sessions.active_flow end,
+        flow_token = case when excluded.human_mode then '' else salu.customer_sessions.flow_token end,
         last_intent = excluded.last_intent,
         summary = excluded.summary,
         handoff_started_at = case
           when excluded.human_mode then coalesce(salu.customer_sessions.handoff_started_at, now())
           else null
         end,
+        unclear_turn_count = 0,
+        handoff_reason = case when excluded.human_mode then excluded.handoff_reason else '' end,
+        handoff_category = case when excluded.human_mode then excluded.handoff_category else '' end,
+        handoff_event_id = case when excluded.human_mode then salu.customer_sessions.handoff_event_id else '' end,
+        sheet_sync_source = 'database',
+        sheet_synced_at = null,
         updated_at = now()
       returning
         phone,
@@ -439,10 +459,51 @@ export async function setSaluHumanMode(
         last_customer_message,
         coalesce(last_inbound_at::text, '') as last_inbound_at,
         coalesce(handoff_started_at::text, '') as handoff_started_at,
+        unclear_turn_count,
+        handoff_reason,
+        handoff_category,
+        handoff_event_id,
         updated_at::text
     `,
     [canonicalPhone, phoneKey, humanMode, reason]
   );
 
   return rows[0];
+}
+
+export async function logSaluAgentMessage({
+  phone,
+  messageId,
+  text,
+  senderId,
+  contentType = 'text',
+}: {
+  phone: string;
+  messageId: string;
+  text: string;
+  senderId: string;
+  contentType?: string;
+}): Promise<void> {
+  const canonicalPhone = canonicalSaluPhone(phone);
+  if (!canonicalPhone || !messageId) return;
+
+  await saluQuery(
+    `select salu.upsert_message_event($1::jsonb) as result`,
+    [{
+      event_id: messageId,
+      message_id: messageId,
+      phone: canonicalPhone,
+      wa_to: normalizeSaluPhoneKey(canonicalPhone),
+      event_type: 'agent_message',
+      route: 'dashboard_manual_send',
+      status: 'processed',
+      intent: 'agent_reply',
+      summary: text.slice(0, 500),
+      raw_text: text,
+      message_type: contentType,
+      direction: 'outbound',
+      sender_type: 'agent',
+      sender_id: senderId,
+    }],
+  );
 }
