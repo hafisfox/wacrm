@@ -4,31 +4,25 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Settings,
   MessageSquare,
-  Tag,
   User,
-  Palette,
   UsersRound,
-  Coins,
+  Workflow,
 } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { WhatsAppConfig } from '@/components/settings/whatsapp-config';
 import { TemplateManager } from '@/components/settings/template-manager';
-import { TagManager } from '@/components/settings/tag-manager';
 import { ProfileForm } from '@/components/settings/profile-form';
 import { PasswordForm } from '@/components/settings/password-form';
 import { SessionsCard } from '@/components/settings/sessions-card';
-import { AppearancePanel } from '@/components/settings/appearance-panel';
 import { MembersTab } from '@/components/settings/members-tab';
-import { DealsSettings } from '@/components/settings/deals-settings';
+import { SystemHealthPanel } from '@/components/settings/system-health-panel';
 
 const TAB_VALUES = [
   'profile',
   'whatsapp',
   'templates',
-  'tags',
-  'deals',
-  'appearance',
   'members',
+  'system',
 ] as const;
 type TabValue = (typeof TAB_VALUES)[number];
 
@@ -58,8 +52,7 @@ export default function SettingsPage() {
       <div>
         <h1 className="text-2xl font-bold text-white">Settings</h1>
         <p className="text-sm text-slate-400 mt-1">
-          Manage your profile, WhatsApp® integration, message templates, and
-          tags.
+          Manage operator access, WhatsApp maintenance, and n8n health.
         </p>
       </div>
 
@@ -87,32 +80,18 @@ export default function SettingsPage() {
             Templates
           </TabsTrigger>
           <TabsTrigger
-            value="tags"
-            className="data-active:bg-slate-800 data-active:text-primary text-slate-400"
-          >
-            <Tag className="size-4" />
-            Tags
-          </TabsTrigger>
-          <TabsTrigger
-            value="deals"
-            className="data-active:bg-slate-800 data-active:text-primary text-slate-400"
-          >
-            <Coins className="size-4" />
-            Deals
-          </TabsTrigger>
-          <TabsTrigger
-            value="appearance"
-            className="data-active:bg-slate-800 data-active:text-primary text-slate-400"
-          >
-            <Palette className="size-4" />
-            Appearance
-          </TabsTrigger>
-          <TabsTrigger
             value="members"
             className="data-active:bg-slate-800 data-active:text-primary text-slate-400"
           >
             <UsersRound className="size-4" />
             Members
+          </TabsTrigger>
+          <TabsTrigger
+            value="system"
+            className="data-active:bg-slate-800 data-active:text-primary text-slate-400"
+          >
+            <Workflow className="size-4" />
+            System
           </TabsTrigger>
         </TabsList>
 
@@ -130,20 +109,12 @@ export default function SettingsPage() {
           <TemplateManager />
         </TabsContent>
 
-        <TabsContent value="tags">
-          <TagManager />
-        </TabsContent>
-
-        <TabsContent value="deals">
-          <DealsSettings />
-        </TabsContent>
-
-        <TabsContent value="appearance">
-          <AppearancePanel />
-        </TabsContent>
-
         <TabsContent value="members">
           <MembersTab />
+        </TabsContent>
+
+        <TabsContent value="system">
+          <SystemHealthPanel />
         </TabsContent>
       </Tabs>
     </div>

@@ -127,38 +127,9 @@ export default async function DashboardPage() {
         </Panel>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <Panel title="WhatsApp Activity" className="xl:col-span-2">
-          <ActivityList rows={data.recentActivity} />
-        </Panel>
-
-        <Panel title="Customer Pulse">
-          <div className="divide-y divide-slate-800">
-            {data.customers.map((customer) => (
-              <Link
-                key={customer.phone}
-                href="/contacts"
-                className="block py-3 transition-colors hover:bg-slate-800/40"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-white">
-                      {customer.customer_name || compactPhone(customer.phone)}
-                    </p>
-                    <p className="mt-1 truncate text-xs text-slate-500">
-                      {customer.last_customer_message || customer.profile_summary || "No recent note"}
-                    </p>
-                  </div>
-                  <span className="shrink-0 text-xs text-slate-500">
-                    {customer.last_seen_at ? formatDateTime(customer.last_seen_at) : ""}
-                  </span>
-                </div>
-              </Link>
-            ))}
-            {!data.customers.length ? <EmptyLine text="No customer profiles yet." /> : null}
-          </div>
-        </Panel>
-      </div>
+      <Panel title="WhatsApp Activity">
+        <ActivityList rows={data.recentActivity} />
+      </Panel>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <Panel title="Setup Health" className="xl:col-span-2">
@@ -172,11 +143,39 @@ export default async function DashboardPage() {
                 className="flex items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950/50 px-3 py-2"
               >
                 <span className="min-w-0 truncate text-sm text-slate-300">{workflow.name}</span>
-                <StatusBadge tone={workflow.active ? "good" : "danger"}>
-                  {workflow.active ? "active" : "off"}
-                </StatusBadge>
+                <div className="flex shrink-0 items-center gap-2">
+                  {workflow.role === "bridge" ? (
+                    <StatusBadge tone="neutral">bridge</StatusBadge>
+                  ) : null}
+                  <StatusBadge tone={workflow.active ? "good" : "danger"}>
+                    {workflow.active ? "active" : "off"}
+                  </StatusBadge>
+                </div>
               </div>
             ))}
+            <div className="border-t border-slate-800 pt-3">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Dashboard Bridge
+                </p>
+                <StatusBadge tone={data.n8n.manualSendReady ? "good" : "danger"}>
+                  {data.n8n.manualSendReady ? "ready" : "check env"}
+                </StatusBadge>
+              </div>
+              <div className="space-y-2">
+                {data.n8n.env.map((check) => (
+                  <div
+                    key={check.key}
+                    className="flex items-center justify-between gap-3 text-xs"
+                  >
+                    <span className="truncate text-slate-400">{check.label}</span>
+                    <StatusBadge tone={check.configured ? "good" : "danger"}>
+                      {check.configured ? "set" : "missing"}
+                    </StatusBadge>
+                  </div>
+                ))}
+              </div>
+            </div>
             {data.n8n.error ? (
               <p className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-200">
                 {data.n8n.error}

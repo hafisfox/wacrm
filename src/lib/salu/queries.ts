@@ -108,6 +108,13 @@ export interface SaluSyncRun {
 export interface SaluN8nWorkflow {
   name: string;
   active: boolean;
+  role: "core" | "bridge";
+}
+
+export interface SaluEnvCheck {
+  key: string;
+  configured: boolean;
+  label: string;
 }
 
 export interface SaluN8nHealth {
@@ -116,6 +123,8 @@ export interface SaluN8nHealth {
   error: string;
   activeCount: number;
   expectedCount: number;
+  manualSendReady: boolean;
+  env: SaluEnvCheck[];
   workflows: SaluN8nWorkflow[];
 }
 
@@ -125,21 +134,24 @@ export interface SaluDashboardData {
   todaySchedule: SaluBookingRow[];
   opsQueue: SaluPaymentQueueRow[];
   recentActivity: SaluActivityRow[];
-  customers: SaluCustomerRow[];
   setupHealth: SaluSetupHealth;
   syncState: SaluSyncState[];
   syncRuns: SaluSyncRun[];
   n8n: SaluN8nHealth;
 }
 
-const expectedWorkflowNames = [
-  "Salu WhatsApp - Inbound Concierge",
-  "Salu WhatsApp - Payments",
-  "Salu WhatsApp - Reminders + Owner Digest",
-  "Salu WhatsApp - Flow Options Endpoint",
-  "Salu WhatsApp - Flow Data Adapter",
-  "Salu Admin - Sheets Supabase Sync",
-  "Salu WhatsApp - Error Alerts",
+const expectedWorkflows: Array<{
+  name: string;
+  role: SaluN8nWorkflow["role"];
+}> = [
+  { name: "Salu WhatsApp - Inbound Concierge", role: "core" },
+  { name: "Salu WhatsApp - Payments", role: "core" },
+  { name: "Salu WhatsApp - Reminders + Owner Digest", role: "core" },
+  { name: "Salu WhatsApp - Flow Options Endpoint", role: "core" },
+  { name: "Salu WhatsApp - Flow Data Adapter", role: "core" },
+  { name: "Salu Admin - Sheets Supabase Sync", role: "core" },
+  { name: "Salu WhatsApp - Error Alerts", role: "core" },
+  { name: "Salu WhatsApp - Dashboard Manual Send", role: "bridge" },
 ];
 
 export async function loadSaluDashboardData(): Promise<SaluDashboardData> {
@@ -149,7 +161,6 @@ export async function loadSaluDashboardData(): Promise<SaluDashboardData> {
     todaySchedule,
     opsQueue,
     recentActivity,
-    customers,
     setupHealth,
     syncState,
     syncRuns,
@@ -160,7 +171,6 @@ export async function loadSaluDashboardData(): Promise<SaluDashboardData> {
     loadTodaySchedule(),
     loadOpsQueue(),
     loadRecentActivity(14),
-    loadCustomers(8),
     loadSetupHealth(),
     loadSyncState(),
     loadSyncRuns(),
@@ -173,7 +183,6 @@ export async function loadSaluDashboardData(): Promise<SaluDashboardData> {
     todaySchedule,
     opsQueue,
     recentActivity,
-    customers,
     setupHealth,
     syncState,
     syncRuns,
@@ -506,17 +515,60 @@ export async function loadSaluCustomersPage() {
   return { customers, metrics };
 }
 
-async function loadN8nHealth(): Promise<SaluN8nHealth> {
+function loadN8nEnvChecks(): SaluEnvCheck[] {
+  return [
+    {
+      key: "N8N_URL",
+      label: "n8n API URL",
+      configured: Boolean(process.env.N8N_URL),
+    },
+    {
+      key: "N8N_API_KEY",
+      label: "n8n API key",
+      configured: Boolean(process.env.N8N_API_KEY),
+    },
+    {
+      key: "SALU_DASHBOARD_MODE",
+      label: "n8n-owned send mode",
+      configured: process.env.SALU_DASHBOARD_MODE === "n8n-owned-whatsapp",
+    },
+    {
+      key: "SALU_N8N_MANUAL_SEND_TOKEN",
+      label: "manual-send webhook secret",
+      configured: (process.env.SALU_N8N_MANUAL_SEND_TOKEN || "").length >= 32,
+    },
+  ];
+}
+
+function inactiveExpectedWorkflows() {
+  return expectedWorkflows.map((workflow) => ({
+    ...workflow,
+    active: false,
+  }));
+}
+
+export async function loadN8nHealth(): Promise<SaluN8nHealth> {
   const base = process.env.N8N_URL?.replace(/\/$/, "");
   const apiKey = process.env.N8N_API_KEY;
+  const env = loadN8nEnvChecks();
+  const manualSendReady = env
+    .filter((check) =>
+      ["SALU_DASHBOARD_MODE", "SALU_N8N_MANUAL_SEND_TOKEN"].includes(
+        check.key,
+      ),
+    )
+    .every((check) => check.configured);
+
   if (!base || !apiKey) {
     return {
       configured: false,
       ok: false,
       error: "N8N_URL or N8N_API_KEY is not configured",
       activeCount: 0,
-      expectedCount: expectedWorkflowNames.length,
-      workflows: expectedWorkflowNames.map((name) => ({ name, active: false })),
+      expectedCount: expectedWorkflows.length,
+      manualSendReady,
+      env,
+      workflows: inactiveExpectedWorkflows(),
     };
   }
 
@@ -535,18 +587,23 @@ async function loadN8nHealth(): Promise<SaluN8nHealth> {
     };
     const rows = Array.isArray(body.data) ? body.data : [];
     const byName = new Map(rows.map((workflow) => [workflow.name, workflow]));
-    const workflows = expectedWorkflowNames.map((name) => ({
-      name,
-      active: byName.get(name)?.active === true,
+    const workflows = expectedWorkflows.map((workflow) => ({
+      ...workflow,
+      active: byName.get(workflow.name)?.active === true,
     }));
     const activeCount = workflows.filter((workflow) => workflow.active).length;
+    const ok =
+      activeCount === expectedWorkflows.length &&
+      env.every((check) => check.configured);
 
     return {
       configured: true,
-      ok: activeCount === expectedWorkflowNames.length,
+      ok,
       error: "",
       activeCount,
-      expectedCount: expectedWorkflowNames.length,
+      expectedCount: expectedWorkflows.length,
+      manualSendReady,
+      env,
       workflows,
     };
   } catch (error) {
@@ -555,8 +612,16 @@ async function loadN8nHealth(): Promise<SaluN8nHealth> {
       ok: false,
       error: error instanceof Error ? error.message : "Unable to reach n8n",
       activeCount: 0,
-      expectedCount: expectedWorkflowNames.length,
-      workflows: expectedWorkflowNames.map((name) => ({ name, active: false })),
+      expectedCount: expectedWorkflows.length,
+      manualSendReady,
+      env,
+      workflows: inactiveExpectedWorkflows(),
     };
   }
+}
+
+export async function loadSaluSystemHealth() {
+  return {
+    n8n: await loadN8nHealth(),
+  };
 }
