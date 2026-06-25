@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
 import type { Conversation, ConversationStatus } from '@/types';
@@ -268,9 +269,12 @@ function ConversationItem({
       {/* Avatar */}
       <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#2a3942] text-sm font-medium text-[#e9edef]">
         {contact?.avatar_url ? (
-          <img
+          <Image
             src={contact.avatar_url}
             alt={displayName}
+            width={48}
+            height={48}
+            unoptimized
             className="h-12 w-12 rounded-full object-cover"
           />
         ) : (

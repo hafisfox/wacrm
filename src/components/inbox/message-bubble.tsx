@@ -107,6 +107,9 @@ function MediaImage({ url, alt }: { url: string; alt: string }) {
   }
 
   return (
+    // Authenticated WhatsApp media is loaded as a blob URL, which
+    // next/image cannot optimize or proxy reliably.
+    // eslint-disable-next-line @next/next/no-img-element
     <img
       src={src ?? ''}
       alt={alt}

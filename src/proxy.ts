@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
   const saluPaths = ['/dashboard', '/inbox', '/contacts', '/settings']
   const legacyPaths = ['/pipelines', '/broadcasts', '/automations', '/flows']

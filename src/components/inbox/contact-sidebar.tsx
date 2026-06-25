@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Image from "next/image";
 import { toast } from "sonner";
 
 import { createClient } from "@/lib/supabase/client";
@@ -220,9 +221,12 @@ export function ContactSidebar({
           <div className="flex flex-col items-center text-center">
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#2a3942] text-lg font-semibold text-[#e9edef]">
               {contact.avatar_url ? (
-                <img
+                <Image
                   src={contact.avatar_url}
                   alt={displayName}
+                  width={64}
+                  height={64}
+                  unoptimized
                   className="h-16 w-16 rounded-full object-cover"
                 />
               ) : (
