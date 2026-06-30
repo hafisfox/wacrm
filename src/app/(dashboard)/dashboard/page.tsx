@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   AlertTriangle,
+  ArrowRight,
   CalendarCheck,
   CheckCircle2,
   Clock3,
@@ -29,6 +30,12 @@ import {
   formatPaise,
   formatTime,
 } from "@/lib/salu/format";
+import {
+  formatOpsAge,
+  formatOpsCountdown,
+  paymentQueueLabel,
+  paymentQueueTone,
+} from "@/lib/salu/ops";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -83,6 +90,8 @@ export default async function DashboardPage() {
         </div>
       </div>
 
+      <PriorityStrip data={data} />
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricTile
           icon={CalendarCheck}
@@ -112,12 +121,24 @@ export default async function DashboardPage() {
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
         <Panel
           title="Today Schedule"
           action={<StatusBadge tone="neutral">{formatDate(todayKey())}</StatusBadge>}
+          className="xl:col-span-2"
         >
           <BookingList bookings={data.todaySchedule} />
+        </Panel>
+
+        <Panel
+          title="Next Appointments"
+          action={<StatusBadge tone="neutral">{data.nextSchedule.length}</StatusBadge>}
+        >
+          <BookingList
+            bookings={data.nextSchedule}
+            showDate
+            emptyText="No upcoming appointments after today."
+          />
         </Panel>
 
         <Panel
@@ -130,18 +151,20 @@ export default async function DashboardPage() {
         >
           <HandoffQueue rows={data.handoffQueue} />
         </Panel>
+      </div>
 
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <Panel
           title="Deposits & Exceptions"
           action={<StatusBadge tone={data.opsQueue.length ? "warn" : "good"}>{data.opsQueue.length}</StatusBadge>}
         >
           <PaymentQueue rows={data.opsQueue} />
         </Panel>
-      </div>
 
-      <Panel title="WhatsApp Activity">
-        <ActivityList rows={data.recentActivity} />
-      </Panel>
+        <Panel title="WhatsApp Activity" className="xl:col-span-2">
+          <ActivityList rows={data.recentActivity} />
+        </Panel>
+      </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <Panel title="Setup Health" className="xl:col-span-2">
@@ -236,6 +259,95 @@ function MetricTile({
   );
 }
 
+function PriorityStrip({ data }: { data: SaluDashboardData }) {
+  const setupIssues =
+    data.setupHealth.stylists_missing_images +
+    data.setupHealth.stale_pending_holds +
+    data.setupHealth.failed_payments +
+    (data.setupHealth.active_services ? 0 : 1) +
+    (data.setupHealth.active_stylists ? 0 : 1);
+  const syncIssues =
+    data.syncRuns.filter((run) =>
+      `${run.status}`.toLowerCase().includes("error"),
+    ).length +
+    data.syncState.filter((state) => Boolean(state.last_error)).length;
+  const handoffHref = data.handoffQueue[0]?.conversation_id
+    ? `/inbox?conversation=${data.handoffQueue[0].conversation_id}`
+    : "/inbox";
+
+  const items = [
+    {
+      label: "Human queue",
+      value: data.handoffQueue.length,
+      detail: data.handoffQueue[0]
+        ? `${data.handoffQueue[0].customer_name || compactPhone(data.handoffQueue[0].phone)} · ${formatOpsAge(data.handoffQueue[0].handoff_requested_at || data.handoffQueue[0].last_message_at)}`
+        : "No active handoffs",
+      href: handoffHref,
+      tone: data.handoffQueue.length ? ("danger" as const) : ("good" as const),
+    },
+    {
+      label: "Deposit queue",
+      value: data.opsQueue.length,
+      detail: data.opsQueue[0]
+        ? `${paymentQueueLabel(data.opsQueue[0])} · ${formatOpsCountdown(data.opsQueue[0].expires_at || data.opsQueue[0].hold_expires_at) || "no expiry"}`
+        : "No payment exceptions",
+      href: "/dashboard",
+      tone: data.opsQueue.length ? ("warn" as const) : ("good" as const),
+    },
+    {
+      label: "Setup drift",
+      value: setupIssues + syncIssues,
+      detail:
+        setupIssues || syncIssues
+          ? `${setupIssues} setup, ${syncIssues} sync`
+          : "Sheets and setup look steady",
+      href: "/system-health",
+      tone: setupIssues || syncIssues ? ("warn" as const) : ("good" as const),
+    },
+    {
+      label: "Bridge",
+      value: data.n8n.activeCount,
+      detail: data.n8n.ok
+        ? "n8n and manual-send ready"
+        : `${data.n8n.activeCount}/${data.n8n.expectedCount} workflows active`,
+      href: "/system-health",
+      tone: data.n8n.ok ? ("good" as const) : ("danger" as const),
+    },
+  ];
+
+  return (
+    <section className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+      {items.map((item) => (
+        <Link
+          key={item.label}
+          href={item.href}
+          className={cn(
+            "group rounded-xl border bg-slate-900 p-4 transition-colors hover:border-primary/50 hover:bg-slate-900/80",
+            item.tone === "good" && "border-emerald-500/25",
+            item.tone === "warn" && "border-amber-500/30",
+            item.tone === "danger" && "border-red-500/30",
+          )}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                {item.label}
+              </p>
+              <p className="mt-2 text-2xl font-bold tabular-nums text-white">
+                {item.value.toLocaleString("en-IN")}
+              </p>
+              <p className="mt-1 truncate text-sm text-slate-400">
+                {item.detail}
+              </p>
+            </div>
+            <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-slate-600 transition-colors group-hover:text-primary" />
+          </div>
+        </Link>
+      ))}
+    </section>
+  );
+}
+
 function Panel({
   title,
   action,
@@ -258,16 +370,38 @@ function Panel({
   );
 }
 
-function BookingList({ bookings }: { bookings: SaluBookingRow[] }) {
-  if (!bookings.length) return <EmptyLine text="No appointments on the board for today." />;
+function BookingList({
+  bookings,
+  showDate = false,
+  emptyText = "No appointments on the board for today.",
+}: {
+  bookings: SaluBookingRow[];
+  showDate?: boolean;
+  emptyText?: string;
+}) {
+  if (!bookings.length) return <EmptyLine text={emptyText} />;
 
   return (
     <div className="divide-y divide-slate-800">
       {bookings.map((booking) => (
-        <div key={booking.booking_id} className="grid gap-3 py-3 sm:grid-cols-[88px_1fr_auto]">
+        <div
+          key={booking.booking_id}
+          className="grid gap-3 py-3 sm:grid-cols-[108px_1fr_auto]"
+        >
           <div className="flex items-center gap-2 text-sm font-semibold text-white">
             <Clock3 className="h-4 w-4 text-slate-500" />
-            {formatTime(booking.appointment_time)}
+            <span>
+              {showDate ? (
+                <>
+                  {formatDate(booking.appointment_date)}
+                  <span className="block text-xs font-normal text-slate-500">
+                    {formatTime(booking.appointment_time)}
+                  </span>
+                </>
+              ) : (
+                formatTime(booking.appointment_time)
+              )}
+            </span>
           </div>
           <div className="min-w-0">
             <p className="truncate text-sm font-medium text-white">
@@ -316,12 +450,15 @@ function HandoffQueue({ rows }: { rows: SaluHandoffRow[] }) {
               </p>
             </div>
             <StatusBadge tone={row.unread_count ? "warn" : "neutral"}>
-              {row.unread_count ? `${row.unread_count} unread` : row.handoff_state}
+              {row.unread_count
+                ? `${row.unread_count} unread`
+                : formatOpsAge(row.handoff_requested_at || row.last_message_at)}
             </StatusBadge>
           </div>
           <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
             <span>{compactPhone(row.phone)}</span>
             <span>{row.handoff_category || "handoff"}</span>
+            {row.handoff_reason ? <span>{row.handoff_reason}</span> : null}
             {row.handoff_requested_at ? (
               <span>{formatDateTime(row.handoff_requested_at)}</span>
             ) : null}
@@ -350,10 +487,10 @@ function PaymentQueue({ rows }: { rows: SaluPaymentQueueRow[] }) {
               </p>
             </div>
             <div className="flex flex-wrap gap-2 sm:justify-end">
-              <StatusBadge tone={issueTone(row.status, row.payment_status)}>
-                {row.status}
+              <StatusBadge tone={paymentQueueTone(row)}>
+                {paymentQueueLabel(row)}
               </StatusBadge>
-              <StatusBadge tone={issueTone(row.payment_status_row || row.payment_status, "")}>
+              <StatusBadge tone={paymentQueueTone(row)}>
                 {row.payment_status_row || row.payment_status || "payment"}
               </StatusBadge>
             </div>
@@ -361,9 +498,36 @@ function PaymentQueue({ rows }: { rows: SaluPaymentQueueRow[] }) {
           <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500">
             <span>{formatPaise(row.amount_paise)} deposit</span>
             {row.expires_at || row.hold_expires_at ? (
-              <span>expires {formatDateTime(row.expires_at || row.hold_expires_at)}</span>
+              <span>
+                {formatOpsCountdown(row.expires_at || row.hold_expires_at)} ·{" "}
+                {formatDateTime(row.expires_at || row.hold_expires_at)}
+              </span>
             ) : null}
             {row.reference_id ? <span>ref {row.reference_id}</span> : null}
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {row.conversation_id ? (
+              <Button
+                size="sm"
+                variant="outline"
+                render={<Link href={`/inbox?conversation=${row.conversation_id}`} />}
+              >
+                <MessageSquareText className="h-3.5 w-3.5" />
+                Open chat
+              </Button>
+            ) : null}
+            {row.payment_link ? (
+              <Button
+                size="sm"
+                variant="outline"
+                render={
+                  <a href={row.payment_link} target="_blank" rel="noreferrer" />
+                }
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                Payment link
+              </Button>
+            ) : null}
           </div>
         </div>
       ))}
@@ -378,7 +542,10 @@ function ActivityList({ rows }: { rows: SaluActivityRow[] }) {
     <div className="divide-y divide-slate-800">
       {rows.map((row) => (
         <div key={row.event_id} className="grid gap-3 py-3 sm:grid-cols-[160px_1fr_auto]">
-          <div className="text-xs text-slate-500">{formatDateTime(row.created_at)}</div>
+          <div className="text-xs text-slate-500">
+            <span className="block text-slate-400">{formatOpsAge(row.created_at)}</span>
+            <span>{formatDateTime(row.created_at)}</span>
+          </div>
           <div className="min-w-0">
             <p className="truncate text-sm text-white">
               {row.raw_text || row.summary || row.intent || row.event_type}
@@ -521,13 +688,6 @@ function StatusBadge({
 
 function EmptyLine({ text }: { text: string }) {
   return <p className="py-4 text-sm text-slate-500">{text}</p>;
-}
-
-function issueTone(status: string, paymentStatus: string) {
-  const combined = `${status} ${paymentStatus}`.toLowerCase();
-  if (combined.includes("refund") || combined.includes("failed")) return "danger";
-  if (combined.includes("pending") || combined.includes("expired")) return "warn";
-  return "neutral";
 }
 
 function todayKey() {

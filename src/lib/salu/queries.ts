@@ -48,6 +48,7 @@ export interface SaluPaymentQueueRow extends SaluBookingRow {
   payment_status_row: string;
   amount_paise: number;
   expires_at: string;
+  conversation_id: string;
 }
 
 export interface SaluActivityRow {
@@ -147,6 +148,7 @@ export interface SaluDashboardData {
   config: SaluConfig | null;
   metrics: SaluMetrics;
   todaySchedule: SaluBookingRow[];
+  nextSchedule: SaluBookingRow[];
   opsQueue: SaluPaymentQueueRow[];
   handoffQueue: SaluHandoffRow[];
   recentActivity: SaluActivityRow[];
@@ -175,6 +177,7 @@ export async function loadSaluDashboardData(): Promise<SaluDashboardData> {
     config,
     metrics,
     todaySchedule,
+    nextSchedule,
     opsQueue,
     handoffQueue,
     recentActivity,
@@ -186,6 +189,7 @@ export async function loadSaluDashboardData(): Promise<SaluDashboardData> {
     loadConfig(),
     loadMetrics(),
     loadTodaySchedule(),
+    loadNextSchedule(),
     loadOpsQueue(),
     loadHandoffQueue(),
     loadRecentActivity(14),
@@ -199,6 +203,7 @@ export async function loadSaluDashboardData(): Promise<SaluDashboardData> {
     config,
     metrics,
     todaySchedule,
+    nextSchedule,
     opsQueue,
     handoffQueue,
     recentActivity,
@@ -321,6 +326,37 @@ async function loadTodaySchedule() {
   );
 }
 
+async function loadNextSchedule() {
+  return saluQuery<SaluBookingRow>(
+    `
+      select
+        booking_id,
+        phone,
+        customer_name,
+        service_labels,
+        service_label,
+        service_assignments_summary,
+        stylist_names,
+        stylist_name,
+        appointment_date::text,
+        to_char(appointment_time, 'HH24:MI') as appointment_time,
+        status,
+        payment_status,
+        total_paise,
+        deposit_paise,
+        coalesce(hold_expires_at::text, '') as hold_expires_at,
+        created_at::text
+      from salu.bookings
+      where starts_at >= now()
+        and appointment_date > (now() at time zone $1)::date
+        and status in ('pending', 'confirmed')
+      order by starts_at asc
+      limit 8
+    `,
+    [TZ],
+  );
+}
+
 async function loadOpsQueue() {
   return saluQuery<SaluPaymentQueueRow>(
     `
@@ -346,7 +382,15 @@ async function loadOpsQueue() {
         coalesce(p.gateway_payment_link_id, '') as gateway_payment_link_id,
         coalesce(p.status, '') as payment_status_row,
         coalesce(p.amount_paise, b.deposit_paise, 0) as amount_paise,
-        coalesce(p.expires_at::text, '') as expires_at
+        coalesce(p.expires_at::text, '') as expires_at,
+        coalesce((
+          select conv.id::text
+          from public.contacts c
+          join public.conversations conv on conv.contact_id = c.id
+          where c.phone_normalized = regexp_replace(b.phone, '\\D', '', 'g')
+          order by conv.updated_at desc nulls last, conv.created_at desc
+          limit 1
+        ), '') as conversation_id
       from salu.bookings b
       left join salu.payments p
         on p.reference_id = b.payment_reference_id
@@ -689,7 +733,17 @@ export async function loadN8nHealth(): Promise<SaluN8nHealth> {
 }
 
 export async function loadSaluSystemHealth() {
+  const [n8n, setupHealth, syncState, syncRuns] = await Promise.all([
+    loadN8nHealth(),
+    loadSetupHealth(),
+    loadSyncState(),
+    loadSyncRuns(),
+  ]);
+
   return {
-    n8n: await loadN8nHealth(),
+    n8n,
+    setupHealth,
+    syncState,
+    syncRuns,
   };
 }

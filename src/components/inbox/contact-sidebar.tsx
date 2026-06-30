@@ -18,13 +18,17 @@ import {
   Plus,
   CalendarClock,
   CreditCard,
+  ExternalLink,
+  History,
   Loader2,
   PauseCircle,
   PlayCircle,
+  ReceiptText,
   Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { formatOpsAge, formatOpsCountdown } from "@/lib/salu/ops";
 import { format } from "date-fns";
 
 interface ContactSidebarProps {
@@ -67,6 +71,7 @@ export function ContactSidebar({
 }: ContactSidebarProps) {
   const { accountId } = useAuth();
   const [copied, setCopied] = useState(false);
+  const [copiedPayment, setCopiedPayment] = useState(false);
   const [notes, setNotes] = useState<ContactNote[]>([]);
   const [newNote, setNewNote] = useState("");
   const [addingNote, setAddingNote] = useState(false);
@@ -138,6 +143,14 @@ export function ContactSidebar({
     // React Compiler's inference agrees with the manual dep list —
     // fixes the `preserve-manual-memoization` lint error.
   }, [contact]);
+
+  const handleCopyPaymentLink = useCallback(async () => {
+    const link = saluDetails?.pending_payment?.payment_link;
+    if (!link) return;
+    await navigator.clipboard.writeText(link);
+    setCopiedPayment(true);
+    setTimeout(() => setCopiedPayment(false), 2000);
+  }, [saluDetails?.pending_payment?.payment_link]);
 
   const handleAddNote = useCallback(async () => {
     if (!contact || !newNote.trim()) return;
@@ -212,6 +225,17 @@ export function ContactSidebar({
   const pendingPayment = saluDetails?.pending_payment ?? null;
   const profile = saluDetails?.profile ?? null;
   const session = saluDetails?.session ?? null;
+  const recentBookings =
+    saluDetails?.bookings
+      ?.filter((booking) => booking.booking_id !== activeBooking?.booking_id)
+      .slice(0, 3) ?? [];
+  const recentPayments =
+    saluDetails?.payments
+      ?.filter(
+        (payment) => payment.reference_id !== pendingPayment?.reference_id,
+      )
+      .slice(0, 3) ?? [];
+  const whatsappHref = `https://wa.me/${contact.phone.replace(/\D/g, "")}`;
 
   return (
     <div className="flex h-full w-80 flex-col border-l border-[#233138] bg-[#111b21]">
@@ -308,6 +332,36 @@ export function ContactSidebar({
                 {humanMode ? "Resume bot" : "Pause bot"}
               </Button>
 
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  render={
+                    <a href={whatsappHref} target="_blank" rel="noreferrer" />
+                  }
+                  className="border-[#2a3942] bg-[#202c33] text-[#e9edef] hover:bg-[#2a3942]"
+                >
+                  <ExternalLink className="mr-1 h-3.5 w-3.5" />
+                  WhatsApp
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={!pendingPayment?.payment_link}
+                  onClick={handleCopyPaymentLink}
+                  className="border-[#2a3942] bg-[#202c33] text-[#e9edef] hover:bg-[#2a3942]"
+                >
+                  {copiedPayment ? (
+                    <Check className="mr-1 h-3.5 w-3.5 text-[#00a884]" />
+                  ) : (
+                    <Copy className="mr-1 h-3.5 w-3.5" />
+                  )}
+                  Pay link
+                </Button>
+              </div>
+
               {saluLoading ? (
                 <div className="flex items-center gap-2 rounded-lg bg-[#202c33] px-3 py-3 text-xs text-[#8696a0]">
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -315,6 +369,35 @@ export function ContactSidebar({
                 </div>
               ) : (
                 <>
+                  {(humanMode ||
+                    session?.handoff_reason ||
+                    session?.handoff_category) ? (
+                    <div className="rounded-lg border border-amber-400/20 bg-amber-400/10 px-3 py-3">
+                      <div className="flex items-center gap-2 text-xs font-medium text-amber-100">
+                        <PauseCircle className="h-3.5 w-3.5" />
+                        Handoff
+                      </div>
+                      <div className="mt-2 space-y-1 text-xs text-amber-100/90">
+                        <p>
+                          {session?.handoff_reason ||
+                            (humanMode
+                              ? "Bot is paused for human handling."
+                              : "Recently handled by a human.")}
+                        </p>
+                        {session?.handoff_category ? (
+                          <p className="text-amber-100/70">
+                            {session.handoff_category}
+                          </p>
+                        ) : null}
+                        {session?.handoff_started_at ? (
+                          <p className="text-amber-100/70">
+                            Started {formatOpsAge(session.handoff_started_at)}
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : null}
+
                   <div className="rounded-lg bg-[#202c33] px-3 py-3">
                     <div className="flex items-center gap-2 text-xs font-medium text-[#aebac1]">
                       <CalendarClock className="h-3.5 w-3.5" />
@@ -328,9 +411,24 @@ export function ContactSidebar({
                         <p className="text-[#d1d7db]">
                           {activeBooking.appointment_date} at {activeBooking.appointment_time}
                         </p>
+                        {(activeBooking.stylist_names ||
+                          activeBooking.stylist_name) ? (
+                          <p className="text-[#8696a0]">
+                            With{" "}
+                            {activeBooking.stylist_names ||
+                              activeBooking.stylist_name}
+                          </p>
+                        ) : null}
                         <p className="text-[#8696a0]">
-                          {activeBooking.status} · {activeBooking.payment_status || "payment"}
+                          {activeBooking.status} ·{" "}
+                          {activeBooking.payment_status || "payment"} ·{" "}
+                          {formatMoney(activeBooking.total_paise)}
                         </p>
+                        {activeBooking.hold_expires_at ? (
+                          <p className="text-amber-200">
+                            Hold {formatOpsCountdown(activeBooking.hold_expires_at)}
+                          </p>
+                        ) : null}
                       </div>
                     ) : (
                       <p className="mt-2 text-xs text-[#8696a0]">
@@ -354,9 +452,20 @@ export function ContactSidebar({
                         </p>
                         <p className="text-[#8696a0]">
                           {pendingPayment.expires_at
-                            ? `Expires ${formatMaybeDate(pendingPayment.expires_at)}`
+                            ? `${formatOpsCountdown(pendingPayment.expires_at)} · ${formatMaybeDate(pendingPayment.expires_at)}`
                             : pendingPayment.status}
                         </p>
+                        {pendingPayment.payment_link ? (
+                          <a
+                            href={pendingPayment.payment_link}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 text-[#00a884] hover:text-[#06cf9c]"
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                            Open payment link
+                          </a>
+                        ) : null}
                       </div>
                     ) : (
                       <p className="mt-2 text-xs text-[#8696a0]">
@@ -386,6 +495,48 @@ export function ContactSidebar({
                       ) : null}
                     </div>
                   </div>
+
+                  {(recentBookings.length || recentPayments.length) ? (
+                    <div className="rounded-lg bg-[#202c33] px-3 py-3">
+                      <div className="flex items-center gap-2 text-xs font-medium text-[#aebac1]">
+                        <History className="h-3.5 w-3.5" />
+                        Recent History
+                      </div>
+                      <div className="mt-2 space-y-2 text-xs">
+                        {recentBookings.map((booking) => (
+                          <div
+                            key={booking.booking_id}
+                            className="rounded-md bg-[#111b21] px-2 py-2"
+                          >
+                            <p className="truncate font-medium text-[#e9edef]">
+                              {booking.service_assignments_summary ||
+                                booking.service_labels ||
+                                booking.service_label ||
+                                "Booking"}
+                            </p>
+                            <p className="mt-0.5 text-[#8696a0]">
+                              {booking.appointment_date} at{" "}
+                              {booking.appointment_time} · {booking.status}
+                            </p>
+                          </div>
+                        ))}
+                        {recentPayments.map((payment) => (
+                          <div
+                            key={payment.reference_id}
+                            className="rounded-md bg-[#111b21] px-2 py-2"
+                          >
+                            <div className="flex items-center gap-2 font-medium text-[#e9edef]">
+                              <ReceiptText className="h-3.5 w-3.5 text-[#8696a0]" />
+                              {formatMoney(payment.amount_paise)}
+                            </div>
+                            <p className="mt-0.5 truncate text-[#8696a0]">
+                              {payment.status} · {payment.reference_id}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
                 </>
               )}
             </div>
