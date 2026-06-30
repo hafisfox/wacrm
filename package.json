@@ -30,6 +30,7 @@
     "setup:salu-env": "node scripts/sync-salu-env.mjs",
     "setup:salu-db": "node scripts/apply-wacrm-migrations.mjs",
     "check:salu-setup": "node scripts/check-salu-setup.mjs",
+    "sync:vercel-env": "node scripts/sync-vercel-env.mjs",
     "test:watch": "vitest"
   },
   "dependencies": {
