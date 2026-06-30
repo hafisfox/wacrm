@@ -31,12 +31,8 @@
 //
 // Use it like:
 //
-//   <GatedButton
-//     canAct={canCreate}
-//     gateReason="create broadcasts"
-//     onClick={() => router.push("/broadcasts/new")}
-//   >
-//     <Plus className="h-4 w-4" /> New Broadcast
+//   <GatedButton canAct={canSend} gateReason="send messages">
+//     <Send className="h-4 w-4" /> Send
 //   </GatedButton>
 //
 // `canAct` defaults to true so unrelated usages still work.
@@ -57,8 +53,8 @@ interface GatedButtonProps extends Omit<ComponentProps<typeof Button>, "title"> 
   canAct?: boolean;
   /** Verb phrase that completes the sentence
    *  `"Read-only — your role can't <gateReason>"`. Provided
-   *  per-call so each CTA can name what it does ("create flows",
-   *  "send messages", "add contacts"). */
+   *  per-call so each CTA can name what it does ("send messages",
+   *  "pause the bot", "invite teammates"). */
   gateReason?: string;
   /** Optional fallback title for the non-gated case. */
   title?: string;

@@ -82,8 +82,8 @@ const nextConfig: NextConfig = {
    *     chunk-hash drift self-heals within ~5 min with no user-
    *     visible latency.
    *
-   *   Note: dynamic dashboard routes (/inbox, /contacts, /pipelines,
-   *   /broadcasts, etc.) are server-rendered per request — Next.js
+   *   Note: dynamic dashboard routes (/inbox, /contacts, /settings,
+   *   /system-health, etc.) are server-rendered per request — Next.js
    *   and Supabase auth already prevent them from being served
    *   from a shared cache. The s-maxage here is a ceiling; Next.js
    *   and auth middleware still set `private` / `no-store` for

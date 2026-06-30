@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
-  const saluPaths = ['/dashboard', '/inbox', '/contacts', '/settings']
+  const saluPaths = ['/dashboard', '/inbox', '/contacts', '/settings', '/system-health']
   const legacyPaths = ['/pipelines', '/broadcasts', '/automations', '/flows']
   const isLegacyPath = legacyPaths.some(path =>
     request.nextUrl.pathname.startsWith(path),

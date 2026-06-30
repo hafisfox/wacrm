@@ -76,6 +76,21 @@ export interface SaluCustomerRow {
   last_seen_at: string;
   bookings_count: number;
   next_booking_at: string;
+  conversation_id: string;
+  human_mode: boolean;
+}
+
+export interface SaluHandoffRow {
+  conversation_id: string;
+  phone: string;
+  customer_name: string;
+  last_message_text: string;
+  last_message_at: string;
+  unread_count: number;
+  handoff_state: string;
+  handoff_reason: string;
+  handoff_category: string;
+  handoff_requested_at: string;
 }
 
 export interface SaluSetupHealth {
@@ -133,6 +148,7 @@ export interface SaluDashboardData {
   metrics: SaluMetrics;
   todaySchedule: SaluBookingRow[];
   opsQueue: SaluPaymentQueueRow[];
+  handoffQueue: SaluHandoffRow[];
   recentActivity: SaluActivityRow[];
   setupHealth: SaluSetupHealth;
   syncState: SaluSyncState[];
@@ -160,6 +176,7 @@ export async function loadSaluDashboardData(): Promise<SaluDashboardData> {
     metrics,
     todaySchedule,
     opsQueue,
+    handoffQueue,
     recentActivity,
     setupHealth,
     syncState,
@@ -170,6 +187,7 @@ export async function loadSaluDashboardData(): Promise<SaluDashboardData> {
     loadMetrics(),
     loadTodaySchedule(),
     loadOpsQueue(),
+    loadHandoffQueue(),
     loadRecentActivity(14),
     loadSetupHealth(),
     loadSyncState(),
@@ -182,6 +200,7 @@ export async function loadSaluDashboardData(): Promise<SaluDashboardData> {
     metrics,
     todaySchedule,
     opsQueue,
+    handoffQueue,
     recentActivity,
     setupHealth,
     syncState,
@@ -348,6 +367,32 @@ async function loadOpsQueue() {
   );
 }
 
+async function loadHandoffQueue() {
+  return saluQuery<SaluHandoffRow>(
+    `
+      select
+        conv.id::text as conversation_id,
+        coalesce(c.phone, '') as phone,
+        coalesce(c.name, '') as customer_name,
+        coalesce(conv.last_message_text, '') as last_message_text,
+        coalesce(conv.last_message_at::text, '') as last_message_at,
+        coalesce(conv.unread_count, 0)::int as unread_count,
+        coalesce(conv.handoff_state, 'none') as handoff_state,
+        coalesce(conv.handoff_reason, '') as handoff_reason,
+        coalesce(conv.handoff_category, '') as handoff_category,
+        coalesce(conv.handoff_requested_at::text, '') as handoff_requested_at
+      from public.conversations conv
+      join public.contacts c on c.id = conv.contact_id
+      where conv.bot_paused
+         or conv.handoff_state in ('requested', 'active')
+      order by
+        case when conv.handoff_priority = 'urgent' then 0 else 1 end,
+        coalesce(conv.handoff_requested_at, conv.last_message_at, conv.updated_at) desc
+      limit 10
+    `,
+  );
+}
+
 async function loadRecentActivity(limit: number) {
   return saluQuery<SaluActivityRow>(
     `
@@ -384,13 +429,36 @@ export async function loadCustomers(limit = 50) {
         cp.last_intent,
         cp.last_customer_message,
         coalesce(cp.last_seen_at::text, '') as last_seen_at,
-        count(b.booking_id)::int as bookings_count,
+        count(distinct b.booking_id)::int as bookings_count,
         coalesce(min(b.starts_at) filter (
           where b.status in ('pending', 'confirmed') and b.starts_at >= now()
-        )::text, '') as next_booking_at
+        )::text, '') as next_booking_at,
+        coalesce((
+          array_agg(conv.id::text order by conv.updated_at desc)
+          filter (where conv.id is not null)
+        )[1], '') as conversation_id,
+        coalesce(bool_or(coalesce(cs.human_mode, false)), false) as human_mode
       from salu.customer_profiles cp
       left join salu.bookings b on b.phone = cp.phone
-      group by cp.phone
+      left join salu.customer_sessions cs
+        on regexp_replace(cs.phone, '\\D', '', 'g') = regexp_replace(cp.phone, '\\D', '', 'g')
+      left join public.contacts c
+        on c.phone_normalized = regexp_replace(cp.phone, '\\D', '', 'g')
+      left join public.conversations conv
+        on conv.contact_id = c.id
+      group by
+        cp.phone,
+        cp.customer_name,
+        cp.profile_summary,
+        cp.preferred_services_summary,
+        cp.preferred_stylist_name,
+        cp.active_booking_id,
+        cp.pending_booking_id,
+        cp.pending_payment_reference_id,
+        cp.last_intent,
+        cp.last_customer_message,
+        cp.last_seen_at,
+        cp.updated_at
       order by cp.last_seen_at desc nulls last, cp.updated_at desc
       limit $1
     `,

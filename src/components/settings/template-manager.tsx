@@ -119,7 +119,7 @@ function emptyButton(type: TemplateButton['type']): TemplateButton {
 
 export function TemplateManager() {
   const supabase = createClient();
-  const { user, loading: authLoading } = useAuth();
+  const { user, accountId, loading: authLoading, profileLoading } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [templates, setTemplates] = useState<MessageTemplate[]>([]);
@@ -165,22 +165,22 @@ export function TemplateManager() {
   }, [bodyVarCount]);
 
   useEffect(() => {
-    if (authLoading) return;
-    if (!user) {
+    if (authLoading || profileLoading) return;
+    if (!user || !accountId) {
       setLoading(false);
       return;
     }
-    fetchTemplates(user.id);
+    fetchTemplates(accountId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, user?.id]);
+  }, [accountId, authLoading, profileLoading, user?.id]);
 
-  async function fetchTemplates(userId: string) {
+  async function fetchTemplates(acctId: string) {
     try {
       setLoading(true);
       const { data, error } = await supabase
         .from('message_templates')
         .select('*')
-        .eq('user_id', userId)
+        .eq('account_id', acctId)
         .order('created_at', { ascending: false });
       if (error) throw error;
       setTemplates(data || []);
@@ -267,7 +267,7 @@ export function TemplateManager() {
       }
       // Refresh first, then close — re-opening the dialog
       // immediately should not show a stale list.
-      if (user) await fetchTemplates(user.id);
+      if (accountId) await fetchTemplates(accountId);
       toast.success(
         data.dry_run
           ? isEdit
@@ -289,7 +289,7 @@ export function TemplateManager() {
   }
 
   async function handleSyncFromMeta() {
-    if (!user) return;
+    if (!user || !accountId) return;
     setSyncing(true);
     try {
       const res = await fetch('/api/whatsapp/templates/sync', { method: 'POST' });
@@ -321,7 +321,7 @@ export function TemplateManager() {
           { duration: 10000 },
         );
       }
-      await fetchTemplates(user.id);
+      await fetchTemplates(accountId);
     } catch (err) {
       console.error('Template sync error:', err);
       toast.error(err instanceof Error ? err.message : 'Failed to sync templates');
@@ -620,7 +620,7 @@ export function TemplateManager() {
             <DialogDescription className="text-slate-400">
               {editingId
                 ? 'Save your changes to re-submit to Meta. Status will flip back to PENDING during review.'
-                : 'Build a template and submit it to Meta for approval. Once approved, you can use it in broadcasts and the inbox.'}
+            : 'Build a template and submit it to Meta for approval. Once approved, agents can use it in the inbox when the WhatsApp session has expired.'}
             </DialogDescription>
           </DialogHeader>
 
@@ -1035,8 +1035,8 @@ export function TemplateManager() {
             <DialogTitle className="text-white">Delete template?</DialogTitle>
             <DialogDescription className="text-slate-400">
               {templateToDelete?.meta_template_id
-                ? `"${templateToDelete?.name}" will be deleted from Meta and from wacrm. Active broadcasts using this template will start failing on their next send. This can't be undone.`
-                : `"${templateToDelete?.name}" will be deleted from wacrm. It was never submitted to Meta, so no remote cleanup is needed.`}
+                ? `"${templateToDelete?.name}" will be deleted from Meta and from the Salu dashboard. Approved template sends using it will stop working. This can't be undone.`
+                : `"${templateToDelete?.name}" will be deleted from the Salu dashboard. It was never submitted to Meta, so no remote cleanup is needed.`}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="bg-slate-900 border-slate-700">

@@ -17,6 +17,7 @@ import {
   UserCog,
   Users,
   UsersRound,
+  Workflow,
   X,
 } from "lucide-react";
 import type { AccountRole } from "@/lib/auth/roles";
@@ -89,6 +90,7 @@ const navItems: NavItem[] = [
 ];
 
 const bottomNavItems = [
+  { href: "/system-health", label: "System Health", icon: Workflow },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 

@@ -94,13 +94,12 @@ describe("rateLimitResponse", () => {
 });
 
 describe("RATE_LIMITS presets", () => {
-  it("send and broadcast budgets are independent", async () => {
+  it("keeps the live reply budget comfortable for human operators", async () => {
     __resetRateLimitForTests();
     // Importing here so the presets stay close to their assertions.
     const { RATE_LIMITS } = await import("./rate-limit");
-    expect(RATE_LIMITS.send.limit).toBeGreaterThan(RATE_LIMITS.broadcast.limit);
+    expect(RATE_LIMITS.send.limit).toBe(60);
     expect(RATE_LIMITS.send.windowMs).toBe(60_000);
-    expect(RATE_LIMITS.broadcast.windowMs).toBe(60_000);
   });
 });
 

@@ -3,10 +3,12 @@ import type { Message } from '@/types';
 const INTERNAL_BOOKING_REFERENCE = /^(?:salu|bk)_\d+_[a-z0-9]+$/i;
 
 export function humanizeSaluTranscriptText(
-  value: string | undefined,
-  interactiveReplyId?: string
+  value: string | null | undefined,
+  interactiveReplyId?: string | null
 ): string | undefined {
-  if (!value || !INTERNAL_BOOKING_REFERENCE.test(value.trim())) return value;
+  if (!value || !INTERNAL_BOOKING_REFERENCE.test(value.trim())) {
+    return value ?? undefined;
+  }
 
   if (interactiveReplyId === 'cancel' || value.startsWith('bk_')) {
     return 'Cancellation request submitted';

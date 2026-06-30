@@ -13,7 +13,7 @@ describe('Salu human handoff contracts', () => {
 
     expect(pause).toBeGreaterThan(-1);
     expect(send).toBeGreaterThan(pause);
-    expect(route).toContain("{ error: 'Could not pause automation. The message was not sent.' }");
+    expect(route).toContain("{ error: 'Could not pause the bot. The message was not sent.' }");
     expect(route).toContain('{ status: 503 }');
     expect(route).toContain('await logSaluAgentMessage({');
   });

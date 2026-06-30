@@ -56,9 +56,9 @@ const EXPIRY_OPTIONS: { value: string; label: string }[] = [
 
 const ROLE_DESCRIPTIONS: Record<InviteRole, string> = {
   admin:
-    'Can invite teammates, manage settings, send messages, and edit data.',
+    'Can invite teammates, manage Salu settings, send messages, and handle customers.',
   agent:
-    'Can use the inbox, contacts, broadcasts, automations, and flows. No settings or member access.',
+    'Can use the inbox, customers view, bot handoff controls, and notes. No settings or member access.',
   viewer: 'Read-only access across every page. Cannot send or edit anything.',
 };
 
@@ -140,7 +140,7 @@ export function InviteMemberDialog({
         // string if `account` hasn't loaded yet (shouldn't happen
         // — the dialog requires admin+ which requires a loaded
         // profile — but stay safe).
-        accountName: account?.name ?? 'our wacrm account',
+        accountName: account?.name ?? 'Salu WhatsApp',
       });
       onCreated();
     } catch (err) {
@@ -167,10 +167,10 @@ export function InviteMemberDialog({
   function whatsappShareUrl(url: string): string {
     // Include the account name so the recipient knows which team
     // they're being invited to before clicking through. This matters
-    // for users in multi-team contexts where "our wacrm account"
+    // for users in multi-team contexts where "Salu WhatsApp"
     // wouldn't be enough to disambiguate.
-    const accountName = result?.accountName ?? 'our wacrm account';
-    const message = `Join ${accountName} on wacrm using this link (valid for ${result?.expiresInDays} days): ${url}`;
+    const accountName = result?.accountName ?? 'Salu WhatsApp';
+    const message = `Join ${accountName} on the Salu WhatsApp dashboard using this link (valid for ${result?.expiresInDays} days): ${url}`;
     return `https://wa.me/?text=${encodeURIComponent(message)}`;
   }
 
@@ -239,8 +239,8 @@ export function InviteMemberDialog({
               </div>
 
               {/* Anchor styled with `buttonVariants` rather than wrapping
-                  in <Button asChild>. The wacrm Button is the Base UI
-                  ButtonPrimitive — it has no Radix-style asChild slot.
+                  in <Button asChild>. This Button is the Base UI
+                  ButtonPrimitive, so it has no Radix-style asChild slot.
                   Direct anchor preserves right-click "Open in new tab"
                   behaviour too. */}
               <a

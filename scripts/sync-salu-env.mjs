@@ -49,11 +49,6 @@ const values = {
   ),
   NEXT_PUBLIC_SITE_URL: first(existing.NEXT_PUBLIC_SITE_URL, 'http://localhost:3000'),
   ENCRYPTION_KEY: encryptionKey(),
-  META_APP_SECRET: first(
-    existing.META_APP_SECRET,
-    rootEnv.META_APP_SECRET,
-    'n8n-owns-salu-whatsapp-webhook',
-  ),
   SALU_DASHBOARD_MODE: 'n8n-owned-whatsapp',
 };
 

@@ -21,6 +21,7 @@ import {
   Clock,
   ArrowLeft,
   RefreshCw,
+  PanelRightOpen,
 } from 'lucide-react';
 import { format, isToday, isYesterday, differenceInMinutes } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
@@ -88,6 +89,8 @@ interface MessageThreadProps {
   onRefresh?: () => void;
   /** Called after a manual message/template send succeeds. */
   onMessageSent?: () => void;
+  /** Opens Salu customer details when the persistent sidebar is hidden. */
+  onOpenDetails?: () => void;
   /** Whether the account has direct Meta access for template sends. */
   templatesAvailable?: boolean;
   /** Whether this deployment can send normal replies through Meta or n8n. */
@@ -153,6 +156,7 @@ export function MessageThread({
   resyncToken = 0,
   onRefresh,
   onMessageSent,
+  onOpenDetails,
   templatesAvailable = true,
   sendingAvailable = true,
 }: MessageThreadProps) {
@@ -798,6 +802,18 @@ export function MessageThread({
         </div>
 
         <div className="flex items-center gap-2">
+          {onOpenDetails && (
+            <button
+              type="button"
+              onClick={onOpenDetails}
+              aria-label="Open customer details"
+              title="Customer details"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[#aebac1] transition-colors hover:bg-[#202c33] hover:text-white 2xl:hidden"
+            >
+              <PanelRightOpen className="h-3.5 w-3.5" />
+            </button>
+          )}
+
           {/* Manual refresh — forces a refetch of the messages + the
               conversation list (the parent bumps its resyncToken). Useful
               when realtime missed an event or the agent just wants to be

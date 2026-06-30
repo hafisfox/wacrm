@@ -18,6 +18,7 @@ import {
   type SaluActivityRow,
   type SaluBookingRow,
   type SaluDashboardData,
+  type SaluHandoffRow,
   type SaluPaymentQueueRow,
   loadSaluDashboardData,
 } from "@/lib/salu/queries";
@@ -58,7 +59,7 @@ export default async function DashboardPage() {
             </StatusBadge>
           </div>
           <p className="mt-1 text-sm text-slate-400">
-            WhatsApp bookings, deposits, customer memory, and automation health.
+            WhatsApp bookings, deposits, customer memory, and workflow health.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -111,7 +112,7 @@ export default async function DashboardPage() {
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <Panel
           title="Today Schedule"
           action={<StatusBadge tone="neutral">{formatDate(todayKey())}</StatusBadge>}
@@ -120,7 +121,18 @@ export default async function DashboardPage() {
         </Panel>
 
         <Panel
-          title="Attention Queue"
+          title="Human Handoffs"
+          action={
+            <StatusBadge tone={data.handoffQueue.length ? "warn" : "good"}>
+              {data.handoffQueue.length}
+            </StatusBadge>
+          }
+        >
+          <HandoffQueue rows={data.handoffQueue} />
+        </Panel>
+
+        <Panel
+          title="Deposits & Exceptions"
           action={<StatusBadge tone={data.opsQueue.length ? "warn" : "good"}>{data.opsQueue.length}</StatusBadge>}
         >
           <PaymentQueue rows={data.opsQueue} />
@@ -278,6 +290,43 @@ function BookingList({ bookings }: { bookings: SaluBookingRow[] }) {
             </StatusBadge>
           </div>
         </div>
+      ))}
+    </div>
+  );
+}
+
+function HandoffQueue({ rows }: { rows: SaluHandoffRow[] }) {
+  if (!rows.length) return <EmptyLine text="No active handoffs. The bot is carrying the queue." />;
+
+  return (
+    <div className="space-y-3">
+      {rows.map((row) => (
+        <Link
+          key={row.conversation_id}
+          href={`/inbox?conversation=${row.conversation_id}`}
+          className="block rounded-lg border border-slate-800 bg-slate-950/50 p-3 transition-colors hover:border-primary/40 hover:bg-slate-950"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-white">
+                {row.customer_name || compactPhone(row.phone)}
+              </p>
+              <p className="mt-1 line-clamp-2 text-xs text-slate-500">
+                {row.last_message_text || row.handoff_reason || "Needs human help"}
+              </p>
+            </div>
+            <StatusBadge tone={row.unread_count ? "warn" : "neutral"}>
+              {row.unread_count ? `${row.unread_count} unread` : row.handoff_state}
+            </StatusBadge>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
+            <span>{compactPhone(row.phone)}</span>
+            <span>{row.handoff_category || "handoff"}</span>
+            {row.handoff_requested_at ? (
+              <span>{formatDateTime(row.handoff_requested_at)}</span>
+            ) : null}
+          </div>
+        </Link>
       ))}
     </div>
   );

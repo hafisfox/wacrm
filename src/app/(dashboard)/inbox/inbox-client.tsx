@@ -8,6 +8,12 @@ import { ExternalLink, Workflow, WifiOff } from 'lucide-react';
 import { ContactSidebar } from '@/components/inbox/contact-sidebar';
 import { ConversationList } from '@/components/inbox/conversation-list';
 import { MessageThread } from '@/components/inbox/message-thread';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import { createClient } from '@/lib/supabase/client';
 import {
   normalizeSaluTranscriptMessage,
@@ -96,6 +102,7 @@ export function InboxClient({ n8nOwnedWhatsapp }: InboxClientProps) {
   );
   const [resyncToken, setResyncToken] = useState(0);
   const [saluDetailsToken, setSaluDetailsToken] = useState(0);
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   const activeContact = activeConversation?.contact ?? null;
   const activeConversationId = activeConversation?.id ?? null;
@@ -144,6 +151,7 @@ export function InboxClient({ n8nOwnedWhatsapp }: InboxClientProps) {
       const hydrated = normalizeConversation(conversation);
       setActiveConversation(hydrated);
       setMessages([]);
+      setDetailsOpen(false);
       const next = new URLSearchParams(searchParams.toString());
       next.set('conversation', hydrated.id);
       router.replace(`/inbox?${next.toString()}`, { scroll: false });
@@ -154,6 +162,7 @@ export function InboxClient({ n8nOwnedWhatsapp }: InboxClientProps) {
   const handleBack = useCallback(() => {
     setActiveConversation(null);
     setMessages([]);
+    setDetailsOpen(false);
     router.replace('/inbox', { scroll: false });
   }, [router]);
 
@@ -431,6 +440,7 @@ export function InboxClient({ n8nOwnedWhatsapp }: InboxClientProps) {
             onBack={handleBack}
             resyncToken={resyncToken}
             onRefresh={handleRefresh}
+            onOpenDetails={() => setDetailsOpen(true)}
             sendingAvailable={whatsappConnected === true || n8nOwnedWhatsapp}
             templatesAvailable={whatsappConnected === true}
             onMessageSent={() => {
@@ -451,6 +461,26 @@ export function InboxClient({ n8nOwnedWhatsapp }: InboxClientProps) {
           />
         </div>
       </div>
+
+      <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
+        <SheetContent
+          side="right"
+          className="w-80 max-w-[92vw] gap-0 border-[#233138] bg-[#111b21] p-0 2xl:hidden"
+        >
+          <SheetTitle className="sr-only">Customer details</SheetTitle>
+          <SheetDescription className="sr-only">
+            Salu booking, payment, memory, and bot takeover controls for the selected conversation.
+          </SheetDescription>
+          <ContactSidebar
+            contact={activeContact}
+            refreshToken={saluDetailsToken}
+            onTakeoverChange={() => {
+              setSaluDetailsToken((token) => token + 1);
+              setResyncToken((token) => token + 1);
+            }}
+          />
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

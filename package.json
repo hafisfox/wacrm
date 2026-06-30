@@ -1,28 +1,19 @@
 {
-  "name": "wacrm",
+  "name": "salu-whatsapp-dashboard",
   "version": "0.2.2",
   "private": true,
-  "description": "Self-hostable CRM template for WhatsApp built on Next.js and Supabase — shared inbox, contacts, sales pipelines, broadcasts, and no-code automations.",
+  "description": "Salu Salon WhatsApp operations console for daily triage, shared inbox, customer memory, and Meta template maintenance.",
   "license": "MIT",
-  "author": "Arnas Donauskas",
-  "homepage": "https://github.com/ArnasDon/wacrm",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/ArnasDon/wacrm.git"
-  },
-  "bugs": {
-    "url": "https://github.com/ArnasDon/wacrm/issues"
-  },
+  "author": "Salu Salon",
   "keywords": [
-    "crm",
+    "salu",
+    "salon",
     "whatsapp",
     "whatsapp-business-api",
     "nextjs",
     "supabase",
-    "automation",
-    "broadcast",
-    "self-hosted",
-    "template"
+    "n8n",
+    "operations"
   ],
   "engines": {
     "node": ">=20.0.0"
@@ -43,13 +34,8 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
-    "@dagrejs/dagre": "^3.0.0",
-    "@dnd-kit/core": "^6.3.1",
-    "@dnd-kit/sortable": "^10.0.0",
-    "@dnd-kit/utilities": "^3.2.2",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.107.0",
-    "@xyflow/react": "^12.11.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",
@@ -58,7 +44,6 @@
     "pg": "^8.21.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "recharts": "^3.8.1",
     "shadcn": "^4.10.0",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.6.0",

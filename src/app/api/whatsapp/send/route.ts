@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { sendTextMessage, sendTemplateMessage } from '@/lib/whatsapp/meta-api'
 import { decrypt, encrypt, isLegacyFormat } from '@/lib/whatsapp/encryption'
-import { supabaseAdmin } from '@/lib/flows/admin-client'
 import {
   sanitizePhoneForMeta,
   isValidE164,
@@ -85,8 +84,7 @@ export async function POST(request: Request) {
       )
     }
 
-    // Per-user rate limit. Bucket key is scoped to this route so
-    // `/broadcast` has an independent budget.
+    // Per-user rate limit for manual agent sends.
     const limit = checkRateLimit(`send:${user.id}`, RATE_LIMITS.send)
     if (!limit.success) {
       return rateLimitResponse(limit)
@@ -329,7 +327,7 @@ export async function POST(request: Request) {
       return result.messageId
     }
 
-    // Acquire the automation pause before a human reply leaves the system.
+    // Pause the bot before a human reply leaves the system.
     // A failed pause is a hard stop: sending while the bot can still answer
     // would create two competing operators in the same conversation.
     try {
@@ -344,7 +342,7 @@ export async function POST(request: Request) {
         err instanceof Error ? err.message : err,
       )
       return NextResponse.json(
-        { error: 'Could not pause automation. The message was not sent.' },
+        { error: 'Could not pause the bot. The message was not sent.' },
         { status: 503 },
       )
     }
@@ -440,37 +438,6 @@ export async function POST(request: Request) {
         bot_paused: true,
       })
       .eq('id', conversation_id)
-
-    // Pause any active Flow run for this contact — the agent stepping
-    // in is the strongest "yield, human is here" signal. See PR #2
-    // plan for why we pause (not end): preserves diagnostic state +
-    // lets the agent or the 24h timeout sweep cleanly resolve the
-    // run later. For accounts with no active runs the UPDATE matches
-    // zero rows — cheap and harmless.
-    try {
-      const { error: pauseErr } = await supabaseAdmin()
-        .from('flow_runs')
-        .update({
-          status: 'paused_by_agent',
-          ended_at: new Date().toISOString(),
-          end_reason: 'agent_replied',
-        })
-        .eq('account_id', accountId)
-        .eq('contact_id', contact.id)
-        .eq('status', 'active')
-      if (pauseErr) {
-        // Best-effort — log + continue. The agent's message already
-        // landed at Meta; don't fail the response over a bookkeeping
-        // miss. Worst case: a stale active run gets caught by the
-        // stale-run cron sweep within 24h.
-        console.error('[flows] pause-on-agent-send failed:', pauseErr.message)
-      }
-    } catch (err) {
-      console.error(
-        '[flows] pause-on-agent-send threw:',
-        err instanceof Error ? err.message : err,
-      )
-    }
 
     // Mirror the agent message into Salu history as well. The CRM row is
     // already authoritative for the UI, so a mirror failure is recorded

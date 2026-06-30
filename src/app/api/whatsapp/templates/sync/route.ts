@@ -9,9 +9,8 @@ import type { TemplateButton, TemplateSampleValues } from '@/types'
  *
  * The local catalog stores Meta's status enum verbatim (APPROVED /
  * PENDING / REJECTED / PAUSED / DISABLED / IN_APPEAL / PENDING_DELETION)
- * so the edit / resubmit / delete flows can distinguish recoverable
- * states (PAUSED) from terminal ones (DISABLED) and so webhook events
- * land 1:1 without a translation table.
+ * so edit / resubmit / delete actions can distinguish recoverable
+ * states (PAUSED) from terminal ones (DISABLED).
  *
  * Locally-created templates (no Meta counterpart) are NOT deleted —
  * they remain visible so the user can notice drift and clean up.

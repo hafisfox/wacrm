@@ -83,9 +83,9 @@ interface AuthContextValue {
   accountRole: AccountRole | null;
   /** Lightweight account meta — id + name + default_currency. Null while loading. */
   account: AccountSummary | null;
-  /** Account default deal currency. Falls back to DEFAULT_CURRENCY
-   *  while loading or when no account is resolved, so callers can use
-   *  it unconditionally. */
+  /** Account default currency. Falls back to DEFAULT_CURRENCY while
+   *  loading or when no account is resolved, so callers can use it
+   *  unconditionally. */
   defaultCurrency: string;
   /** True if `accountRole === 'owner'`. */
   isOwner: boolean;

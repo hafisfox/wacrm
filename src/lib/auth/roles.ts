@@ -73,8 +73,8 @@ export function canManageMembers(role: AccountRole): boolean {
 
 /**
  * Owner / admin: edit account-wide settings (WhatsApp config,
- * message templates, pipelines, tags, custom fields, account
- * name). Excludes per-user settings like avatar or own password.
+ * message templates, members, account name, and system health).
+ * Excludes per-user settings like avatar or own password.
  */
 export function canEditSettings(role: AccountRole): boolean {
   return hasMinRole(role, "admin");
@@ -82,8 +82,8 @@ export function canEditSettings(role: AccountRole): boolean {
 
 /**
  * Owner / admin / agent: write operational data — send messages,
- * create contacts, move deals, run broadcasts, edit automations.
- * Viewers are read-only.
+ * pause or resume the Salu bot, and add customer notes. Viewers are
+ * read-only.
  */
 export function canSendMessages(role: AccountRole): boolean {
   return hasMinRole(role, "agent");

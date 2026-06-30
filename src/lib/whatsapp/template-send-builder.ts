@@ -97,8 +97,8 @@ function buildHeaderComponent(
   // image / video / document — Meta requires the media component on
   // every send. Prefer the caller's explicit override; fall back to
   // the template's stored sample.
-  const link = params.headerMediaUrl ?? template.header_media_url;
-  const id = params.headerMediaId ?? template.header_handle;
+  const link = params.headerMediaUrl ?? template.header_media_url ?? undefined;
+  const id = params.headerMediaId ?? template.header_handle ?? undefined;
   if (!link && !id) {
     throw new Error(
       `${headerType} header requires a media link or id at send time — set header_media_url on the template or pass headerMediaUrl/headerMediaId.`,

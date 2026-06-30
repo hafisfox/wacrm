@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { CalendarClock, CreditCard, MessageSquareText, Phone } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +16,7 @@ export default async function ContactsPage() {
         <div>
           <h1 className="text-2xl font-bold text-white">Customers</h1>
           <p className="mt-1 text-sm text-slate-400">
-            Durable WhatsApp customer memory from the Salu booking automation.
+            Durable WhatsApp customer memory from the Salu booking concierge.
           </p>
         </div>
         <div className="grid grid-cols-3 gap-2 text-center">
@@ -39,9 +40,18 @@ export default async function ContactsPage() {
               className="grid gap-3 px-4 py-4 lg:grid-cols-[1.2fr_1fr_1fr_120px] lg:items-center"
             >
               <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-white">
-                  {customer.customer_name || compactPhone(customer.phone)}
-                </p>
+                {customer.conversation_id ? (
+                  <Link
+                    href={`/inbox?conversation=${customer.conversation_id}`}
+                    className="block truncate text-sm font-medium text-white hover:text-primary"
+                  >
+                    {customer.customer_name || compactPhone(customer.phone)}
+                  </Link>
+                ) : (
+                  <p className="truncate text-sm font-medium text-white">
+                    {customer.customer_name || compactPhone(customer.phone)}
+                  </p>
+                )}
                 <a
                   href={`https://wa.me/${customer.phone.replace(/\D/g, "")}`}
                   target="_blank"
@@ -63,6 +73,14 @@ export default async function ContactsPage() {
               </div>
 
               <div className="flex flex-wrap gap-2">
+                {customer.human_mode ? (
+                  <Badge
+                    variant="outline"
+                    className="border-red-500/30 bg-red-500/10 text-red-300"
+                  >
+                    handoff
+                  </Badge>
+                ) : null}
                 {customer.pending_payment_reference_id ? (
                   <Badge
                     variant="outline"
@@ -86,10 +104,21 @@ export default async function ContactsPage() {
                     {customer.last_intent}
                   </Badge>
                 ) : null}
+                {customer.conversation_id ? (
+                  <Link
+                    href={`/inbox?conversation=${customer.conversation_id}`}
+                    className="inline-flex items-center gap-1 rounded-md border border-slate-700 bg-slate-800 px-2 py-0.5 text-xs text-slate-300 hover:border-primary/50 hover:text-white"
+                  >
+                    <MessageSquareText className="h-3 w-3" />
+                    open chat
+                  </Link>
+                ) : null}
                 {!customer.pending_payment_reference_id &&
                 !customer.pending_booking_id &&
                 !customer.active_booking_id &&
-                !customer.last_intent ? (
+                !customer.last_intent &&
+                !customer.human_mode &&
+                !customer.conversation_id ? (
                   <span className="text-sm text-slate-500">Idle</span>
                 ) : null}
               </div>
