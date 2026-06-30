@@ -17,9 +17,10 @@ export function getSaluPool() {
   if (!globalThis.saluPgPool) {
     globalThis.saluPgPool = new Pool({
       connectionString: url,
-      max: 5,
+      max: 3,
       idleTimeoutMillis: 30_000,
-      connectionTimeoutMillis: 10_000,
+      connectionTimeoutMillis: 15_000,
+      allowExitOnIdle: true,
     });
   }
 
