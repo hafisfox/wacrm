@@ -20,7 +20,7 @@ npm run check:salu-setup
 npm run dev
 ```
 
-`setup:salu-env` generates an ignored `.env.local` from the parent Salu `.env`.
+`setup:salu-env` normalizes the ignored `dashboard/.env.local` file. The dashboard does not read the parent Salu `.env`; keep dashboard Supabase, Postgres, n8n, and encryption values in `dashboard/.env.local`.
 
 `setup:salu-db` applies the additive dashboard migrations to the same Supabase database. Apply root `sql/003_salu_handoff_capture.sql` first because dashboard migration `025_salu_handoff_capture.sql` bridges those new Salu columns into the shared inbox.
 

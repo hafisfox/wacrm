@@ -1,15 +1,22 @@
 # Changelog
 
-User-visible changes in `wacrm`. Self-hosters: when pulling an update,
-check this file for any **migration required** notes and apply the
-matching SQL files from `supabase/migrations/` against your Supabase
-project before restarting the app.
+User-visible changes in the Salu WhatsApp dashboard. When pulling an update,
+check this file for any **migration required** notes and apply matching SQL
+files from `supabase/migrations/` against the Supabase project before
+restarting the app. Older entries may reference imported WACRM template
+history that this dashboard was originally built from.
 
 Versions follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Pre-1.0, `MINOR` bumps cover new modules; `PATCH` bumps cover bug fixes
 and polish.
 
 ## [Unreleased]
+
+### Changed
+
+- Updated Salu-specific setup/security/contribution docs and clarified that `dashboard/.env.local` is the canonical dashboard env file.
+
+## Imported WACRM History
 
 Multi-user accounts ship. Every wacrm install is multi-tenant on the
 database side: a single user's signup creates a fresh "account", and

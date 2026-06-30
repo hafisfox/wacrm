@@ -24,6 +24,8 @@ npm run dev
 
 Required environment values live in `.env.local.example`. Keep `SALU_DASHBOARD_MODE=n8n-owned-whatsapp` unless the production ownership model changes intentionally.
 
+`dashboard/.env.local` is the canonical local env file for this app. The dashboard setup/check scripts do not read the parent `../.env`; keep Supabase, Postgres, n8n, and encryption values in `dashboard/.env.local` and mirror the same dashboard values in Vercel.
+
 ## Verification
 
 ```bash

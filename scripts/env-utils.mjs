@@ -7,7 +7,7 @@ export function loadEnvFile(path) {
   for (const rawLine of fs.readFileSync(path, 'utf8').split(/\r?\n/)) {
     const line = rawLine.trim();
     if (!line || line.startsWith('#')) continue;
-    const match = line.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
+    const match = line.match(/^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
     if (!match) continue;
 
     let value = match[2].trim();
@@ -32,7 +32,6 @@ export function shellQuote(value) {
 export function mergedEnv() {
   return {
     ...loadEnvFile(new URL('../.env.local', import.meta.url)),
-    ...loadEnvFile(new URL('../../.env', import.meta.url)),
     ...process.env,
   };
 }

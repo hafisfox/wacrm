@@ -1,124 +1,47 @@
-# Using this template
+# Contributing
 
-This is a **template repository**, not a collaborative product. The
-expected flow is:
+This folder is the Salu Salon WhatsApp operations dashboard. It is a focused Next.js app layered on top of the live n8n-owned WhatsApp automation, not the original upstream WACRM template.
 
-1. **Fork** it to your own GitHub account or organisation.
-2. **Deploy** the fork — see [`docs/`](./docs/README.md).
-3. **Customise** your fork. Rebrand, add the features you need, remove
-   the ones you don't, swap hosting, change the schema.
+## Local Setup
 
-You **don't** need to send changes back upstream. The fact that your
-fork diverges is the whole point — the upstream is deliberately
-opinionated about stack, UX, and scope, and your fork is where those
-opinions become yours.
-
-## Fork and run
+From `dashboard/`:
 
 ```bash
-# 1. Fork on GitHub: https://github.com/ArnasDon/wacrm → Fork
-# 2. Clone your fork
-git clone https://github.com/<your-username>/wacrm.git
-cd wacrm
-
-cp .env.local.example .env.local   # fill in Supabase + Meta creds
 npm install
+npm run setup:salu-env
+npm run check:salu-setup
 npm run dev
 ```
 
-Full setup (Supabase migrations, WhatsApp Business API, deploy) lives in
-[`docs/`](./docs/README.md).
+Keep local secrets in `dashboard/.env.local`. The setup/check scripts read that file and process env only; they do not read the parent `../.env`.
 
-## Keeping your fork up to date
+## Before Changing Code
 
-Pull in upstream bug fixes and security patches periodically:
+- Read `README.md` and `SALU_DASHBOARD.md` for the current runtime shape.
+- Keep Meta's production WhatsApp webhook on n8n. Do not repoint it at this app.
+- Treat `salu.*` Postgres tables as the source of truth for bookings, payments, customer memory, and message capture.
+- Keep dashboard changes compatible with the n8n manual-send bridge protected by `SALU_N8N_MANUAL_SEND_TOKEN`.
+
+## Verification
+
+Run the narrowest useful checks while developing, and run the full set before shipping dashboard changes:
 
 ```bash
-git remote add upstream https://github.com/ArnasDon/wacrm.git  # once
-git fetch upstream
-git checkout main
-git merge upstream/main     # or: git rebase upstream/main
-# Resolve any conflicts (likely in areas you've customised), then push
-git push origin main
+npm run test
+npm run typecheck
+npm run lint
+npm run build
+npm run check:salu-setup
 ```
 
-If you've made heavy local customisations, rebasing can surface
-conflicts every time you pull. Pinning to a specific upstream tag and
-updating on your schedule is a valid alternative.
+If typecheck/build reports duplicate generated route/type files, remove the ignored `dashboard/.next` directory and rerun the command.
 
-## Reporting bugs in the upstream template
+## Database Changes
 
-If you find a bug in the upstream code — not one you introduced in your
-fork — please file it using the
-[bug report](https://github.com/ArnasDon/wacrm/issues/new?template=bug_report.yml)
-template. Including the commit SHA, the runtime (Hostinger / Vercel /
-local / other), and logs will get to a fix fastest.
+- Add dashboard-owned schema changes under `supabase/migrations/`.
+- Keep migrations additive and idempotent where practical.
+- When a dashboard migration depends on root Salu SQL, call that out in `SALU_DASHBOARD.md`.
 
-## Reporting security issues
+## Documentation
 
-**Do not file security issues publicly.** Follow the private flow in
-[SECURITY.md](./.github/SECURITY.md).
-
-## Upstream pull requests
-
-Not the primary flow, but welcome in specific cases:
-
-- **Security fixes** — always welcome, please follow SECURITY.md first
-  for disclosure.
-- **Bug fixes** that match upstream intent (crash, correctness,
-  documentation errors, typos) — land quickly.
-- **Small improvements** (accessibility, obvious UX nits) — usually
-  welcome, open an issue first to check alignment.
-
-Less likely to land:
-
-- **New features.** The template's scope is intentionally narrow. A
-  "great idea for a CRM" is often a great idea for *your* CRM — i.e.
-  your fork — but would dilute the template for the next forker.
-- **Stack changes** (different ORM, different UI kit, different auth
-  provider). These belong in a fork, not upstream.
-- **Opinionated refactors** without a concrete correctness or
-  performance motivation.
-
-If you do send a PR, the usual rules apply:
-
-- Branch off the latest `main` (don't push to a merged branch — commits
-  end up orphaned).
-- Run `npm run typecheck` and `npm run format` locally first.
-- Fill in the PR template, especially the **Test plan**.
-- One logical change per PR.
-- Commit-message first line is imperative + terse; the body explains
-  the *why*, the diff shows the *what*.
-
-Expect a review within a few days. PRs opened without an issue may be
-closed — open the issue first to align.
-
-## If you maintain a public fork
-
-- Rebrand. The "CRM Template for WhatsApp" name, favicon, and
-  `wacrm.tech` URL belong to the upstream project; please swap them
-  for your own before putting your deployment in front of users.
-- Keep the MIT [`LICENSE`](./LICENSE) file — that's how the template's
-  permissions travel with the code. Attribution in a `README` section
-  is appreciated but not required.
-- You are free to re-license additions to your fork however you like.
-
-## Dev-loop reference
-
-Even if you never send a PR upstream, these are the scripts you'll use
-in your fork:
-
-| Command | What it does |
-| --- | --- |
-| `npm run dev` | Turbopack dev server on port 3000. |
-| `npm run build` | Production build. Next also runs its own typecheck here. |
-| `npm run typecheck` | `tsc --noEmit`. Fast TS-only pass. |
-| `npm run lint` | ESLint. |
-| `npm run format` | Prettier write. |
-| `npm run format:check` | Prettier in check-only mode. Useful in CI. |
-
-## Licensing
-
-This template is MIT ([`LICENSE`](./LICENSE)). Anything you contribute
-upstream is assumed to be MIT too. Your fork's additions are yours to
-license however you like.
+Update the nearest Markdown file when changing setup steps, required env vars, production ownership boundaries, or operational runbooks.
