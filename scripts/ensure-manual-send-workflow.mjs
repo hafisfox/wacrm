@@ -242,14 +242,7 @@ if (existing) {
   const current = await request(baseUrl, apiKey, `/api/v1/workflows/${existing.id}`);
   workflow = await request(baseUrl, apiKey, `/api/v1/workflows/${existing.id}`, {
     method: 'PUT',
-    body: JSON.stringify({
-      ...current,
-      ...payload,
-      id: current.id,
-      active: current.active,
-      staticData: current.staticData || null,
-      tags: current.tags || [],
-    }),
+    body: JSON.stringify({ ...payload, staticData: current.staticData || null }),
   });
 } else {
   workflow = await request(baseUrl, apiKey, '/api/v1/workflows', {
