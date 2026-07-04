@@ -105,22 +105,6 @@ export interface SaluSetupHealth {
   failed_payments: number;
 }
 
-export interface SaluSyncState {
-  sync_name: string;
-  last_status: string;
-  last_error: string;
-  updated_at: string;
-}
-
-export interface SaluSyncRun {
-  tab_name: string;
-  source: string;
-  row_count: number;
-  error_count: number;
-  status: string;
-  created_at: string;
-}
-
 export interface SaluN8nWorkflow {
   name: string;
   active: boolean;
@@ -153,8 +137,6 @@ export interface SaluDashboardData {
   handoffQueue: SaluHandoffRow[];
   recentActivity: SaluActivityRow[];
   setupHealth: SaluSetupHealth;
-  syncState: SaluSyncState[];
-  syncRuns: SaluSyncRun[];
   n8n: SaluN8nHealth;
 }
 
@@ -167,7 +149,6 @@ const expectedWorkflows: Array<{
   { name: "Salu WhatsApp - Reminders + Owner Digest", role: "core" },
   { name: "Salu WhatsApp - Flow Options Endpoint", role: "core" },
   { name: "Salu WhatsApp - Flow Data Adapter", role: "core" },
-  { name: "Salu Admin - Sheets Supabase Sync", role: "core" },
   { name: "Salu WhatsApp - Error Alerts", role: "core" },
   { name: "Salu WhatsApp - Dashboard Manual Send", role: "bridge" },
 ];
@@ -182,8 +163,6 @@ export async function loadSaluDashboardData(): Promise<SaluDashboardData> {
     handoffQueue,
     recentActivity,
     setupHealth,
-    syncState,
-    syncRuns,
     n8n,
   ] = await Promise.all([
     loadConfig(),
@@ -194,8 +173,6 @@ export async function loadSaluDashboardData(): Promise<SaluDashboardData> {
     loadHandoffQueue(),
     loadRecentActivity(14),
     loadSetupHealth(),
-    loadSyncState(),
-    loadSyncRuns(),
     loadN8nHealth(),
   ]);
 
@@ -208,8 +185,6 @@ export async function loadSaluDashboardData(): Promise<SaluDashboardData> {
     handoffQueue,
     recentActivity,
     setupHealth,
-    syncState,
-    syncRuns,
     n8n,
   };
 }
@@ -219,7 +194,6 @@ export async function loadConfig() {
     `
       select salon_name, timezone, owner_number, address, hours, updated_at::text
       from salu.config
-      where not sheet_sync_deleted
       order by updated_at desc
       limit 1
     `,
@@ -514,18 +488,17 @@ async function loadSetupHealth() {
   const rows = await saluQuery<SaluSetupHealth>(
     `
       select
-        (select count(*)::int from salu.services where active and not sheet_sync_deleted) as active_services,
-        (select count(*)::int from salu.stylists where active and not sheet_sync_deleted) as active_stylists,
+        (select count(*)::int from salu.services where active) as active_services,
+        (select count(*)::int from salu.stylists where active) as active_stylists,
         (
           select count(*)::int
           from salu.stylists
           where active
-            and not sheet_sync_deleted
             and coalesce(image_url, '') = ''
         ) as stylists_missing_images,
-        (select count(*)::int from salu.stylist_services where active and not sheet_sync_deleted) as active_stylist_services,
-        (select count(*)::int from salu.availability where active and not sheet_sync_deleted) as availability_rules,
-        (select count(*)::int from salu.stylist_availability where active and not sheet_sync_deleted) as stylist_availability_rules,
+        (select count(*)::int from salu.stylist_services where active) as active_stylist_services,
+        (select count(*)::int from salu.availability where active) as availability_rules,
+        (select count(*)::int from salu.stylist_availability where active) as stylist_availability_rules,
         (
           select count(*)::int
           from salu.bookings
@@ -541,28 +514,6 @@ async function loadSetupHealth() {
     `,
   );
   return rows[0];
-}
-
-async function loadSyncState() {
-  return saluQuery<SaluSyncState>(
-    `
-      select sync_name, last_status, last_error, updated_at::text
-      from salu.sheet_sync_state
-      order by updated_at desc
-      limit 8
-    `,
-  );
-}
-
-async function loadSyncRuns() {
-  return saluQuery<SaluSyncRun>(
-    `
-      select tab_name, source, row_count, error_count, status, created_at::text
-      from salu.sheet_sync_runs
-      order by id desc
-      limit 8
-    `,
-  );
 }
 
 export async function loadSaluInbox() {
@@ -733,17 +684,13 @@ export async function loadN8nHealth(): Promise<SaluN8nHealth> {
 }
 
 export async function loadSaluSystemHealth() {
-  const [n8n, setupHealth, syncState, syncRuns] = await Promise.all([
+  const [n8n, setupHealth] = await Promise.all([
     loadN8nHealth(),
     loadSetupHealth(),
-    loadSyncState(),
-    loadSyncRuns(),
   ]);
 
   return {
     n8n,
     setupHealth,
-    syncState,
-    syncRuns,
   };
 }

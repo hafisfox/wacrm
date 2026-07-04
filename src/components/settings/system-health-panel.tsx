@@ -5,21 +5,15 @@ import { AlertTriangle, CheckCircle2, Loader2, RefreshCw } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatDateTime } from "@/lib/salu/format";
-import { formatOpsAge } from "@/lib/salu/ops";
 import type {
   SaluN8nHealth,
   SaluSetupHealth,
-  SaluSyncRun,
-  SaluSyncState,
 } from "@/lib/salu/queries";
 import { cn } from "@/lib/utils";
 
 interface SystemHealthPayload {
   n8n: SaluN8nHealth;
   setupHealth: SaluSetupHealth;
-  syncState: SaluSyncState[];
-  syncRuns: SaluSyncRun[];
 }
 
 export function SystemHealthPanel() {
@@ -90,8 +84,6 @@ export function SystemHealthPanel() {
   const n8n = data?.n8n;
   if (!n8n) return null;
   const setupHealth = data.setupHealth;
-  const syncState = data.syncState ?? [];
-  const syncRuns = data.syncRuns ?? [];
   const setupItems = setupHealth
     ? [
         {
@@ -193,7 +185,7 @@ export function SystemHealthPanel() {
                 Salon Setup Readiness
               </h2>
               <p className="mt-1 text-xs text-slate-500">
-                Read-only view of the Google Sheets backed Salu setup.
+                Read-only view of Supabase-backed salon setup.
               </p>
             </div>
             <HealthBadge
@@ -217,97 +209,6 @@ export function SystemHealthPanel() {
           </div>
         </section>
       ) : null}
-
-      <section className="rounded-xl border border-slate-800 bg-slate-900">
-        <div className="flex items-center justify-between gap-3 border-b border-slate-800 px-4 py-3">
-          <div>
-            <h2 className="text-sm font-semibold text-white">
-              Sheet Sync Freshness
-            </h2>
-            <p className="mt-1 text-xs text-slate-500">
-              Recent reconciliation runs and sync watermarks.
-            </p>
-          </div>
-          <HealthBadge
-            ok={
-              !syncRuns.some((run) =>
-                `${run.status}`.toLowerCase().includes("error"),
-              ) && !syncState.some((state) => state.last_error)
-            }
-            label={
-              syncRuns.length || syncState.length ? "tracked" : "no data"
-            }
-          />
-        </div>
-        <div className="grid gap-4 p-4 lg:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-              Recent Runs
-            </p>
-            {syncRuns.slice(0, 5).map((run) => (
-              <div
-                key={`${run.tab_name}-${run.created_at}`}
-                className="rounded-lg border border-slate-800 bg-slate-950/50 px-3 py-2"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <p className="truncate text-sm text-slate-300">
-                    {run.tab_name || run.source}
-                  </p>
-                  <HealthBadge
-                    ok={!`${run.status}`.toLowerCase().includes("error")}
-                    label={run.status || "seen"}
-                  />
-                </div>
-                <p className="mt-1 text-xs text-slate-500">
-                  {run.row_count} rows · {formatOpsAge(run.created_at)} ·{" "}
-                  {formatDateTime(run.created_at)}
-                </p>
-              </div>
-            ))}
-            {!syncRuns.length ? (
-              <p className="rounded-lg border border-slate-800 bg-slate-950/50 px-3 py-4 text-sm text-slate-500">
-                No sheet sync runs recorded.
-              </p>
-            ) : null}
-          </div>
-
-          <div className="space-y-2">
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-              Watermarks
-            </p>
-            {syncState.slice(0, 5).map((state) => (
-              <div
-                key={state.sync_name}
-                className="rounded-lg border border-slate-800 bg-slate-950/50 px-3 py-2"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <p className="truncate text-sm text-slate-300">
-                    {state.sync_name}
-                  </p>
-                  <HealthBadge
-                    ok={!state.last_error}
-                    label={state.last_status || "seen"}
-                  />
-                </div>
-                <p className="mt-1 text-xs text-slate-500">
-                  {formatOpsAge(state.updated_at)} ·{" "}
-                  {formatDateTime(state.updated_at)}
-                </p>
-                {state.last_error ? (
-                  <p className="mt-2 line-clamp-2 text-xs text-amber-200">
-                    {state.last_error}
-                  </p>
-                ) : null}
-              </div>
-            ))}
-            {!syncState.length ? (
-              <p className="rounded-lg border border-slate-800 bg-slate-950/50 px-3 py-4 text-sm text-slate-500">
-                No sync watermarks recorded.
-              </p>
-            ) : null}
-          </div>
-        </div>
-      </section>
 
       <section className="rounded-xl border border-slate-800 bg-slate-900">
         <div className="flex items-center justify-between gap-3 border-b border-slate-800 px-4 py-3">

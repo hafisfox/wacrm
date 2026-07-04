@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import {
   AlertTriangle,
   ArrowRight,
@@ -10,7 +11,6 @@ import {
   MessageSquareText,
   Scissors,
   UsersRound,
-  Workflow,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -265,12 +265,11 @@ function PriorityStrip({ data }: { data: SaluDashboardData }) {
     data.setupHealth.stale_pending_holds +
     data.setupHealth.failed_payments +
     (data.setupHealth.active_services ? 0 : 1) +
-    (data.setupHealth.active_stylists ? 0 : 1);
-  const syncIssues =
-    data.syncRuns.filter((run) =>
-      `${run.status}`.toLowerCase().includes("error"),
-    ).length +
-    data.syncState.filter((state) => Boolean(state.last_error)).length;
+    (data.setupHealth.active_stylists ? 0 : 1) +
+    (data.setupHealth.active_stylist_services ? 0 : 1) +
+    (data.setupHealth.availability_rules + data.setupHealth.stylist_availability_rules
+      ? 0
+      : 1);
   const handoffHref = data.handoffQueue[0]?.conversation_id
     ? `/inbox?conversation=${data.handoffQueue[0].conversation_id}`
     : "/inbox";
@@ -295,14 +294,14 @@ function PriorityStrip({ data }: { data: SaluDashboardData }) {
       tone: data.opsQueue.length ? ("warn" as const) : ("good" as const),
     },
     {
-      label: "Setup drift",
-      value: setupIssues + syncIssues,
+      label: "Salon setup",
+      value: setupIssues,
       detail:
-        setupIssues || syncIssues
-          ? `${setupIssues} setup, ${syncIssues} sync`
-          : "Sheets and setup look steady",
-      href: "/system-health",
-      tone: setupIssues || syncIssues ? ("warn" as const) : ("good" as const),
+        setupIssues
+          ? `${setupIssues} setup checks need review`
+          : "Supabase setup looks steady",
+      href: "/salon-control",
+      tone: setupIssues ? ("warn" as const) : ("good" as const),
     },
     {
       label: "Bridge",
@@ -355,9 +354,9 @@ function Panel({
   children,
 }: {
   title: string;
-  action?: React.ReactNode;
+  action?: ReactNode;
   className?: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <section className={cn("rounded-xl border border-slate-800 bg-slate-900", className)}>
@@ -601,42 +600,24 @@ function SetupHealth({ data }: { data: SaluDashboardData }) {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-        <div className="rounded-lg border border-slate-800 bg-slate-950/50 p-3">
-          <div className="mb-2 flex items-center gap-2 text-sm font-medium text-white">
-            <Scissors className="h-4 w-4 text-slate-500" />
-            Sheet Sync
-          </div>
-          <div className="space-y-2">
-            {data.syncRuns.slice(0, 4).map((run) => (
-              <div key={`${run.tab_name}-${run.created_at}`} className="flex items-center justify-between gap-3 text-xs">
-                <span className="truncate text-slate-400">{run.tab_name || run.source}</span>
-                <span className="text-slate-500">
-                  {run.status} · {run.row_count} rows · {formatDateTime(run.created_at)}
-                </span>
-              </div>
-            ))}
-            {!data.syncRuns.length ? <EmptyLine text="No sheet sync runs recorded." /> : null}
-          </div>
+      <div className="rounded-lg border border-slate-800 bg-slate-950/50 p-3">
+        <div className="mb-2 flex items-center gap-2 text-sm font-medium text-white">
+          <Scissors className="h-4 w-4 text-slate-500" />
+          Salon Control
         </div>
-
-        <div className="rounded-lg border border-slate-800 bg-slate-950/50 p-3">
-          <div className="mb-2 flex items-center gap-2 text-sm font-medium text-white">
-            <Workflow className="h-4 w-4 text-slate-500" />
-            Sync State
-          </div>
-          <div className="space-y-2">
-            {data.syncState.slice(0, 4).map((state) => (
-              <div key={state.sync_name} className="flex items-center justify-between gap-3 text-xs">
-                <span className="truncate text-slate-400">{state.sync_name}</span>
-                <span className="text-slate-500">
-                  {state.last_status || "seen"} · {formatDateTime(state.updated_at)}
-                </span>
-              </div>
-            ))}
-            {!data.syncState.length ? <EmptyLine text="No sync watermarks recorded." /> : null}
-          </div>
-        </div>
+        <p className="text-sm text-slate-400">
+          Services, stylists, staff mappings, salon hours, and availability are
+          managed in Supabase from the control room.
+        </p>
+        <Button
+          size="sm"
+          variant="outline"
+          className="mt-3"
+          render={<Link href="/salon-control" />}
+        >
+          <ArrowRight className="h-3.5 w-3.5" />
+          Open control room
+        </Button>
       </div>
     </div>
   );
@@ -667,7 +648,7 @@ function StatusBadge({
   children,
 }: {
   tone: "good" | "warn" | "danger" | "neutral";
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <Badge

@@ -5,7 +5,7 @@ This folder is the Salu Salon WhatsApp operations dashboard.
 ## Runtime Shape
 
 - n8n stays the production WhatsApp owner.
-- Meta inbound messages, WhatsApp Flows, Razorpay webhooks, reminders, Google Calendar, and Google Sheets sync continue to run through the live n8n workflows.
+- Meta inbound messages, WhatsApp Flows, Razorpay webhooks, reminders, Google Calendar, and dashboard manual-send automation continue to run through the live n8n workflows.
 - The dashboard reads Salu operational data from the existing Postgres `salu` schema through `SALU_BOOKING_DATABASE_URL`.
 - The existing public schema is still used for Supabase Auth, accounts, roles, conversations, messages, and the dashboard shell.
 

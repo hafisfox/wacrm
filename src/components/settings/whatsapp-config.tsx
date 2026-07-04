@@ -243,7 +243,7 @@ export function WhatsAppConfig() {
           </AlertTitle>
           <AlertDescription className="text-sky-100/80">
             Keep Meta inbound webhooks, WhatsApp Flow data exchange, payments,
-            reminders, Sheets sync, and bot routing pointed at the live n8n
+            reminders, Supabase setup reads, and bot routing pointed at the live n8n
             workflows. These credentials are only for dashboard template
             maintenance and approved template sends.
           </AlertDescription>
@@ -416,7 +416,7 @@ export function WhatsAppConfig() {
             <p className="font-medium text-slate-200">Keep in n8n</p>
             <p className="mt-1">
               Inbound webhook, Flow data endpoint, booking/payment routing,
-              reminders, owner digest, Calendar, Gmail, and Sheets sync.
+              reminders, owner digest, Calendar, Gmail, and Supabase setup reads.
             </p>
           </div>
           <div>

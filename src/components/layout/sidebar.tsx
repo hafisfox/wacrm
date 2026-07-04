@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   LogOut,
   MessageSquare,
+  Scissors,
   Settings,
   Shield,
   User,
@@ -85,6 +86,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { href: "/dashboard", label: "Ops Dashboard", icon: LayoutDashboard },
+  { href: "/salon-control", label: "Salon Control", icon: Scissors },
   { href: "/inbox", label: "WhatsApp Inbox", icon: MessageSquare },
   { href: "/contacts", label: "Customers", icon: Users },
 ];

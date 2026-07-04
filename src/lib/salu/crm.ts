@@ -434,8 +434,6 @@ export async function setSaluHumanMode(
         handoff_reason = case when excluded.human_mode then excluded.handoff_reason else '' end,
         handoff_category = case when excluded.human_mode then excluded.handoff_category else '' end,
         handoff_event_id = case when excluded.human_mode then salu.customer_sessions.handoff_event_id else '' end,
-        sheet_sync_source = 'database',
-        sheet_synced_at = null,
         updated_at = now()
       returning
         phone,

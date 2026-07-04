@@ -50,8 +50,8 @@ try {
         (select count(*)::int from salu.payments) as payments,
         (select count(*)::int from salu.customer_profiles) as customers,
         (select count(*)::int from salu.message_events) as message_events,
-        (select count(*)::int from salu.services where active and not sheet_sync_deleted) as active_services,
-        (select count(*)::int from salu.stylists where active and not sheet_sync_deleted) as active_stylists
+        (select count(*)::int from salu.services where active) as active_services,
+        (select count(*)::int from salu.stylists where active) as active_stylists
     `,
   );
 

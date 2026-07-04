@@ -2,11 +2,12 @@
 
 Lean operations console for Salu Salon WhatsApp booking support.
 
-This dashboard is not the live WhatsApp workflow owner. Production inbound messages, WhatsApp Flows, payments, reminders, Google Sheets sync, Calendar updates, Gmail alerts, and the manual-send bridge stay in n8n. The Next.js app provides the team-facing console for daily triage, inbox replies, customer memory, Meta template maintenance, members, settings, and system health.
+This dashboard is not the live WhatsApp workflow owner. Production inbound messages, WhatsApp Flows, payments, reminders, Calendar updates, Gmail alerts, and the manual-send bridge stay in n8n. The Next.js app provides the team-facing console for daily triage, Salon Control, inbox replies, customer memory, Meta template maintenance, members, settings, and system health.
 
 ## Product Surfaces
 
-- Daily Ops Dashboard: today schedule, handoffs, deposits, setup drift, Sheet sync, and n8n/manual-send health.
+- Daily Ops Dashboard: today schedule, handoffs, deposits, Salon Control readiness, and n8n/manual-send health.
+- Salon Control: salon details, services, current staff, stylist-service mappings, salon hours, stylist availability, blackout dates, and effective windows.
 - WhatsApp Inbox: shared conversation history, bot pause-before-send, human takeover/resume, n8n-owned text replies, and Meta template sends.
 - Customers: Salu memory by phone number, preferences, active booking, pending payment, handoff state, and inbox links.
 - Settings: profile, members, Meta maintenance credentials, template maintenance, and system health.
