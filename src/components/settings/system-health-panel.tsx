@@ -6,6 +6,7 @@ import { AlertTriangle, CheckCircle2, Loader2, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type {
+  SaluDatabaseHealth,
   SaluN8nHealth,
   SaluSetupHealth,
 } from "@/lib/salu/queries";
@@ -13,7 +14,8 @@ import { cn } from "@/lib/utils";
 
 interface SystemHealthPayload {
   n8n: SaluN8nHealth;
-  setupHealth: SaluSetupHealth;
+  setupHealth: SaluSetupHealth | null;
+  database?: SaluDatabaseHealth;
 }
 
 export function SystemHealthPanel() {
@@ -176,6 +178,30 @@ export function SystemHealthPanel() {
           </p>
         ) : null}
       </section>
+
+      {data.database ? (
+        <section className="rounded-xl border border-slate-800 bg-slate-900">
+          <div className="flex flex-col gap-3 border-b border-slate-800 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-sm font-semibold text-white">
+                Database Connectivity
+              </h2>
+              <p className="mt-1 text-xs text-slate-500">
+                Supabase/Postgres setup checks.
+              </p>
+            </div>
+            <HealthBadge
+              ok={data.database.ok}
+              label={data.database.ok ? "reachable" : "review"}
+            />
+          </div>
+          {!data.database.ok ? (
+            <p className="m-4 rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-200">
+              {data.database.error || "Database setup check failed."}
+            </p>
+          ) : null}
+        </section>
+      ) : null}
 
       {setupHealth ? (
         <section className="rounded-xl border border-slate-800 bg-slate-900">

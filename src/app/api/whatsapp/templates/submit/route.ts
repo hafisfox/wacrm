@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { createClient } from '@/lib/supabase/server'
+import {
+  ForbiddenError,
+  requireRole,
+  toErrorResponse,
+  UnauthorizedError,
+} from '@/lib/auth/account'
 import { decrypt } from '@/lib/whatsapp/encryption'
 import { submitMessageTemplate } from '@/lib/whatsapp/meta-api'
 import {
@@ -30,9 +35,8 @@ function buildUpsertRow(
     // of migration 017. Without this an INSERT throws on the
     // not-null constraint.
     account_id: accountId,
-    // Original author — kept as audit only. The unique index is
-    // still on (user_id, name, language) — see the upsert helper
-    // for the cross-teammate dedup follow-up.
+    // Original author — kept as audit only. Account-level uniqueness
+    // is enforced by migration 027 on (account_id, name, language).
     user_id: userId,
     name: payload.name,
     category: payload.category,
@@ -59,14 +63,9 @@ async function upsertTemplateRow(
   supabase: SupabaseClient,
   row: ReturnType<typeof buildUpsertRow>,
 ) {
-  // TODO(account-sharing): conflict target is still scoped to
-  // user_id. Once a follow-up migration drops the legacy unique
-  // index on (user_id, name, language) and adds (account_id,
-  // name, language), switch `onConflict` here so two teammates
-  // can't shadow each other's same-named template.
   return supabase
     .from('message_templates')
-    .upsert(row, { onConflict: 'user_id,name,language' })
+    .upsert(row, { onConflict: 'account_id,name,language' })
     .select()
     .single()
 }
@@ -87,29 +86,10 @@ async function upsertTemplateRow(
  */
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient()
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Resolve the caller's account_id — whatsapp_config + the
-    // message_templates row are account-scoped post-multi-user.
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('account_id')
-      .eq('user_id', user.id)
-      .maybeSingle()
-    const accountId = profile?.account_id as string | undefined
-    if (!accountId) {
-      return NextResponse.json(
-        { error: 'Your profile is not linked to an account.' },
-        { status: 403 },
-      )
-    }
+    const ctx = await requireRole('admin')
+    const supabase = ctx.supabase
+    const accountId = ctx.accountId
+    const userId = ctx.userId
 
     let payload: TemplatePayload
     try {
@@ -189,7 +169,7 @@ export async function POST(request: Request) {
         // until they fix and re-submit.
         await upsertTemplateRow(
           supabase,
-          buildUpsertRow(accountId, user.id, payload, {
+          buildUpsertRow(accountId, userId, payload, {
             status: 'DRAFT',
             metaTemplateId: null,
             submissionError: message,
@@ -209,7 +189,7 @@ export async function POST(request: Request) {
 
     const { data: row, error: upsertErr } = await upsertTemplateRow(
       supabase,
-      buildUpsertRow(accountId, user.id, payload, {
+      buildUpsertRow(accountId, userId, payload, {
         status: normalizeStatus(metaStatus),
         metaTemplateId,
         submissionError: null,
@@ -235,6 +215,9 @@ export async function POST(request: Request) {
       dry_run: dryRun,
     })
   } catch (error) {
+    if (error instanceof UnauthorizedError || error instanceof ForbiddenError) {
+      return toErrorResponse(error)
+    }
     console.error('Error submitting template:', error)
     return NextResponse.json(
       {

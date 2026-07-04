@@ -38,6 +38,6 @@ describe('Salu human handoff contracts', () => {
     const takeover = source('../../app/api/salu/takeover/route.ts');
     expect(migration).toMatch(/when 'owner' then 0\s+when 'admin' then 1/);
     expect(migration).toContain("handoff_priority = 'urgent'");
-    expect(takeover).toContain('hasMinRole(accountRole, "agent")');
+    expect(takeover).toContain('requireRole("agent")');
   });
 });

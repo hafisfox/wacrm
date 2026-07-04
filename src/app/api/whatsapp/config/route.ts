@@ -1,31 +1,14 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import {
+  ForbiddenError,
+  getCurrentAccount,
+  requireRole,
+  toErrorResponse,
+  UnauthorizedError,
+} from '@/lib/auth/account'
 import { verifyPhoneNumber } from '@/lib/whatsapp/meta-api'
 import { encrypt, decrypt } from '@/lib/whatsapp/encryption'
 import { supabaseAdmin } from '@/lib/supabase/admin'
-
-/**
- * Resolve the caller's account_id from their profile. Inlined here
- * (rather than going through `@/lib/auth/account.getCurrentAccount`)
- * because the GET handler wants to return shaped 200s for every
- * non-auth failure mode, not throw — keeping the helper minimal lets
- * the existing response branches stay as-is.
- *
- * Returns null if the user has no profile or no account; callers
- * should treat that the same as "not connected".
- */
-async function resolveAccountId(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  userId: string,
-): Promise<string | null> {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('account_id')
-    .eq('user_id', userId)
-    .maybeSingle()
-  if (error || !data?.account_id) return null
-  return data.account_id as string
-}
 
 /**
  * GET /api/whatsapp/config
@@ -42,28 +25,9 @@ async function resolveAccountId(
  */
 export async function GET() {
   try {
-    const supabase = await createClient()
-
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const accountId = await resolveAccountId(supabase, user.id)
-    if (!accountId) {
-      return NextResponse.json(
-        {
-          connected: false,
-          reason: 'no_account',
-          message: 'Your profile is not linked to an account.',
-        },
-        { status: 200 },
-      )
-    }
+    const ctx = await getCurrentAccount()
+    const supabase = ctx.supabase
+    const accountId = ctx.accountId
 
     const { data: config, error: configError } = await supabase
       .from('whatsapp_config')
@@ -129,6 +93,19 @@ export async function GET() {
       )
     }
   } catch (error) {
+    if (error instanceof UnauthorizedError) {
+      return toErrorResponse(error)
+    }
+    if (error instanceof ForbiddenError) {
+      return NextResponse.json(
+        {
+          connected: false,
+          reason: 'no_account',
+          message: 'Your profile is not linked to an account.',
+        },
+        { status: 200 },
+      )
+    }
     console.error('Error in WhatsApp config GET:', error)
     return NextResponse.json(
       { connected: false, reason: 'unknown', message: 'Internal server error' },
@@ -146,24 +123,9 @@ export async function GET() {
  */
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient()
-
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const accountId = await resolveAccountId(supabase, user.id)
-    if (!accountId) {
-      return NextResponse.json(
-        { error: 'Your profile is not linked to an account.' },
-        { status: 403 },
-      )
-    }
+    const ctx = await requireRole('admin')
+    const supabase = ctx.supabase
+    const accountId = ctx.accountId
 
     const body = await request.json()
     const { phone_number_id, waba_id, access_token } = body
@@ -273,7 +235,7 @@ export async function POST(request: Request) {
         .from('whatsapp_config')
         .insert({
           account_id: accountId,
-          user_id: user.id,
+          user_id: ctx.userId,
           ...baseRow,
         })
 
@@ -292,6 +254,9 @@ export async function POST(request: Request) {
       phone_info: phoneInfo,
     })
   } catch (error) {
+    if (error instanceof UnauthorizedError || error instanceof ForbiddenError) {
+      return toErrorResponse(error)
+    }
     console.error('Error in WhatsApp config POST:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
@@ -306,24 +271,9 @@ export async function POST(request: Request) {
  */
 export async function DELETE() {
   try {
-    const supabase = await createClient()
-
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const accountId = await resolveAccountId(supabase, user.id)
-    if (!accountId) {
-      return NextResponse.json(
-        { error: 'Your profile is not linked to an account.' },
-        { status: 403 },
-      )
-    }
+    const ctx = await requireRole('admin')
+    const supabase = ctx.supabase
+    const accountId = ctx.accountId
 
     const { error: deleteError } = await supabase
       .from('whatsapp_config')
@@ -340,6 +290,9 @@ export async function DELETE() {
 
     return NextResponse.json({ success: true })
   } catch (error) {
+    if (error instanceof UnauthorizedError || error instanceof ForbiddenError) {
+      return toErrorResponse(error)
+    }
     console.error('Error in WhatsApp config DELETE:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }

@@ -1,48 +1,24 @@
 import { NextResponse } from "next/server";
 
 import {
-  hasMinRole,
-  isAccountRole,
-  type AccountRole,
-} from "@/lib/auth/roles";
+  ForbiddenError,
+  requireRole,
+  toErrorResponse,
+  UnauthorizedError,
+} from "@/lib/auth/account";
+import {
+  checkRateLimit,
+  rateLimitResponse,
+  RATE_LIMITS,
+} from "@/lib/rate-limit";
 import { findAccessibleSaluContact } from "@/lib/salu/access";
 import { loadSaluCustomerDetails, setSaluHumanMode } from "@/lib/salu/crm";
-import { createClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient();
-
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("account_id, account_role")
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    const accountId = profile?.account_id as string | undefined;
-    const accountRole = profile?.account_role as AccountRole | undefined;
-    if (!accountId || !isAccountRole(accountRole)) {
-      return NextResponse.json(
-        { error: "Your profile is not linked to an account." },
-        { status: 403 },
-      );
-    }
-
-    if (!hasMinRole(accountRole, "agent")) {
-      return NextResponse.json(
-        { error: "You need agent access to pause or resume the Salu bot." },
-        { status: 403 },
-      );
-    }
+    const ctx = await requireRole("agent");
+    const limit = checkRateLimit(`takeover:${ctx.userId}`, RATE_LIMITS.takeover);
+    if (!limit.success) return rateLimitResponse(limit);
 
     const body = (await request.json().catch(() => ({}))) as {
       phone?: string;
@@ -58,8 +34,8 @@ export async function POST(request: Request) {
     }
 
     const contact = await findAccessibleSaluContact(
-      supabase,
-      accountId,
+      ctx.supabase,
+      ctx.accountId,
       body.phone,
     );
     if (!contact) {
@@ -79,6 +55,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, contact, details });
   } catch (error) {
+    if (error instanceof UnauthorizedError || error instanceof ForbiddenError) {
+      return toErrorResponse(error);
+    }
     console.error("[salu/takeover] failed:", error);
     return NextResponse.json(
       { error: "Failed to update Salu takeover state" },

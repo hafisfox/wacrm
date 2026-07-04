@@ -5,6 +5,7 @@ import type { MessageTemplate } from '@/types';
 function row(overrides: Partial<MessageTemplate> = {}): MessageTemplate {
   return {
     id: 'row-1',
+    account_id: 'account-1',
     user_id: 'user-1',
     name: 'order_confirmation',
     category: 'Utility',

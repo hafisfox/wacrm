@@ -27,6 +27,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
+    "verify:local": "node scripts/verify-local.mjs",
     "setup:salu-env": "node scripts/sync-salu-env.mjs",
     "setup:salu-db": "node scripts/apply-wacrm-migrations.mjs",
     "check:salu-setup": "node scripts/check-salu-setup.mjs",

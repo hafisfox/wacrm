@@ -128,6 +128,18 @@ export interface SaluN8nHealth {
   workflows: SaluN8nWorkflow[];
 }
 
+export interface SaluDatabaseHealth {
+  ok: boolean;
+  error: string;
+  checkedAt: string;
+}
+
+export interface SaluSystemHealth {
+  n8n: SaluN8nHealth;
+  setupHealth: SaluSetupHealth | null;
+  database: SaluDatabaseHealth;
+}
+
 export interface SaluDashboardData {
   config: SaluConfig | null;
   metrics: SaluMetrics;
@@ -484,7 +496,7 @@ export async function loadCustomers(limit = 50) {
   );
 }
 
-async function loadSetupHealth() {
+export async function loadSetupHealth() {
   const rows = await saluQuery<SaluSetupHealth>(
     `
       select
@@ -683,14 +695,48 @@ export async function loadN8nHealth(): Promise<SaluN8nHealth> {
   }
 }
 
-export async function loadSaluSystemHealth() {
-  const [n8n, setupHealth] = await Promise.all([
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}
+
+export async function loadSaluSystemHealth(): Promise<SaluSystemHealth> {
+  const checkedAt = new Date().toISOString();
+  const [n8nResult, setupResult] = await Promise.allSettled([
     loadN8nHealth(),
     loadSetupHealth(),
   ]);
 
+  const env = loadN8nEnvChecks();
+  const n8n =
+    n8nResult.status === "fulfilled"
+      ? n8nResult.value
+      : {
+          configured: Boolean(process.env.N8N_URL && process.env.N8N_API_KEY),
+          ok: false,
+          error: errorMessage(n8nResult.reason),
+          activeCount: 0,
+          expectedCount: expectedWorkflows.length,
+          manualSendReady: env
+            .filter((check) =>
+              ["SALU_DASHBOARD_MODE", "SALU_N8N_MANUAL_SEND_TOKEN"].includes(
+                check.key,
+              ),
+            )
+            .every((check) => check.configured),
+          env,
+          workflows: inactiveExpectedWorkflows(),
+        };
+
+  const setupHealth =
+    setupResult.status === "fulfilled" ? setupResult.value : null;
+  const database: SaluDatabaseHealth =
+    setupResult.status === "fulfilled"
+      ? { ok: true, error: "", checkedAt }
+      : { ok: false, error: errorMessage(setupResult.reason), checkedAt };
+
   return {
     n8n,
     setupHealth,
+    database,
   };
 }

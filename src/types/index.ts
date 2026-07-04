@@ -167,7 +167,7 @@ export interface TemplateSampleValues {
 
 export interface MessageTemplate {
   id: string;
-  account_id?: string;
+  account_id: string;
   user_id: string;
   name: string;
   category: "Marketing" | "Utility" | "Authentication";
