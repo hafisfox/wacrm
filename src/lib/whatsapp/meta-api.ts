@@ -429,6 +429,61 @@ export async function deleteMessageTemplate(
 }
 
 // ============================================================
+// Read receipts / typing indicators
+// ============================================================
+
+export interface MarkMessageAsReadArgs {
+  phoneNumberId: string
+  accessToken: string
+  /** Meta's inbound WhatsApp message ID from messages[0].id. */
+  messageId: string
+  /** Display WhatsApp's text typing indicator while a reply is prepared. */
+  typingIndicator?: boolean
+}
+
+export interface MetaSuccessResult {
+  success: boolean
+}
+
+/**
+ * Mark an inbound WhatsApp message as read. When `typingIndicator` is true,
+ * Meta also shows a short-lived text typing indicator for the conversation.
+ */
+export async function markMessageAsRead(
+  args: MarkMessageAsReadArgs
+): Promise<MetaSuccessResult> {
+  const { phoneNumberId, accessToken, messageId, typingIndicator = false } = args
+  const trimmedMessageId =
+    typeof messageId === 'string' ? messageId.trim() : ''
+  if (!trimmedMessageId) {
+    throw new Error('markMessageAsRead requires a messageId.')
+  }
+
+  const body: Record<string, unknown> = {
+    messaging_product: 'whatsapp',
+    status: 'read',
+    message_id: trimmedMessageId,
+  }
+  if (typingIndicator) {
+    body.typing_indicator = { type: 'text' }
+  }
+
+  const response = await fetch(`${META_API_BASE}/${phoneNumberId}/messages`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(body),
+  })
+  if (!response.ok) {
+    await throwMetaError(response, `Meta API error: ${response.status}`)
+  }
+  const data = await response.json()
+  return { success: data.success === true }
+}
+
+// ============================================================
 // Reactions
 // ============================================================
 

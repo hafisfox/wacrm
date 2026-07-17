@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   INTERACTIVE_LIMITS,
+  markMessageAsRead,
   sendInteractiveButtons,
   sendInteractiveList,
 } from "./meta-api";
@@ -20,6 +21,83 @@ const BASE_ARGS = {
   to: "1234567890",
   bodyText: "Body text",
 } as const;
+
+describe("markMessageAsRead", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("marks a message as read without typing by default", async () => {
+    let captured: { url: string; body: unknown; method: string } | null = null;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init: RequestInit) => {
+        captured = {
+          url,
+          method: init.method ?? "GET",
+          body: JSON.parse(String(init.body)),
+        };
+        return new Response(JSON.stringify({ success: true }), { status: 200 });
+      }),
+    );
+
+    const result = await markMessageAsRead({
+      phoneNumberId: "test-phone",
+      accessToken: "test-token",
+      messageId: "wamid.READ",
+    });
+
+    expect(result).toEqual({ success: true });
+    expect(captured).not.toBeNull();
+    expect(captured!.method).toBe("POST");
+    expect(captured!.url).toContain("test-phone/messages");
+    expect(captured!.body).toEqual({
+      messaging_product: "whatsapp",
+      status: "read",
+      message_id: "wamid.READ",
+    });
+  });
+
+  it("adds the text typing indicator when requested", async () => {
+    let captured: { body: unknown } | null = null;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init: RequestInit) => {
+        captured = { body: JSON.parse(String(init.body)) };
+        return new Response(JSON.stringify({ success: true }), { status: 200 });
+      }),
+    );
+
+    await markMessageAsRead({
+      phoneNumberId: "test-phone",
+      accessToken: "test-token",
+      messageId: "wamid.TYPING",
+      typingIndicator: true,
+    });
+
+    expect(captured).not.toBeNull();
+    expect(captured!.body).toMatchObject({
+      messaging_product: "whatsapp",
+      status: "read",
+      message_id: "wamid.TYPING",
+      typing_indicator: { type: "text" },
+    });
+  });
+
+  it("rejects an empty message id before calling Meta", async () => {
+    const fetchMock = vi.fn(neverFetch);
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      markMessageAsRead({
+        phoneNumberId: "test-phone",
+        accessToken: "test-token",
+        messageId: " ",
+      }),
+    ).rejects.toThrow(/requires a messageId/);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
 
 describe("sendInteractiveButtons — validation", () => {
   beforeEach(() => {
