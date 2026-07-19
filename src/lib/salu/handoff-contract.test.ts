@@ -33,6 +33,24 @@ describe('Salu human handoff contracts', () => {
     expect(thread).toContain('Needs human');
   });
 
+  it('exposes a two-way bot toggle in the thread header, not only the 2xl-gated sidebar', () => {
+    const thread = source('../../components/inbox/message-thread.tsx');
+    // Both directions reachable at any width, unconditionally rendered.
+    expect(thread).toContain('human_mode: nextHumanMode');
+    expect(thread).toContain("'dashboard_pause_bot'");
+    expect(thread).toContain("'dashboard_resume_bot'");
+    expect(thread).toContain('Resume bot');
+    expect(thread).toContain('Pause bot');
+  });
+
+  it('scopes the bot toggle to one contact rather than a global switch', () => {
+    const crm = source('../../lib/salu/crm.ts');
+    const thread = source('../../components/inbox/message-thread.tsx');
+    // Session state is keyed by phone, so a toggle can never span contacts.
+    expect(crm).toContain('on conflict (phone) do update');
+    expect(thread).toContain('phone,');
+  });
+
   it('assigns owner before admin and keeps resume manual', () => {
     const migration = source('../../../supabase/migrations/025_salu_handoff_capture.sql');
     const takeover = source('../../app/api/salu/takeover/route.ts');

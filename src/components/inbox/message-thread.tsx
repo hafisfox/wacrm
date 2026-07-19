@@ -22,6 +22,9 @@ import {
   ArrowLeft,
   RefreshCw,
   PanelRightOpen,
+  PlayCircle,
+  PauseCircle,
+  Loader2,
 } from 'lucide-react';
 import { format, isToday, isYesterday, differenceInMinutes } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
@@ -190,6 +193,50 @@ export function MessageThread({
   }, [isRefreshing, onRefresh]);
   const [replyTo, setReplyTo] = useState<ReplyDraft | null>(null);
   const [sessionClock, setSessionClock] = useState(() => new Date());
+  const [togglingBot, setTogglingBot] = useState(false);
+
+  // Per-contact bot switch, mirrored from the contact sidebar (which is
+  // hidden below 2xl) so it's reachable at any width and in either
+  // direction. `bot_paused` on the conversation is kept in sync with
+  // salu.customer_sessions.human_mode by the handoff trigger, so it's
+  // the authoritative state for this one contact — never a global flag.
+  const botPaused =
+    conversation?.bot_paused === true ||
+    conversation?.handoff_state === 'requested' ||
+    conversation?.handoff_state === 'active';
+
+  const handleToggleBot = useCallback(async () => {
+    const phone = contact?.phone;
+    if (!phone || togglingBot) return;
+    const nextHumanMode = !botPaused;
+    setTogglingBot(true);
+    try {
+      const res = await fetch('/api/salu/takeover', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone,
+          human_mode: nextHumanMode,
+          reason: nextHumanMode
+            ? 'dashboard_pause_bot'
+            : 'dashboard_resume_bot',
+        }),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(payload?.error || `HTTP ${res.status}`);
+      toast.success(
+        nextHumanMode
+          ? 'Bot paused for this customer'
+          : 'Bot resumed — auto-replies are back on'
+      );
+      onRefresh?.();
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : 'request failed';
+      toast.error(`Could not update the bot: ${reason}`);
+    } finally {
+      setTogglingBot(false);
+    }
+  }, [contact?.phone, botPaused, togglingBot, onRefresh]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setSessionClock(new Date()), 60_000);
@@ -804,6 +851,41 @@ export function MessageThread({
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleToggleBot}
+            disabled={togglingBot}
+            role="switch"
+            aria-checked={!botPaused}
+            aria-label={
+              botPaused
+                ? `Resume bot for ${displayName}`
+                : `Pause bot for ${displayName}`
+            }
+            title={
+              botPaused
+                ? `Auto-replies are off for ${displayName} — click to resume`
+                : `Auto-replies are on for ${displayName} — click to pause`
+            }
+            className={cn(
+              'inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#00a884] disabled:opacity-60 sm:px-3',
+              botPaused
+                ? 'border-[#00a884]/40 bg-[#00a884]/10 text-[#00a884] hover:bg-[#00a884]/20'
+                : 'border-amber-400/30 bg-amber-400/10 text-amber-200 hover:bg-amber-400/20'
+            )}
+          >
+            {togglingBot ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : botPaused ? (
+              <PlayCircle className="h-3.5 w-3.5" />
+            ) : (
+              <PauseCircle className="h-3.5 w-3.5" />
+            )}
+            <span className="hidden sm:inline">
+              {botPaused ? 'Resume bot' : 'Pause bot'}
+            </span>
+          </button>
+
           {onOpenDetails && (
             <button
               type="button"
