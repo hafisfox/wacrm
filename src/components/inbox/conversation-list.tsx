@@ -57,9 +57,9 @@ export function ConversationList({
   resyncToken = 0,
 }: ConversationListProps) {
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState<ConversationStatus | 'all' | 'unread' | 'needs_human'>(
-    'all'
-  );
+  const [filter, setFilter] = useState<
+    ConversationStatus | 'all' | 'unread' | 'needs_human'
+  >('all');
   const [loading, setLoading] = useState(true);
 
   // Keep the latest callback in a ref so the fetch effect below can
@@ -120,7 +120,10 @@ export function ConversationList({
 
     if (filter === 'needs_human') {
       result = result.filter(
-        (c) => c.bot_paused || c.handoff_state === 'requested' || c.handoff_state === 'active'
+        (c) =>
+          c.bot_paused ||
+          c.handoff_state === 'requested' ||
+          c.handoff_state === 'active'
       );
     } else if (filter === 'unread') {
       result = result.filter((c) => c.unread_count > 0);
@@ -160,8 +163,16 @@ export function ConversationList({
 
   return (
     <div className="flex h-full w-full flex-col border-r border-[#233138] bg-[#111b21] lg:w-[360px]">
-      <div className="flex h-[61px] shrink-0 items-center border-b border-[#233138] px-4">
-        <h2 className="text-xl font-semibold text-[#e9edef]">WhatsApp</h2>
+      <div className="flex h-[61px] shrink-0 items-center justify-between border-b border-[#233138] px-4">
+        <div>
+          <p className="text-[10px] font-semibold tracking-[0.14em] text-[#8696a0] uppercase">
+            Live inbox
+          </p>
+          <h2 className="text-lg font-semibold text-[#e9edef]">WhatsApp</h2>
+        </div>
+        <span className="rounded-full bg-[#00a884]/15 px-2 py-1 text-[10px] font-semibold text-[#67d8b5]">
+          Live
+        </span>
       </div>
       {/* Search + Filter */}
       <div className="shrink-0 space-y-3 border-b border-[#233138] p-3">
@@ -170,13 +181,14 @@ export function ConversationList({
           <Input
             value={search}
             onChange={handleSearchChange}
+            aria-label="Search conversations"
             placeholder="Search conversations"
             className="h-10 rounded-full border-transparent bg-[#202c33] pl-11 text-sm text-[#e9edef] placeholder-[#8696a0] focus:border-transparent focus:ring-0"
           />
         </div>
 
         <DropdownMenu>
-          <DropdownMenuTrigger className="inline-flex h-8 items-center justify-center gap-1 rounded-full border border-[#2a3942] px-3 text-xs font-medium text-[#aebac1] hover:bg-[#202c33] hover:text-white">
+          <DropdownMenuTrigger className="inline-flex h-9 items-center justify-center gap-1 rounded-full border border-[#2a3942] px-3 text-xs font-medium text-[#aebac1] hover:bg-[#202c33] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#00a884]">
             {activeFilter?.label ?? 'All'}
             <ChevronDown className="h-3 w-3" />
           </DropdownMenuTrigger>
@@ -261,8 +273,9 @@ function ConversationItem({
   return (
     <button
       onClick={handleClick}
+      aria-current={isActive ? 'true' : undefined}
       className={cn(
-        'flex w-full items-start gap-3 px-3 py-3 text-left transition-colors hover:bg-[#202c33]',
+        'flex w-full items-start gap-3 px-3 py-3 text-left transition-colors hover:bg-[#202c33] focus-visible:relative focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#00a884]',
         isActive && 'bg-[#2a3942]'
       )}
     >
@@ -289,8 +302,10 @@ function ConversationItem({
             <span className="truncate text-[15px] font-medium text-[#e9edef]">
               {displayName}
             </span>
-            {(conversation.bot_paused || conversation.handoff_state === 'requested' || conversation.handoff_state === 'active') && (
-              <span className="shrink-0 rounded-full bg-red-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-300">
+            {(conversation.bot_paused ||
+              conversation.handoff_state === 'requested' ||
+              conversation.handoff_state === 'active') && (
+              <span className="shrink-0 rounded-full bg-red-500/20 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-red-300 uppercase">
                 Needs human
               </span>
             )}

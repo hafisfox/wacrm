@@ -1,16 +1,16 @@
-"use client";
+'use client';
 
-import { useCallback, useEffect, useState } from "react";
-import { AlertTriangle, CheckCircle2, Loader2, RefreshCw } from "lucide-react";
+import { useCallback, useEffect, useState } from 'react';
+import { AlertTriangle, CheckCircle2, Loader2, RefreshCw } from 'lucide-react';
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import type {
   SaluDatabaseHealth,
   SaluN8nHealth,
   SaluSetupHealth,
-} from "@/lib/salu/queries";
-import { cn } from "@/lib/utils";
+} from '@/lib/salu/queries';
+import { cn } from '@/lib/utils';
 
 interface SystemHealthPayload {
   n8n: SaluN8nHealth;
@@ -21,15 +21,15 @@ interface SystemHealthPayload {
 export function SystemHealthPanel() {
   const [data, setData] = useState<SystemHealthPayload | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
-    setError("");
+    setError('');
 
     try {
-      const res = await fetch("/api/salu/system-health", {
-        cache: "no-store",
+      const res = await fetch('/api/salu/system-health', {
+        cache: 'no-store',
       });
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -38,7 +38,7 @@ export function SystemHealthPanel() {
       setData(payload as SystemHealthPayload);
     } catch (err) {
       setData(null);
-      setError(err instanceof Error ? err.message : "Unable to load health");
+      setError(err instanceof Error ? err.message : 'Unable to load health');
     } finally {
       setLoading(false);
     }
@@ -50,7 +50,11 @@ export function SystemHealthPanel() {
 
   if (loading && !data) {
     return (
-      <div className="mt-4 flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900 p-5 text-sm text-slate-400">
+      <div
+        className="ops-surface mt-4 flex items-center gap-2 p-5 text-sm text-slate-400"
+        role="status"
+        aria-live="polite"
+      >
         <Loader2 className="h-4 w-4 animate-spin" />
         Loading system health
       </div>
@@ -59,7 +63,10 @@ export function SystemHealthPanel() {
 
   if (error && !data) {
     return (
-      <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 p-5">
+      <div
+        className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 p-5"
+        role="alert"
+      >
         <div className="flex items-start gap-3">
           <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-300" />
           <div>
@@ -89,32 +96,32 @@ export function SystemHealthPanel() {
   const setupItems = setupHealth
     ? [
         {
-          label: "Active services",
+          label: 'Active services',
           value: setupHealth.active_services,
           ok: setupHealth.active_services > 0,
         },
         {
-          label: "Active stylists",
+          label: 'Active stylists',
           value: setupHealth.active_stylists,
           ok: setupHealth.active_stylists > 0,
         },
         {
-          label: "Missing stylist photos",
+          label: 'Missing stylist photos',
           value: setupHealth.stylists_missing_images,
           ok: setupHealth.stylists_missing_images === 0,
         },
         {
-          label: "Stale pending holds",
+          label: 'Stale pending holds',
           value: setupHealth.stale_pending_holds,
           ok: setupHealth.stale_pending_holds === 0,
         },
         {
-          label: "Failed/refund payments",
+          label: 'Failed/refund payments',
           value: setupHealth.failed_payments,
           ok: setupHealth.failed_payments === 0,
         },
         {
-          label: "Stylist mappings",
+          label: 'Stylist mappings',
           value: setupHealth.active_stylist_services,
           ok: setupHealth.active_stylist_services > 0,
         },
@@ -123,7 +130,7 @@ export function SystemHealthPanel() {
 
   return (
     <div className="mt-4 space-y-4">
-      <section className="rounded-xl border border-slate-800 bg-slate-900">
+      <section className="ops-surface">
         <div className="flex flex-col gap-3 border-b border-slate-800 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-sm font-semibold text-white">
@@ -134,7 +141,7 @@ export function SystemHealthPanel() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <HealthBadge ok={n8n.ok} label={n8n.ok ? "healthy" : "review"} />
+            <HealthBadge ok={n8n.ok} label={n8n.ok ? 'healthy' : 'review'} />
             <Button
               type="button"
               variant="outline"
@@ -142,7 +149,7 @@ export function SystemHealthPanel() {
               onClick={load}
               disabled={loading}
             >
-              <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+              <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
               Refresh
             </Button>
           </div>
@@ -158,7 +165,7 @@ export function SystemHealthPanel() {
                 <p className="truncate text-sm text-slate-300">
                   {workflow.name}
                 </p>
-                {workflow.role === "bridge" ? (
+                {workflow.role === 'bridge' ? (
                   <p className="mt-0.5 text-xs text-slate-500">
                     Dashboard manual-send bridge
                   </p>
@@ -166,7 +173,7 @@ export function SystemHealthPanel() {
               </div>
               <HealthBadge
                 ok={workflow.active}
-                label={workflow.active ? "active" : "off"}
+                label={workflow.active ? 'active' : 'off'}
               />
             </div>
           ))}
@@ -180,7 +187,7 @@ export function SystemHealthPanel() {
       </section>
 
       {data.database ? (
-        <section className="rounded-xl border border-slate-800 bg-slate-900">
+        <section className="ops-surface">
           <div className="flex flex-col gap-3 border-b border-slate-800 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-sm font-semibold text-white">
@@ -192,19 +199,19 @@ export function SystemHealthPanel() {
             </div>
             <HealthBadge
               ok={data.database.ok}
-              label={data.database.ok ? "reachable" : "review"}
+              label={data.database.ok ? 'reachable' : 'review'}
             />
           </div>
           {!data.database.ok ? (
             <p className="m-4 rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-200">
-              {data.database.error || "Database setup check failed."}
+              {data.database.error || 'Database setup check failed.'}
             </p>
           ) : null}
         </section>
       ) : null}
 
       {setupHealth ? (
-        <section className="rounded-xl border border-slate-800 bg-slate-900">
+        <section className="ops-surface">
           <div className="flex items-center justify-between gap-3 border-b border-slate-800 px-4 py-3">
             <div>
               <h2 className="text-sm font-semibold text-white">
@@ -216,7 +223,7 @@ export function SystemHealthPanel() {
             </div>
             <HealthBadge
               ok={setupItems.every((item) => item.ok)}
-              label={setupItems.every((item) => item.ok) ? "ready" : "review"}
+              label={setupItems.every((item) => item.ok) ? 'ready' : 'review'}
             />
           </div>
           <div className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -228,7 +235,7 @@ export function SystemHealthPanel() {
                 <span className="text-sm text-slate-300">{item.label}</span>
                 <HealthBadge
                   ok={item.ok}
-                  label={item.value.toLocaleString("en-IN")}
+                  label={item.value.toLocaleString('en-IN')}
                 />
               </div>
             ))}
@@ -236,7 +243,7 @@ export function SystemHealthPanel() {
         </section>
       ) : null}
 
-      <section className="rounded-xl border border-slate-800 bg-slate-900">
+      <section className="ops-surface">
         <div className="flex items-center justify-between gap-3 border-b border-slate-800 px-4 py-3">
           <div>
             <h2 className="text-sm font-semibold text-white">
@@ -248,7 +255,7 @@ export function SystemHealthPanel() {
           </div>
           <HealthBadge
             ok={n8n.manualSendReady}
-            label={n8n.manualSendReady ? "ready" : "review"}
+            label={n8n.manualSendReady ? 'ready' : 'review'}
           />
         </div>
         <div className="grid gap-3 p-4 sm:grid-cols-2">
@@ -258,16 +265,14 @@ export function SystemHealthPanel() {
               className="flex items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950/50 px-3 py-2"
             >
               <div className="min-w-0">
-                <p className="truncate text-sm text-slate-300">
-                  {check.label}
-                </p>
+                <p className="truncate text-sm text-slate-300">{check.label}</p>
                 <p className="mt-0.5 truncate text-xs text-slate-500">
                   {check.key}
                 </p>
               </div>
               <HealthBadge
                 ok={check.configured}
-                label={check.configured ? "set" : "missing"}
+                label={check.configured ? 'set' : 'missing'}
               />
             </div>
           ))}
@@ -282,10 +287,10 @@ function HealthBadge({ ok, label }: { ok: boolean; label: string }) {
     <Badge
       variant="outline"
       className={cn(
-        "shrink-0 capitalize",
+        'shrink-0 capitalize',
         ok
-          ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
-          : "border-amber-500/30 bg-amber-500/10 text-amber-300",
+          ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+          : 'border-amber-500/30 bg-amber-500/10 text-amber-300'
       )}
     >
       {ok ? <CheckCircle2 className="h-3 w-3" /> : null}

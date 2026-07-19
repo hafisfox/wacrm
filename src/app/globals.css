@@ -1,6 +1,6 @@
-@import "tailwindcss";
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -70,7 +70,9 @@
  * ============================================================ */
 
 :root,
-html[data-theme="violet"] {
+html[data-theme='violet'] {
+  --font-sans: Inter, 'Avenir Next', Avenir, 'Segoe UI', sans-serif;
+  --font-geist-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
   --background: oklch(0.13 0.01 260);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.18 0.01 260);
@@ -108,7 +110,7 @@ html[data-theme="violet"] {
   --sidebar-ring: oklch(0.526 0.247 293);
 }
 
-html[data-theme="emerald"] {
+html[data-theme='emerald'] {
   --background: oklch(0.135 0.01 200);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.185 0.01 200);
@@ -145,7 +147,7 @@ html[data-theme="emerald"] {
   --sidebar-ring: oklch(0.62 0.16 162);
 }
 
-html[data-theme="cobalt"] {
+html[data-theme='cobalt'] {
   --background: oklch(0.13 0.015 252);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.18 0.015 252);
@@ -182,7 +184,7 @@ html[data-theme="cobalt"] {
   --sidebar-ring: oklch(0.585 0.2 254);
 }
 
-html[data-theme="amber"] {
+html[data-theme='amber'] {
   --background: oklch(0.135 0.012 60);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.185 0.012 60);
@@ -219,7 +221,7 @@ html[data-theme="amber"] {
   --sidebar-ring: oklch(0.745 0.16 65);
 }
 
-html[data-theme="rose"] {
+html[data-theme='rose'] {
   --background: oklch(0.13 0.012 15);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.18 0.012 15);
@@ -265,5 +267,47 @@ html[data-theme="rose"] {
   }
   html {
     @apply font-sans;
+  }
+
+  ::selection {
+    background: var(--primary-soft-2);
+    color: var(--foreground);
+  }
+}
+
+@layer components {
+  .ops-page {
+    @apply mx-auto w-full max-w-7xl space-y-5;
+  }
+
+  .ops-surface {
+    @apply rounded-xl border border-slate-800 bg-slate-900 shadow-sm shadow-black/10;
+  }
+
+  .ops-section-title {
+    @apply text-sm font-semibold tracking-tight text-white;
+  }
+
+  .ops-eyebrow {
+    @apply text-xs font-semibold tracking-[0.14em] text-slate-500 uppercase;
+  }
+
+  .ops-help {
+    @apply text-sm leading-6 text-slate-400;
+  }
+
+  .ops-focus-ring {
+    @apply focus-visible:ring-primary/45 focus-visible:outline-primary focus-visible:ring-3 focus-visible:outline-1 focus-visible:outline-offset-2;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

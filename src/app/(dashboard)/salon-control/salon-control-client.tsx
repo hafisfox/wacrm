@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { useEffect, useMemo, useState } from "react";
-import type { FormEvent, ReactNode } from "react";
+import { useEffect, useMemo, useState } from 'react';
+import type { FormEvent, ReactNode } from 'react';
 import {
   CalendarClock,
   Clock,
@@ -14,24 +14,15 @@ import {
   Trash2,
   UserRound,
   type LucideIcon,
-} from "lucide-react";
+} from 'lucide-react';
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import { useCan } from "@/hooks/use-can";
-import { cn } from "@/lib/utils";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useCan } from '@/hooks/use-can';
+import { paiseToRupeesInput, rupeesToPaiseInput } from '@/lib/salu/money-input';
+import { cn } from '@/lib/utils';
 import type {
   AvailabilityRow,
   ControlRoomData,
@@ -40,21 +31,21 @@ import type {
   SalonStylistRow,
   StylistAvailabilityRow,
   StylistServiceRow,
-} from "@/lib/salu/control-room";
+} from '@/lib/salu/control-room';
 
 const WEEKDAYS = [
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-  "Sunday",
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday',
 ] as const;
 
-const API_BASE = "/api/salu/control-room";
+const API_BASE = '/api/salu/control-room';
 
-type MutateMethod = "POST" | "PATCH" | "DELETE";
+type MutateMethod = 'POST' | 'PATCH' | 'DELETE';
 
 function formPayload(form: HTMLFormElement) {
   const formData = new FormData(form);
@@ -63,6 +54,22 @@ function formPayload(form: HTMLFormElement) {
     const values = formData.getAll(key);
     const value = values[values.length - 1];
     if (value !== undefined) payload[key] = value;
+  }
+  return payload;
+}
+
+function normaliseMoneyPayload(payload: Record<string, FormDataEntryValue>) {
+  const moneyFields = [
+    ['price_rupees', 'price_paise'],
+    ['deposit_rupees', 'deposit_paise'],
+    ['override_price_rupees', 'override_price_paise'],
+    ['override_deposit_rupees', 'override_deposit_paise'],
+  ] as const;
+
+  for (const [inputKey, apiKey] of moneyFields) {
+    if (!(inputKey in payload)) continue;
+    payload[apiKey] = rupeesToPaiseInput(payload[inputKey]);
+    delete payload[inputKey];
   }
   return payload;
 }
@@ -85,7 +92,7 @@ function boolField(name: string, checked: boolean, disabled: boolean) {
 }
 
 function money(value: number) {
-  return `Rs ${Math.round(value / 100).toLocaleString("en-IN")}`;
+  return `Rs ${Math.round(value / 100).toLocaleString('en-IN')}`;
 }
 
 function TextInput({
@@ -93,9 +100,12 @@ function TextInput({
   defaultValue,
   placeholder,
   disabled,
-  type = "text",
+  type = 'text',
   className,
   min,
+  step,
+  label,
+  hint,
 }: {
   name: string;
   defaultValue?: string | number | null;
@@ -104,20 +114,35 @@ function TextInput({
   type?: string;
   className?: string;
   min?: number;
+  step?: number | string;
+  label?: string;
+  hint?: string;
 }) {
-  return (
+  const input = (
     <input
       name={name}
       type={type}
-      defaultValue={defaultValue ?? ""}
+      defaultValue={defaultValue ?? ''}
       placeholder={placeholder}
       disabled={disabled}
       min={min}
+      step={step}
       className={cn(
-        "h-9 w-full rounded-md border border-slate-800 bg-slate-950/70 px-3 text-sm text-slate-100 outline-none transition focus:border-primary/60 disabled:cursor-not-allowed disabled:opacity-60",
-        className,
+        'focus-visible:border-primary/60 focus-visible:ring-primary/20 h-10 w-full rounded-md border border-slate-800 bg-slate-950/70 px-3 text-sm text-slate-100 transition outline-none focus-visible:ring-3 disabled:cursor-not-allowed disabled:opacity-60',
+        className
       )}
     />
+  );
+
+  if (!label) return input;
+  return (
+    <label className="grid gap-1.5 text-sm font-medium text-slate-200">
+      <span>{label}</span>
+      {input}
+      {hint ? (
+        <span className="text-xs font-normal text-slate-500">{hint}</span>
+      ) : null}
+    </label>
   );
 }
 
@@ -127,22 +152,37 @@ function TextArea({
   placeholder,
   disabled,
   rows = 3,
+  label,
+  hint,
 }: {
   name: string;
   defaultValue?: string | null;
   placeholder?: string;
   disabled: boolean;
   rows?: number;
+  label?: string;
+  hint?: string;
 }) {
-  return (
+  const textarea = (
     <textarea
       name={name}
-      defaultValue={defaultValue ?? ""}
+      defaultValue={defaultValue ?? ''}
       placeholder={placeholder}
       disabled={disabled}
       rows={rows}
-      className="w-full resize-y rounded-md border border-slate-800 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-primary/60 disabled:cursor-not-allowed disabled:opacity-60"
+      className="focus-visible:border-primary/60 focus-visible:ring-primary/20 w-full resize-y rounded-md border border-slate-800 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 transition outline-none focus-visible:ring-3 disabled:cursor-not-allowed disabled:opacity-60"
     />
+  );
+
+  if (!label) return textarea;
+  return (
+    <label className="grid gap-1.5 text-sm font-medium text-slate-200">
+      <span>{label}</span>
+      {textarea}
+      {hint ? (
+        <span className="text-xs font-normal text-slate-500">{hint}</span>
+      ) : null}
+    </label>
   );
 }
 
@@ -151,21 +191,30 @@ function SelectField({
   defaultValue,
   disabled,
   children,
+  label,
 }: {
   name: string;
   defaultValue?: string | null;
   disabled: boolean;
   children: ReactNode;
+  label?: string;
 }) {
-  return (
+  const select = (
     <select
       name={name}
-      defaultValue={defaultValue ?? ""}
+      defaultValue={defaultValue ?? ''}
       disabled={disabled}
-      className="h-9 w-full rounded-md border border-slate-800 bg-slate-950/70 px-3 text-sm text-slate-100 outline-none transition focus:border-primary/60 disabled:cursor-not-allowed disabled:opacity-60"
+      className="focus-visible:border-primary/60 focus-visible:ring-primary/20 h-10 w-full rounded-md border border-slate-800 bg-slate-950/70 px-3 text-sm text-slate-100 transition outline-none focus-visible:ring-3 disabled:cursor-not-allowed disabled:opacity-60"
     >
       {children}
     </select>
+  );
+  if (!label) return select;
+  return (
+    <label className="grid gap-1.5 text-sm font-medium text-slate-200">
+      <span>{label}</span>
+      {select}
+    </label>
   );
 }
 
@@ -180,9 +229,9 @@ function SectionTitle({
 }) {
   return (
     <div className="flex items-center gap-2">
-      <Icon className="h-4 w-4 text-primary" />
+      <Icon className="text-primary h-4 w-4" />
       <span>{title}</span>
-      {typeof count === "number" && (
+      {typeof count === 'number' && (
         <Badge variant="outline" className="border-slate-700 text-slate-300">
           {count}
         </Badge>
@@ -194,7 +243,7 @@ function SectionTitle({
 function SaveButton({
   disabled,
   busy,
-  label = "Save",
+  label = 'Save',
 }: {
   disabled: boolean;
   busy: boolean;
@@ -213,10 +262,10 @@ export function SalonControlClient({
 }: {
   initialData: ControlRoomData;
 }) {
-  const canEdit = useCan("edit-settings");
+  const canEdit = useCan('edit-settings');
   const [data, setData] = useState(initialData);
-  const [saving, setSaving] = useState("");
-  const [error, setError] = useState("");
+  const [saving, setSaving] = useState('');
+  const [error, setError] = useState('');
 
   useEffect(() => {
     setData(initialData);
@@ -224,25 +273,28 @@ export function SalonControlClient({
 
   const activeStylists = useMemo(
     () => data.stylists.filter((row) => row.active),
-    [data.stylists],
+    [data.stylists]
   );
   const activeServices = useMemo(
     () => data.services.filter((row) => row.active),
-    [data.services],
+    [data.services]
   );
 
   async function reload() {
-    setSaving("refresh");
-    setError("");
+    setSaving('refresh');
+    setError('');
     try {
       const response = await fetch(API_BASE);
-      const next = (await response.json()) as ControlRoomData | { error: string };
-      if (!response.ok) throw new Error("error" in next ? next.error : "Refresh failed");
+      const next = (await response.json()) as
+        | ControlRoomData
+        | { error: string };
+      if (!response.ok)
+        throw new Error('error' in next ? next.error : 'Refresh failed');
       setData(next as ControlRoomData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Refresh failed");
+      setError(err instanceof Error ? err.message : 'Refresh failed');
     } finally {
-      setSaving("");
+      setSaving('');
     }
   }
 
@@ -250,63 +302,81 @@ export function SalonControlClient({
     path: string,
     method: MutateMethod,
     body?: Record<string, unknown>,
-    busyKey = path,
+    busyKey = path
   ) {
     if (!canEdit) return;
     setSaving(busyKey);
-    setError("");
+    setError('');
     try {
       const response = await fetch(path, {
         method,
-        headers: body ? { "Content-Type": "application/json" } : undefined,
+        headers: body ? { 'Content-Type': 'application/json' } : undefined,
         body: body ? JSON.stringify(body) : undefined,
       });
-      const next = (await response.json()) as ControlRoomData | { error: string };
-      if (!response.ok) throw new Error("error" in next ? next.error : "Update failed");
+      const next = (await response.json()) as
+        | ControlRoomData
+        | { error: string };
+      if (!response.ok)
+        throw new Error('error' in next ? next.error : 'Update failed');
       setData(next as ControlRoomData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Update failed");
+      setError(err instanceof Error ? err.message : 'Update failed');
     } finally {
-      setSaving("");
+      setSaving('');
     }
   }
 
   function submit(
     event: FormEvent<HTMLFormElement>,
     path: string,
-    method: "POST" | "PATCH",
-    busyKey: string,
+    method: 'POST' | 'PATCH',
+    busyKey: string
   ) {
     event.preventDefault();
-    mutate(path, method, formPayload(event.currentTarget), busyKey);
+    mutate(
+      path,
+      method,
+      normaliseMoneyPayload(formPayload(event.currentTarget)),
+      busyKey
+    );
+  }
+
+  function confirmDeactivate(label: string) {
+    return window.confirm(
+      `Deactivate this ${label}? Existing bookings stay intact, but it will no longer be offered in new bookings.`
+    );
   }
 
   const disabled = !canEdit;
 
   return (
-    <main className="min-h-screen bg-slate-950 px-4 py-5 text-slate-100 sm:px-6 lg:px-8">
+    <div className="ops-page text-slate-100">
       <div className="mx-auto flex max-w-7xl flex-col gap-5">
         <div className="flex flex-col gap-3 border-b border-slate-800 pb-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <div className="flex items-center gap-2">
-              <Scissors className="h-5 w-5 text-primary" />
+              <Scissors className="text-primary h-5 w-5" />
               <h1 className="text-2xl font-semibold tracking-normal text-white">
                 Salon Control
               </h1>
               <Badge
-                variant={data.readiness.ready ? "default" : "destructive"}
+                variant={data.readiness.ready ? 'default' : 'destructive'}
                 className="h-6"
               >
-                {data.readiness.ready ? "Ready" : "Needs Setup"}
+                {data.readiness.ready ? 'Ready' : 'Needs Setup'}
               </Badge>
             </div>
             <p className="mt-1 text-sm text-slate-400">
-              Supabase is the source of truth for salon setup and booking operations.
+              Set up services, staff, and availability without touching the live
+              booking workflow.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {!canEdit && (
-              <Badge variant="outline" className="border-slate-700 text-slate-300">
+              <Badge
+                variant="outline"
+                className="border-slate-700 text-slate-300"
+              >
                 <Eye className="h-3 w-3" />
                 Read-only
               </Badge>
@@ -316,10 +386,13 @@ export function SalonControlClient({
               variant="outline"
               size="sm"
               onClick={reload}
-              disabled={saving === "refresh"}
+              disabled={saving === 'refresh'}
             >
               <RefreshCw
-                className={cn("h-3.5 w-3.5", saving === "refresh" && "animate-spin")}
+                className={cn(
+                  'h-3.5 w-3.5',
+                  saving === 'refresh' && 'animate-spin'
+                )}
               />
               Refresh
             </Button>
@@ -327,7 +400,10 @@ export function SalonControlClient({
         </div>
 
         {error && (
-          <div className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+          <div
+            className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200"
+            role="alert"
+          >
             {error}
           </div>
         )}
@@ -335,21 +411,35 @@ export function SalonControlClient({
         <ReadinessStrip data={data} />
 
         <Tabs defaultValue="details" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 gap-1 bg-slate-900 p-1 sm:grid-cols-3 lg:grid-cols-6">
-            <TabsTrigger value="details">Details</TabsTrigger>
-            <TabsTrigger value="services">Services</TabsTrigger>
-            <TabsTrigger value="staff">Staff</TabsTrigger>
-            <TabsTrigger value="mapping">Mappings</TabsTrigger>
-            <TabsTrigger value="hours">Salon Hours</TabsTrigger>
-            <TabsTrigger value="stylist-hours">Stylist Hours</TabsTrigger>
+          <TabsList className="flex w-full [scrollbar-width:none] justify-start gap-1 overflow-x-auto border border-slate-800 bg-slate-900 p-1 [&::-webkit-scrollbar]:hidden">
+            <TabsTrigger className="min-w-24 shrink-0" value="details">
+              Details
+            </TabsTrigger>
+            <TabsTrigger className="min-w-24 shrink-0" value="services">
+              Services
+            </TabsTrigger>
+            <TabsTrigger className="min-w-20 shrink-0" value="staff">
+              Staff
+            </TabsTrigger>
+            <TabsTrigger className="min-w-24 shrink-0" value="mapping">
+              Mappings
+            </TabsTrigger>
+            <TabsTrigger className="min-w-28 shrink-0" value="hours">
+              Salon Hours
+            </TabsTrigger>
+            <TabsTrigger className="min-w-30 shrink-0" value="stylist-hours">
+              Stylist Hours
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="details" className="mt-4">
             <ConfigPanel
               config={data.config}
               disabled={disabled}
-              busy={saving === "config"}
-              onSubmit={(event) => submit(event, `${API_BASE}/config`, "PATCH", "config")}
+              busy={saving === 'config'}
+              onSubmit={(event) =>
+                submit(event, `${API_BASE}/config`, 'PATCH', 'config')
+              }
             />
           </TabsContent>
 
@@ -359,14 +449,15 @@ export function SalonControlClient({
               disabled={disabled}
               saving={saving}
               onSubmit={submit}
-              onDelete={(id) =>
+              onDelete={(id) => {
+                if (!confirmDeactivate('service')) return;
                 mutate(
                   `${API_BASE}/services?service_id=${encodeURIComponent(id)}`,
-                  "DELETE",
+                  'DELETE',
                   undefined,
-                  `delete-service:${id}`,
-                )
-              }
+                  `delete-service:${id}`
+                );
+              }}
             />
           </TabsContent>
 
@@ -376,14 +467,15 @@ export function SalonControlClient({
               disabled={disabled}
               saving={saving}
               onSubmit={submit}
-              onDelete={(id) =>
+              onDelete={(id) => {
+                if (!confirmDeactivate('stylist')) return;
                 mutate(
                   `${API_BASE}/stylists?stylist_id=${encodeURIComponent(id)}`,
-                  "DELETE",
+                  'DELETE',
                   undefined,
-                  `delete-stylist:${id}`,
-                )
-              }
+                  `delete-stylist:${id}`
+                );
+              }}
             />
           </TabsContent>
 
@@ -395,14 +487,15 @@ export function SalonControlClient({
               disabled={disabled}
               saving={saving}
               onSubmit={submit}
-              onDelete={(id) =>
+              onDelete={(id) => {
+                if (!confirmDeactivate('stylist mapping')) return;
                 mutate(
                   `${API_BASE}/stylist-services?stylist_service_id=${encodeURIComponent(id)}`,
-                  "DELETE",
+                  'DELETE',
                   undefined,
-                  `delete-mapping:${id}`,
-                )
-              }
+                  `delete-mapping:${id}`
+                );
+              }}
             />
           </TabsContent>
 
@@ -413,14 +506,15 @@ export function SalonControlClient({
               disabled={disabled}
               saving={saving}
               onSubmit={submit}
-              onDelete={(id) =>
+              onDelete={(id) => {
+                if (!confirmDeactivate('availability rule')) return;
                 mutate(
                   `${API_BASE}/availability?availability_id=${encodeURIComponent(id)}`,
-                  "DELETE",
+                  'DELETE',
                   undefined,
-                  `delete-availability:${id}`,
-                )
-              }
+                  `delete-availability:${id}`
+                );
+              }}
             />
           </TabsContent>
 
@@ -431,29 +525,30 @@ export function SalonControlClient({
               disabled={disabled}
               saving={saving}
               onSubmit={submit}
-              onDelete={(id) =>
+              onDelete={(id) => {
+                if (!confirmDeactivate('stylist availability rule')) return;
                 mutate(
                   `${API_BASE}/stylist-availability?stylist_availability_id=${encodeURIComponent(id)}`,
-                  "DELETE",
+                  'DELETE',
                   undefined,
-                  `delete-stylist-availability:${id}`,
-                )
-              }
+                  `delete-stylist-availability:${id}`
+                );
+              }}
             />
           </TabsContent>
         </Tabs>
       </div>
-    </main>
+    </div>
   );
 }
 
 function ReadinessStrip({ data }: { data: ControlRoomData }) {
   const items = [
-    ["Services", data.readiness.active_services, Scissors],
-    ["Stylists", data.readiness.active_stylists, UserRound],
-    ["Mappings", data.readiness.active_mappings, CalendarClock],
+    ['Services', data.readiness.active_services, Scissors],
+    ['Stylists', data.readiness.active_stylists, UserRound],
+    ['Mappings', data.readiness.active_mappings, CalendarClock],
     [
-      "Hours",
+      'Hours',
       data.readiness.availability_rules +
         data.readiness.stylist_availability_rules,
       Clock,
@@ -468,7 +563,7 @@ function ReadinessStrip({ data }: { data: ControlRoomData }) {
         >
           <div className="flex items-center justify-between gap-3">
             <span className="text-sm text-slate-400">{label}</span>
-            <Icon className="h-4 w-4 text-primary" />
+            <Icon className="text-primary h-4 w-4" />
           </div>
           <div className="mt-3 text-2xl font-semibold text-white">{value}</div>
         </div>
@@ -489,26 +584,73 @@ function ConfigPanel({
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
   return (
-    <Card className="rounded-lg border-slate-800 bg-slate-900/70">
+    <Card className="ops-surface bg-slate-900/70">
       <CardHeader>
         <CardTitle>
           <SectionTitle icon={Scissors} title="Salon Details" />
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={onSubmit} className="grid gap-3 lg:grid-cols-2">
-          <TextInput name="salon_name" defaultValue={config.salon_name} disabled={disabled} placeholder="Salon name" />
-          <TextInput name="timezone" defaultValue={config.timezone} disabled={disabled} placeholder="Timezone" />
-          <TextInput name="owner_number" defaultValue={config.owner_number} disabled={disabled} placeholder="Owner WhatsApp number" />
-          <TextInput name="default_language" defaultValue={config.default_language} disabled={disabled} placeholder="Default language" />
+        <form onSubmit={onSubmit} className="grid gap-4 lg:grid-cols-2">
+          <TextInput
+            name="salon_name"
+            defaultValue={config.salon_name}
+            disabled={disabled}
+            label="Salon name"
+            placeholder="Salu Salon"
+          />
+          <TextInput
+            name="timezone"
+            defaultValue={config.timezone}
+            disabled={disabled}
+            label="Timezone"
+            placeholder="Asia/Kolkata"
+          />
+          <TextInput
+            name="owner_number"
+            defaultValue={config.owner_number}
+            disabled={disabled}
+            label="Owner WhatsApp number"
+            placeholder="+91…"
+          />
+          <TextInput
+            name="default_language"
+            defaultValue={config.default_language}
+            disabled={disabled}
+            label="Default language"
+            placeholder="English"
+          />
           <div className="lg:col-span-2">
-            <TextArea name="address" defaultValue={config.address} disabled={disabled} rows={2} placeholder="Address" />
+            <TextArea
+              name="address"
+              defaultValue={config.address}
+              disabled={disabled}
+              rows={2}
+              label="Salon address"
+              placeholder="Address"
+            />
           </div>
           <div className="lg:col-span-2">
-            <TextArea name="hours" defaultValue={config.hours} disabled={disabled} rows={2} placeholder="Public hours text" />
+            <TextArea
+              name="hours"
+              defaultValue={config.hours}
+              disabled={disabled}
+              rows={2}
+              label="Public hours"
+              hint="Shown to customers in booking messages."
+              placeholder="Tuesday–Sunday, 10am–7pm"
+            />
           </div>
           <div className="lg:col-span-2">
-            <TextArea name="bot_policy_text" defaultValue={config.bot_policy_text} disabled={disabled} rows={4} placeholder="Bot policy" />
+            <TextArea
+              name="bot_policy_text"
+              defaultValue={config.bot_policy_text}
+              disabled={disabled}
+              rows={4}
+              label="Bot policy"
+              hint="Use this for operator-approved booking and handoff guidance."
+              placeholder="Bot policy"
+            />
           </div>
           <div className="flex justify-end lg:col-span-2">
             <SaveButton disabled={disabled} busy={busy} />
@@ -532,8 +674,8 @@ function ServicesPanel({
   onSubmit: (
     event: FormEvent<HTMLFormElement>,
     path: string,
-    method: "POST" | "PATCH",
-    busyKey: string,
+    method: 'POST' | 'PATCH',
+    busyKey: string
   ) => void;
   onDelete: (id: string) => void;
 }) {
@@ -547,16 +689,51 @@ function ServicesPanel({
         </CardHeader>
         <CardContent>
           <form
-            onSubmit={(event) => onSubmit(event, `${API_BASE}/services`, "POST", "new-service")}
+            onSubmit={(event) =>
+              onSubmit(event, `${API_BASE}/services`, 'POST', 'new-service')
+            }
             className="grid gap-3 lg:grid-cols-6"
           >
-            <TextInput name="service_name" disabled={disabled} placeholder="Service" className="lg:col-span-2" />
-            <TextInput name="duration_minutes" type="number" min={5} disabled={disabled} placeholder="Minutes" />
-            <TextInput name="price_display" disabled={disabled} placeholder="Display price" />
-            <TextInput name="price_paise" type="number" min={0} disabled={disabled} placeholder="Price paise" />
-            <TextInput name="deposit_paise" type="number" min={0} disabled={disabled} placeholder="Deposit paise" />
+            <TextInput
+              name="service_name"
+              disabled={disabled}
+              placeholder="Service name"
+              className="lg:col-span-2"
+            />
+            <TextInput
+              name="duration_minutes"
+              type="number"
+              min={5}
+              disabled={disabled}
+              placeholder="Minutes"
+            />
+            <TextInput
+              name="price_display"
+              disabled={disabled}
+              placeholder="Customer price label"
+            />
+            <TextInput
+              name="price_rupees"
+              type="number"
+              min={0}
+              step="0.01"
+              disabled={disabled}
+              placeholder="Price (₹)"
+            />
+            <TextInput
+              name="deposit_rupees"
+              type="number"
+              min={0}
+              step="0.01"
+              disabled={disabled}
+              placeholder="Deposit (₹)"
+            />
             <div className="flex justify-end lg:col-span-6">
-              <SaveButton disabled={disabled} busy={saving === "new-service"} label="Add" />
+              <SaveButton
+                disabled={disabled}
+                busy={saving === 'new-service'}
+                label="Add"
+              />
             </div>
           </form>
         </CardContent>
@@ -593,41 +770,106 @@ function ServiceRow({
   onSubmit: (
     event: FormEvent<HTMLFormElement>,
     path: string,
-    method: "POST" | "PATCH",
-    busyKey: string,
+    method: 'POST' | 'PATCH',
+    busyKey: string
   ) => void;
   onDelete: (id: string) => void;
 }) {
   return (
     <form
       onSubmit={(event) =>
-        onSubmit(event, `${API_BASE}/services`, "PATCH", `service:${row.service_id}`)
+        onSubmit(
+          event,
+          `${API_BASE}/services`,
+          'PATCH',
+          `service:${row.service_id}`
+        )
       }
       className="rounded-lg border border-slate-800 bg-slate-900/60 p-3"
     >
       <input type="hidden" name="service_id" value={row.service_id} />
       <div className="grid gap-3 lg:grid-cols-[1.2fr_0.7fr_0.7fr_0.7fr_0.7fr_0.7fr_auto]">
-        <TextInput name="service_name" defaultValue={row.service_name} disabled={disabled} />
-        <TextInput name="duration_minutes" type="number" min={5} defaultValue={row.duration_minutes} disabled={disabled} />
-        <TextInput name="price_display" defaultValue={row.price_display || money(row.price_paise)} disabled={disabled} />
-        <TextInput name="price_paise" type="number" min={0} defaultValue={row.price_paise} disabled={disabled} />
-        <TextInput name="deposit_paise" type="number" min={0} defaultValue={row.deposit_paise} disabled={disabled} />
-        <TextInput name="flow_order" type="number" min={0} defaultValue={row.flow_order} disabled={disabled} />
+        <TextInput
+          name="service_name"
+          defaultValue={row.service_name}
+          disabled={disabled}
+        />
+        <TextInput
+          name="duration_minutes"
+          type="number"
+          min={5}
+          defaultValue={row.duration_minutes}
+          disabled={disabled}
+        />
+        <TextInput
+          name="price_display"
+          defaultValue={row.price_display || money(row.price_paise)}
+          disabled={disabled}
+        />
+        <TextInput
+          name="price_rupees"
+          type="number"
+          min={0}
+          step="0.01"
+          defaultValue={paiseToRupeesInput(row.price_paise)}
+          disabled={disabled}
+          placeholder="Price (₹)"
+        />
+        <TextInput
+          name="deposit_rupees"
+          type="number"
+          min={0}
+          step="0.01"
+          defaultValue={paiseToRupeesInput(row.deposit_paise)}
+          disabled={disabled}
+          placeholder="Deposit (₹)"
+        />
+        <TextInput
+          name="flow_order"
+          type="number"
+          min={0}
+          defaultValue={row.flow_order}
+          disabled={disabled}
+        />
         <div className="flex gap-2">
-          {boolField("active", row.active, disabled)}
+          {boolField('active', row.active, disabled)}
           <input type="hidden" name="payment_required" value="false" />
           <label className="flex h-9 items-center gap-2 rounded-md border border-slate-800 bg-slate-950/40 px-3 text-xs text-slate-300">
-            <input name="payment_required" type="checkbox" value="true" defaultChecked={row.payment_required} disabled={disabled} className="h-4 w-4 rounded border-slate-700 bg-slate-950" />
+            <input
+              name="payment_required"
+              type="checkbox"
+              value="true"
+              defaultChecked={row.payment_required}
+              disabled={disabled}
+              className="h-4 w-4 rounded border-slate-700 bg-slate-950"
+            />
             Pay
           </label>
         </div>
       </div>
       <div className="mt-3 grid gap-3 lg:grid-cols-[1fr_1fr_auto]">
-        <TextInput name="payment_label" defaultValue={row.payment_label} disabled={disabled} placeholder="Payment label" />
-        <TextInput name="notes" defaultValue={row.notes} disabled={disabled} placeholder="Notes" />
+        <TextInput
+          name="payment_label"
+          defaultValue={row.payment_label}
+          disabled={disabled}
+          placeholder="Payment label"
+        />
+        <TextInput
+          name="notes"
+          defaultValue={row.notes}
+          disabled={disabled}
+          placeholder="Notes"
+        />
         <div className="flex justify-end gap-2">
           <SaveButton disabled={disabled} busy={busy} />
-          <Button type="button" variant="destructive" size="icon-sm" title="Deactivate" disabled={disabled || deleting} onClick={() => onDelete(row.service_id)}>
+          <Button
+            type="button"
+            variant="destructive"
+            size="icon-sm"
+            title="Deactivate"
+            disabled={disabled || deleting}
+            onClick={() => onDelete(row.service_id)}
+          >
             {deleting ? <Loader2 className="animate-spin" /> : <Trash2 />}
           </Button>
         </div>
@@ -649,8 +891,8 @@ function StylistsPanel({
   onSubmit: (
     event: FormEvent<HTMLFormElement>,
     path: string,
-    method: "POST" | "PATCH",
-    busyKey: string,
+    method: 'POST' | 'PATCH',
+    busyKey: string
   ) => void;
   onDelete: (id: string) => void;
 }) {
@@ -664,15 +906,39 @@ function StylistsPanel({
         </CardHeader>
         <CardContent>
           <form
-            onSubmit={(event) => onSubmit(event, `${API_BASE}/stylists`, "POST", "new-stylist")}
+            onSubmit={(event) =>
+              onSubmit(event, `${API_BASE}/stylists`, 'POST', 'new-stylist')
+            }
             className="grid gap-3 lg:grid-cols-4"
           >
-            <TextInput name="stylist_name" disabled={disabled} placeholder="Name" />
-            <TextInput name="specialty" disabled={disabled} placeholder="Specialty" />
-            <TextInput name="image_url" disabled={disabled} placeholder="Image URL" />
-            <TextInput name="flow_order" type="number" min={0} disabled={disabled} placeholder="Order" />
+            <TextInput
+              name="stylist_name"
+              disabled={disabled}
+              placeholder="Name"
+            />
+            <TextInput
+              name="specialty"
+              disabled={disabled}
+              placeholder="Specialty"
+            />
+            <TextInput
+              name="image_url"
+              disabled={disabled}
+              placeholder="Image URL"
+            />
+            <TextInput
+              name="flow_order"
+              type="number"
+              min={0}
+              disabled={disabled}
+              placeholder="Order"
+            />
             <div className="flex justify-end lg:col-span-4">
-              <SaveButton disabled={disabled} busy={saving === "new-stylist"} label="Add" />
+              <SaveButton
+                disabled={disabled}
+                busy={saving === 'new-stylist'}
+                label="Add"
+              />
             </div>
           </form>
         </CardContent>
@@ -709,36 +975,88 @@ function StylistRow({
   onSubmit: (
     event: FormEvent<HTMLFormElement>,
     path: string,
-    method: "POST" | "PATCH",
-    busyKey: string,
+    method: 'POST' | 'PATCH',
+    busyKey: string
   ) => void;
   onDelete: (id: string) => void;
 }) {
   return (
     <form
       onSubmit={(event) =>
-        onSubmit(event, `${API_BASE}/stylists`, "PATCH", `stylist:${row.stylist_id}`)
+        onSubmit(
+          event,
+          `${API_BASE}/stylists`,
+          'PATCH',
+          `stylist:${row.stylist_id}`
+        )
       }
       className="rounded-lg border border-slate-800 bg-slate-900/60 p-3"
     >
       <input type="hidden" name="stylist_id" value={row.stylist_id} />
       <div className="grid gap-3 sm:grid-cols-2">
-        <TextInput name="stylist_name" defaultValue={row.stylist_name} disabled={disabled} />
-        <TextInput name="specialty" defaultValue={row.specialty} disabled={disabled} />
-        <TextInput name="image_url" defaultValue={row.image_url} disabled={disabled} placeholder="Image URL" />
-        <TextInput name="image_alt" defaultValue={row.image_alt} disabled={disabled} placeholder="Image alt" />
-        <TextInput name="skills_summary" defaultValue={row.skills_summary} disabled={disabled} placeholder="Skills" />
-        <TextInput name="flow_order" type="number" min={0} defaultValue={row.flow_order} disabled={disabled} />
+        <TextInput
+          name="stylist_name"
+          defaultValue={row.stylist_name}
+          disabled={disabled}
+        />
+        <TextInput
+          name="specialty"
+          defaultValue={row.specialty}
+          disabled={disabled}
+        />
+        <TextInput
+          name="image_url"
+          defaultValue={row.image_url}
+          disabled={disabled}
+          placeholder="Image URL"
+        />
+        <TextInput
+          name="image_alt"
+          defaultValue={row.image_alt}
+          disabled={disabled}
+          placeholder="Image alt"
+        />
+        <TextInput
+          name="skills_summary"
+          defaultValue={row.skills_summary}
+          disabled={disabled}
+          placeholder="Skills"
+        />
+        <TextInput
+          name="flow_order"
+          type="number"
+          min={0}
+          defaultValue={row.flow_order}
+          disabled={disabled}
+        />
       </div>
       <div className="mt-3">
-        <TextArea name="bio" defaultValue={row.bio} disabled={disabled} rows={2} placeholder="Bio" />
+        <TextArea
+          name="bio"
+          defaultValue={row.bio}
+          disabled={disabled}
+          rows={2}
+          placeholder="Bio"
+        />
       </div>
       <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto]">
-        <TextInput name="notes" defaultValue={row.notes} disabled={disabled} placeholder="Notes" />
+        <TextInput
+          name="notes"
+          defaultValue={row.notes}
+          disabled={disabled}
+          placeholder="Notes"
+        />
         <div className="flex justify-end gap-2">
-          {boolField("active", row.active, disabled)}
+          {boolField('active', row.active, disabled)}
           <SaveButton disabled={disabled} busy={busy} />
-          <Button type="button" variant="destructive" size="icon-sm" title="Deactivate" disabled={disabled || deleting} onClick={() => onDelete(row.stylist_id)}>
+          <Button
+            type="button"
+            variant="destructive"
+            size="icon-sm"
+            title="Deactivate"
+            disabled={disabled || deleting}
+            onClick={() => onDelete(row.stylist_id)}
+          >
             {deleting ? <Loader2 className="animate-spin" /> : <Trash2 />}
           </Button>
         </div>
@@ -764,8 +1082,8 @@ function MappingsPanel({
   onSubmit: (
     event: FormEvent<HTMLFormElement>,
     path: string,
-    method: "POST" | "PATCH",
-    busyKey: string,
+    method: 'POST' | 'PATCH',
+    busyKey: string
   ) => void;
   onDelete: (id: string) => void;
 }) {
@@ -780,23 +1098,40 @@ function MappingsPanel({
         <CardContent>
           <MappingForm
             disabled={disabled}
-            busy={saving === "new-mapping"}
+            busy={saving === 'new-mapping'}
             stylists={stylists}
             services={services}
-            onSubmit={(event) => onSubmit(event, `${API_BASE}/stylist-services`, "POST", "new-mapping")}
+            onSubmit={(event) =>
+              onSubmit(
+                event,
+                `${API_BASE}/stylist-services`,
+                'POST',
+                'new-mapping'
+              )
+            }
           />
         </CardContent>
       </Card>
       <div className="grid gap-3">
         {rows.map((row) => (
-          <div key={row.stylist_service_id} className="rounded-lg border border-slate-800 bg-slate-900/60 p-3">
+          <div
+            key={row.stylist_service_id}
+            className="rounded-lg border border-slate-800 bg-slate-900/60 p-3"
+          >
             <MappingForm
               row={row}
               disabled={disabled}
               busy={saving === `mapping:${row.stylist_service_id}`}
               stylists={stylists}
               services={services}
-              onSubmit={(event) => onSubmit(event, `${API_BASE}/stylist-services`, "PATCH", `mapping:${row.stylist_service_id}`)}
+              onSubmit={(event) =>
+                onSubmit(
+                  event,
+                  `${API_BASE}/stylist-services`,
+                  'PATCH',
+                  `mapping:${row.stylist_service_id}`
+                )
+              }
               onDelete={() => onDelete(row.stylist_service_id)}
               deleting={saving === `delete-mapping:${row.stylist_service_id}`}
             />
@@ -827,9 +1162,22 @@ function MappingForm({
   deleting?: boolean;
 }) {
   return (
-    <form onSubmit={onSubmit} className="grid gap-3 lg:grid-cols-[1fr_1fr_0.7fr_0.7fr_0.7fr_0.7fr_auto]">
-      {row && <input type="hidden" name="stylist_service_id" value={row.stylist_service_id} />}
-      <SelectField name="stylist_id" defaultValue={row?.stylist_id} disabled={disabled}>
+    <form
+      onSubmit={onSubmit}
+      className="grid gap-3 lg:grid-cols-[1fr_1fr_0.7fr_0.7fr_0.7fr_0.7fr_auto]"
+    >
+      {row && (
+        <input
+          type="hidden"
+          name="stylist_service_id"
+          value={row.stylist_service_id}
+        />
+      )}
+      <SelectField
+        name="stylist_id"
+        defaultValue={row?.stylist_id}
+        disabled={disabled}
+      >
         <option value="">Stylist</option>
         {stylists.map((stylist) => (
           <option key={stylist.stylist_id} value={stylist.stylist_id}>
@@ -837,7 +1185,11 @@ function MappingForm({
           </option>
         ))}
       </SelectField>
-      <SelectField name="service_id" defaultValue={row?.service_id} disabled={disabled}>
+      <SelectField
+        name="service_id"
+        defaultValue={row?.service_id}
+        disabled={disabled}
+      >
         <option value="">Service</option>
         {services.map((service) => (
           <option key={service.service_id} value={service.service_id}>
@@ -845,21 +1197,74 @@ function MappingForm({
           </option>
         ))}
       </SelectField>
-      <TextInput name="override_duration_minutes" type="number" min={5} defaultValue={row?.override_duration_minutes ?? ""} disabled={disabled} placeholder="Minutes" />
-      <TextInput name="override_price_paise" type="number" min={0} defaultValue={row?.override_price_paise ?? ""} disabled={disabled} placeholder="Price" />
-      <TextInput name="override_deposit_paise" type="number" min={0} defaultValue={row?.override_deposit_paise ?? ""} disabled={disabled} placeholder="Deposit" />
-      <TextInput name="skill_level" defaultValue={row?.skill_level ?? ""} disabled={disabled} placeholder="Skill" />
+      <TextInput
+        name="override_duration_minutes"
+        type="number"
+        min={5}
+        defaultValue={row?.override_duration_minutes ?? ''}
+        disabled={disabled}
+        placeholder="Minutes"
+      />
+      <TextInput
+        name="override_price_rupees"
+        type="number"
+        min={0}
+        step="0.01"
+        defaultValue={paiseToRupeesInput(row?.override_price_paise)}
+        disabled={disabled}
+        placeholder="Price (₹)"
+      />
+      <TextInput
+        name="override_deposit_rupees"
+        type="number"
+        min={0}
+        step="0.01"
+        defaultValue={paiseToRupeesInput(row?.override_deposit_paise)}
+        disabled={disabled}
+        placeholder="Deposit (₹)"
+      />
+      <TextInput
+        name="skill_level"
+        defaultValue={row?.skill_level ?? ''}
+        disabled={disabled}
+        placeholder="Skill"
+      />
       <div className="flex justify-end gap-2">
-        {boolField("active", row?.active ?? true, disabled)}
-        <SaveButton disabled={disabled} busy={busy} label={row ? "Save" : "Add"} />
+        {boolField('active', row?.active ?? true, disabled)}
+        <SaveButton
+          disabled={disabled}
+          busy={busy}
+          label={row ? 'Save' : 'Add'}
+        />
         {row && onDelete && (
-          <Button type="button" variant="destructive" size="icon-sm" title="Deactivate" disabled={disabled || deleting} onClick={onDelete}>
+          <Button
+            type="button"
+            variant="destructive"
+            size="icon-sm"
+            title="Deactivate"
+            disabled={disabled || deleting}
+            onClick={onDelete}
+          >
             {deleting ? <Loader2 className="animate-spin" /> : <Trash2 />}
           </Button>
         )}
       </div>
-      <TextInput name="flow_order" type="number" min={0} defaultValue={row?.flow_order ?? ""} disabled={disabled} placeholder="Order" className="lg:col-span-1" />
-      <TextInput name="notes" defaultValue={row?.notes ?? ""} disabled={disabled} placeholder="Notes" className="lg:col-span-6" />
+      <TextInput
+        name="flow_order"
+        type="number"
+        min={0}
+        defaultValue={row?.flow_order ?? ''}
+        disabled={disabled}
+        placeholder="Order"
+        className="lg:col-span-1"
+      />
+      <TextInput
+        name="notes"
+        defaultValue={row?.notes ?? ''}
+        disabled={disabled}
+        placeholder="Notes"
+        className="lg:col-span-6"
+      />
     </form>
   );
 }
@@ -879,8 +1284,8 @@ function AvailabilityPanel({
   onSubmit: (
     event: FormEvent<HTMLFormElement>,
     path: string,
-    method: "POST" | "PATCH",
-    busyKey: string,
+    method: 'POST' | 'PATCH',
+    busyKey: string
   ) => void;
   onDelete: (id: string) => void;
 }) {
@@ -895,21 +1300,38 @@ function AvailabilityPanel({
         <CardContent>
           <AvailabilityForm
             disabled={disabled}
-            busy={saving === "new-availability"}
+            busy={saving === 'new-availability'}
             services={services}
-            onSubmit={(event) => onSubmit(event, `${API_BASE}/availability`, "POST", "new-availability")}
+            onSubmit={(event) =>
+              onSubmit(
+                event,
+                `${API_BASE}/availability`,
+                'POST',
+                'new-availability'
+              )
+            }
           />
         </CardContent>
       </Card>
       <div className="grid gap-3">
         {rows.map((row) => (
-          <div key={row.availability_id} className="rounded-lg border border-slate-800 bg-slate-900/60 p-3">
+          <div
+            key={row.availability_id}
+            className="rounded-lg border border-slate-800 bg-slate-900/60 p-3"
+          >
             <AvailabilityForm
               row={row}
               disabled={disabled}
               busy={saving === `availability:${row.availability_id}`}
               services={services}
-              onSubmit={(event) => onSubmit(event, `${API_BASE}/availability`, "PATCH", `availability:${row.availability_id}`)}
+              onSubmit={(event) =>
+                onSubmit(
+                  event,
+                  `${API_BASE}/availability`,
+                  'PATCH',
+                  `availability:${row.availability_id}`
+                )
+              }
               onDelete={() => onDelete(row.availability_id)}
               deleting={saving === `delete-availability:${row.availability_id}`}
             />
@@ -938,9 +1360,22 @@ function AvailabilityForm({
   deleting?: boolean;
 }) {
   return (
-    <form onSubmit={onSubmit} className="grid gap-3 lg:grid-cols-[1fr_0.8fr_0.8fr_0.8fr_1fr_1fr_auto]">
-      {row && <input type="hidden" name="availability_id" value={row.availability_id} />}
-      <SelectField name="day_name" defaultValue={row?.day_name} disabled={disabled}>
+    <form
+      onSubmit={onSubmit}
+      className="grid gap-3 lg:grid-cols-[1fr_0.8fr_0.8fr_0.8fr_1fr_1fr_auto]"
+    >
+      {row && (
+        <input
+          type="hidden"
+          name="availability_id"
+          value={row.availability_id}
+        />
+      )}
+      <SelectField
+        name="day_name"
+        defaultValue={row?.day_name}
+        disabled={disabled}
+      >
         <option value="">Day</option>
         {WEEKDAYS.map((day) => (
           <option key={day} value={day}>
@@ -948,11 +1383,37 @@ function AvailabilityForm({
           </option>
         ))}
       </SelectField>
-      <TextInput name="open_time" type="time" defaultValue={row?.open_time ?? ""} disabled={disabled} />
-      <TextInput name="close_time" type="time" defaultValue={row?.close_time ?? ""} disabled={disabled} />
-      <TextInput name="slot_interval_minutes" type="number" min={5} defaultValue={row?.slot_interval_minutes ?? 30} disabled={disabled} placeholder="Interval" />
-      <TextInput name="blackout_date" type="date" defaultValue={row?.blackout_date ?? ""} disabled={disabled} />
-      <SelectField name="service_id" defaultValue={row?.service_id} disabled={disabled}>
+      <TextInput
+        name="open_time"
+        type="time"
+        defaultValue={row?.open_time ?? ''}
+        disabled={disabled}
+      />
+      <TextInput
+        name="close_time"
+        type="time"
+        defaultValue={row?.close_time ?? ''}
+        disabled={disabled}
+      />
+      <TextInput
+        name="slot_interval_minutes"
+        type="number"
+        min={5}
+        defaultValue={row?.slot_interval_minutes ?? 30}
+        disabled={disabled}
+        placeholder="Interval"
+      />
+      <TextInput
+        name="blackout_date"
+        type="date"
+        defaultValue={row?.blackout_date ?? ''}
+        disabled={disabled}
+      />
+      <SelectField
+        name="service_id"
+        defaultValue={row?.service_id}
+        disabled={disabled}
+      >
         <option value="">All services</option>
         {services.map((service) => (
           <option key={service.service_id} value={service.service_id}>
@@ -961,15 +1422,32 @@ function AvailabilityForm({
         ))}
       </SelectField>
       <div className="flex justify-end gap-2">
-        {boolField("active", row?.active ?? true, disabled)}
-        <SaveButton disabled={disabled} busy={busy} label={row ? "Save" : "Add"} />
+        {boolField('active', row?.active ?? true, disabled)}
+        <SaveButton
+          disabled={disabled}
+          busy={busy}
+          label={row ? 'Save' : 'Add'}
+        />
         {row && onDelete && (
-          <Button type="button" variant="destructive" size="icon-sm" title="Deactivate" disabled={disabled || deleting} onClick={onDelete}>
+          <Button
+            type="button"
+            variant="destructive"
+            size="icon-sm"
+            title="Deactivate"
+            disabled={disabled || deleting}
+            onClick={onDelete}
+          >
             {deleting ? <Loader2 className="animate-spin" /> : <Trash2 />}
           </Button>
         )}
       </div>
-      <TextInput name="notes" defaultValue={row?.notes ?? ""} disabled={disabled} placeholder="Notes" className="lg:col-span-7" />
+      <TextInput
+        name="notes"
+        defaultValue={row?.notes ?? ''}
+        disabled={disabled}
+        placeholder="Notes"
+        className="lg:col-span-7"
+      />
     </form>
   );
 }
@@ -989,8 +1467,8 @@ function StylistAvailabilityPanel({
   onSubmit: (
     event: FormEvent<HTMLFormElement>,
     path: string,
-    method: "POST" | "PATCH",
-    busyKey: string,
+    method: 'POST' | 'PATCH',
+    busyKey: string
   ) => void;
   onDelete: (id: string) => void;
 }) {
@@ -999,20 +1477,23 @@ function StylistAvailabilityPanel({
       <Card className="rounded-lg border-slate-800 bg-slate-900/70">
         <CardHeader>
           <CardTitle>
-            <SectionTitle icon={CalendarClock} title="New Stylist Availability" />
+            <SectionTitle
+              icon={CalendarClock}
+              title="New Stylist Availability"
+            />
           </CardTitle>
         </CardHeader>
         <CardContent>
           <StylistAvailabilityForm
             disabled={disabled}
-            busy={saving === "new-stylist-availability"}
+            busy={saving === 'new-stylist-availability'}
             stylists={stylists}
             onSubmit={(event) =>
               onSubmit(
                 event,
                 `${API_BASE}/stylist-availability`,
-                "POST",
-                "new-stylist-availability",
+                'POST',
+                'new-stylist-availability'
               )
             }
           />
@@ -1021,22 +1502,30 @@ function StylistAvailabilityPanel({
       <WeeklyAvailabilityGrid rows={rows} stylists={stylists} />
       <div className="grid gap-3">
         {rows.map((row) => (
-          <div key={row.stylist_availability_id} className="rounded-lg border border-slate-800 bg-slate-900/60 p-3">
+          <div
+            key={row.stylist_availability_id}
+            className="rounded-lg border border-slate-800 bg-slate-900/60 p-3"
+          >
             <StylistAvailabilityForm
               row={row}
               disabled={disabled}
-              busy={saving === `stylist-availability:${row.stylist_availability_id}`}
+              busy={
+                saving === `stylist-availability:${row.stylist_availability_id}`
+              }
               stylists={stylists}
               onSubmit={(event) =>
                 onSubmit(
                   event,
                   `${API_BASE}/stylist-availability`,
-                  "PATCH",
-                  `stylist-availability:${row.stylist_availability_id}`,
+                  'PATCH',
+                  `stylist-availability:${row.stylist_availability_id}`
                 )
               }
               onDelete={() => onDelete(row.stylist_availability_id)}
-              deleting={saving === `delete-stylist-availability:${row.stylist_availability_id}`}
+              deleting={
+                saving ===
+                `delete-stylist-availability:${row.stylist_availability_id}`
+              }
             />
           </div>
         ))}
@@ -1063,9 +1552,22 @@ function StylistAvailabilityForm({
   deleting?: boolean;
 }) {
   return (
-    <form onSubmit={onSubmit} className="grid gap-3 lg:grid-cols-[1fr_1fr_0.75fr_0.75fr_0.7fr_0.9fr_0.9fr_auto]">
-      {row && <input type="hidden" name="stylist_availability_id" value={row.stylist_availability_id} />}
-      <SelectField name="stylist_id" defaultValue={row?.stylist_id} disabled={disabled}>
+    <form
+      onSubmit={onSubmit}
+      className="grid gap-3 lg:grid-cols-[1fr_1fr_0.75fr_0.75fr_0.7fr_0.9fr_0.9fr_auto]"
+    >
+      {row && (
+        <input
+          type="hidden"
+          name="stylist_availability_id"
+          value={row.stylist_availability_id}
+        />
+      )}
+      <SelectField
+        name="stylist_id"
+        defaultValue={row?.stylist_id}
+        disabled={disabled}
+      >
         <option value="">Stylist</option>
         {stylists.map((stylist) => (
           <option key={stylist.stylist_id} value={stylist.stylist_id}>
@@ -1073,7 +1575,11 @@ function StylistAvailabilityForm({
           </option>
         ))}
       </SelectField>
-      <SelectField name="day_name" defaultValue={row?.day_name} disabled={disabled}>
+      <SelectField
+        name="day_name"
+        defaultValue={row?.day_name}
+        disabled={disabled}
+      >
         <option value="">Day</option>
         {WEEKDAYS.map((day) => (
           <option key={day} value={day}>
@@ -1081,22 +1587,71 @@ function StylistAvailabilityForm({
           </option>
         ))}
       </SelectField>
-      <TextInput name="open_time" type="time" defaultValue={row?.open_time ?? ""} disabled={disabled} />
-      <TextInput name="close_time" type="time" defaultValue={row?.close_time ?? ""} disabled={disabled} />
-      <TextInput name="slot_interval_minutes" type="number" min={5} defaultValue={row?.slot_interval_minutes ?? 30} disabled={disabled} placeholder="Interval" />
-      <TextInput name="effective_from" type="date" defaultValue={row?.effective_from ?? ""} disabled={disabled} />
-      <TextInput name="effective_to" type="date" defaultValue={row?.effective_to ?? ""} disabled={disabled} />
+      <TextInput
+        name="open_time"
+        type="time"
+        defaultValue={row?.open_time ?? ''}
+        disabled={disabled}
+      />
+      <TextInput
+        name="close_time"
+        type="time"
+        defaultValue={row?.close_time ?? ''}
+        disabled={disabled}
+      />
+      <TextInput
+        name="slot_interval_minutes"
+        type="number"
+        min={5}
+        defaultValue={row?.slot_interval_minutes ?? 30}
+        disabled={disabled}
+        placeholder="Interval"
+      />
+      <TextInput
+        name="effective_from"
+        type="date"
+        defaultValue={row?.effective_from ?? ''}
+        disabled={disabled}
+      />
+      <TextInput
+        name="effective_to"
+        type="date"
+        defaultValue={row?.effective_to ?? ''}
+        disabled={disabled}
+      />
       <div className="flex justify-end gap-2">
-        {boolField("active", row?.active ?? true, disabled)}
-        <SaveButton disabled={disabled} busy={busy} label={row ? "Save" : "Add"} />
+        {boolField('active', row?.active ?? true, disabled)}
+        <SaveButton
+          disabled={disabled}
+          busy={busy}
+          label={row ? 'Save' : 'Add'}
+        />
         {row && onDelete && (
-          <Button type="button" variant="destructive" size="icon-sm" title="Deactivate" disabled={disabled || deleting} onClick={onDelete}>
+          <Button
+            type="button"
+            variant="destructive"
+            size="icon-sm"
+            title="Deactivate"
+            disabled={disabled || deleting}
+            onClick={onDelete}
+          >
             {deleting ? <Loader2 className="animate-spin" /> : <Trash2 />}
           </Button>
         )}
       </div>
-      <TextInput name="blackout_date" type="date" defaultValue={row?.blackout_date ?? ""} disabled={disabled} />
-      <TextInput name="notes" defaultValue={row?.notes ?? ""} disabled={disabled} placeholder="Notes" className="lg:col-span-7" />
+      <TextInput
+        name="blackout_date"
+        type="date"
+        defaultValue={row?.blackout_date ?? ''}
+        disabled={disabled}
+      />
+      <TextInput
+        name="notes"
+        defaultValue={row?.notes ?? ''}
+        disabled={disabled}
+        placeholder="Notes"
+        className="lg:col-span-7"
+      />
     </form>
   );
 }
@@ -1112,11 +1667,14 @@ function WeeklyAvailabilityGrid({
   return (
     <div className="overflow-x-auto rounded-lg border border-slate-800 bg-slate-900/60">
       <div className="grid min-w-[760px] grid-cols-[160px_repeat(7,minmax(92px,1fr))]">
-        <div className="border-b border-slate-800 p-3 text-xs font-medium uppercase text-slate-500">
+        <div className="border-b border-slate-800 p-3 text-xs font-medium text-slate-500 uppercase">
           Stylist
         </div>
         {WEEKDAYS.map((day) => (
-          <div key={day} className="border-b border-l border-slate-800 p-3 text-xs font-medium uppercase text-slate-500">
+          <div
+            key={day}
+            className="border-b border-l border-slate-800 p-3 text-xs font-medium text-slate-500 uppercase"
+          >
             {day.slice(0, 3)}
           </div>
         ))}
@@ -1129,10 +1687,13 @@ function WeeklyAvailabilityGrid({
               const slots = activeRows.filter(
                 (row) =>
                   row.stylist_id === stylist.stylist_id &&
-                  row.day_name.toLowerCase() === day.toLowerCase(),
+                  row.day_name.toLowerCase() === day.toLowerCase()
               );
               return (
-                <div key={day} className="min-h-16 border-b border-l border-slate-800 p-2">
+                <div
+                  key={day}
+                  className="min-h-16 border-b border-l border-slate-800 p-2"
+                >
                   {slots.length ? (
                     <div className="flex flex-col gap-1">
                       {slots.map((slot) => (

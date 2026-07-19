@@ -1,5 +1,5 @@
-import Link from "next/link";
-import type { ReactNode } from "react";
+import Link from 'next/link';
+import type { ReactNode } from 'react';
 import {
   AlertTriangle,
   ArrowRight,
@@ -11,10 +11,10 @@ import {
   MessageSquareText,
   Scissors,
   UsersRound,
-} from "lucide-react";
+} from 'lucide-react';
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   type SaluActivityRow,
   type SaluBookingRow,
@@ -22,23 +22,23 @@ import {
   type SaluHandoffRow,
   type SaluPaymentQueueRow,
   loadSaluDashboardData,
-} from "@/lib/salu/queries";
+} from '@/lib/salu/queries';
 import {
   compactPhone,
   formatDate,
   formatDateTime,
   formatPaise,
   formatTime,
-} from "@/lib/salu/format";
+} from '@/lib/salu/format';
 import {
   formatOpsAge,
   formatOpsCountdown,
   paymentQueueLabel,
   paymentQueueTone,
-} from "@/lib/salu/ops";
-import { cn } from "@/lib/utils";
+} from '@/lib/salu/ops';
+import { cn } from '@/lib/utils';
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
   let data: SaluDashboardData;
@@ -49,30 +49,34 @@ export default async function DashboardPage() {
     return <SetupError error={error} />;
   }
 
-  const salonName = data.config?.salon_name || "Salu Salon";
+  const salonName = data.config?.salon_name || 'Salu Salon';
 
   return (
-    <div className="space-y-5">
+    <div className="ops-page">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
+          <p className="ops-eyebrow">Today&apos;s control room</p>
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-bold text-white">{salonName}</h1>
-            <StatusBadge tone={data.n8n.ok ? "good" : "warn"}>
+            <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
+              {salonName}
+            </h1>
+            <StatusBadge tone={data.n8n.ok ? 'good' : 'warn'}>
               {data.n8n.ok
-                ? "n8n live"
+                ? 'n8n live'
                 : data.n8n.configured
-                  ? "n8n needs review"
-                  : "n8n not configured"}
+                  ? 'n8n needs review'
+                  : 'n8n not configured'}
             </StatusBadge>
           </div>
-          <p className="mt-1 text-sm text-slate-400">
-            WhatsApp bookings, deposits, customer memory, and workflow health.
+          <p className="mt-2 text-sm text-slate-400">
+            Prioritise customer handoffs, booking exceptions, and today&apos;s
+            appointments.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" render={<Link href="/inbox" />}>
+          <Button render={<Link href="/inbox" />}>
             <MessageSquareText className="h-4 w-4" />
-            Inbox
+            Open inbox
           </Button>
           <Button variant="outline" render={<Link href="/contacts" />}>
             <UsersRound className="h-4 w-4" />
@@ -81,7 +85,13 @@ export default async function DashboardPage() {
           {process.env.N8N_URL ? (
             <Button
               variant="outline"
-              render={<a href={process.env.N8N_URL} target="_blank" rel="noreferrer" />}
+              render={
+                <a
+                  href={process.env.N8N_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                />
+              }
             >
               <ExternalLink className="h-4 w-4" />
               n8n
@@ -92,39 +102,44 @@ export default async function DashboardPage() {
 
       <PriorityStrip data={data} />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section
+        aria-label="Today at a glance"
+        className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"
+      >
         <MetricTile
           icon={CalendarCheck}
           label="Today"
-          value={data.metrics.today_bookings.toLocaleString("en-IN")}
-          detail={`${data.metrics.upcoming_confirmed.toLocaleString("en-IN")} upcoming confirmed`}
+          value={data.metrics.today_bookings.toLocaleString('en-IN')}
+          detail={`${data.metrics.upcoming_confirmed.toLocaleString('en-IN')} upcoming confirmed`}
         />
         <MetricTile
           icon={CreditCard}
           label="Pending Deposits"
-          value={data.metrics.pending_payment_holds.toLocaleString("en-IN")}
+          value={data.metrics.pending_payment_holds.toLocaleString('en-IN')}
           detail={`${formatPaise(data.metrics.paid_today_paise)} paid today`}
-          tone={data.metrics.pending_payment_holds ? "warn" : "normal"}
+          tone={data.metrics.pending_payment_holds ? 'warn' : 'normal'}
         />
         <MetricTile
           icon={AlertTriangle}
           label="Needs Attention"
-          value={data.metrics.needs_attention.toLocaleString("en-IN")}
-          detail={`${data.metrics.human_mode_sessions.toLocaleString("en-IN")} human handoff sessions`}
-          tone={data.metrics.needs_attention ? "danger" : "normal"}
+          value={data.metrics.needs_attention.toLocaleString('en-IN')}
+          detail={`${data.metrics.human_mode_sessions.toLocaleString('en-IN')} human handoff sessions`}
+          tone={data.metrics.needs_attention ? 'danger' : 'normal'}
         />
         <MetricTile
           icon={MessageSquareText}
           label="WhatsApp Today"
-          value={data.metrics.messages_today.toLocaleString("en-IN")}
-          detail={`${data.metrics.customers_seen_7d.toLocaleString("en-IN")} customers seen in 7 days`}
+          value={data.metrics.messages_today.toLocaleString('en-IN')}
+          detail={`${data.metrics.customers_seen_7d.toLocaleString('en-IN')} customers seen in 7 days`}
         />
-      </div>
+      </section>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
         <Panel
           title="Today Schedule"
-          action={<StatusBadge tone="neutral">{formatDate(todayKey())}</StatusBadge>}
+          action={
+            <StatusBadge tone="neutral">{formatDate(todayKey())}</StatusBadge>
+          }
           className="xl:col-span-2"
         >
           <BookingList bookings={data.todaySchedule} />
@@ -132,7 +147,9 @@ export default async function DashboardPage() {
 
         <Panel
           title="Next Appointments"
-          action={<StatusBadge tone="neutral">{data.nextSchedule.length}</StatusBadge>}
+          action={
+            <StatusBadge tone="neutral">{data.nextSchedule.length}</StatusBadge>
+          }
         >
           <BookingList
             bookings={data.nextSchedule}
@@ -144,7 +161,7 @@ export default async function DashboardPage() {
         <Panel
           title="Human Handoffs"
           action={
-            <StatusBadge tone={data.handoffQueue.length ? "warn" : "good"}>
+            <StatusBadge tone={data.handoffQueue.length ? 'warn' : 'good'}>
               {data.handoffQueue.length}
             </StatusBadge>
           }
@@ -156,7 +173,11 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <Panel
           title="Deposits & Exceptions"
-          action={<StatusBadge tone={data.opsQueue.length ? "warn" : "good"}>{data.opsQueue.length}</StatusBadge>}
+          action={
+            <StatusBadge tone={data.opsQueue.length ? 'warn' : 'good'}>
+              {data.opsQueue.length}
+            </StatusBadge>
+          }
         >
           <PaymentQueue rows={data.opsQueue} />
         </Panel>
@@ -177,24 +198,28 @@ export default async function DashboardPage() {
                 key={workflow.name}
                 className="flex items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950/50 px-3 py-2"
               >
-                <span className="min-w-0 truncate text-sm text-slate-300">{workflow.name}</span>
+                <span className="min-w-0 truncate text-sm text-slate-300">
+                  {workflow.name}
+                </span>
                 <div className="flex shrink-0 items-center gap-2">
-                  {workflow.role === "bridge" ? (
+                  {workflow.role === 'bridge' ? (
                     <StatusBadge tone="neutral">bridge</StatusBadge>
                   ) : null}
-                  <StatusBadge tone={workflow.active ? "good" : "danger"}>
-                    {workflow.active ? "active" : "off"}
+                  <StatusBadge tone={workflow.active ? 'good' : 'danger'}>
+                    {workflow.active ? 'active' : 'off'}
                   </StatusBadge>
                 </div>
               </div>
             ))}
             <div className="border-t border-slate-800 pt-3">
               <div className="mb-2 flex items-center justify-between gap-3">
-                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                <p className="text-xs font-medium tracking-wide text-slate-500 uppercase">
                   Dashboard Bridge
                 </p>
-                <StatusBadge tone={data.n8n.manualSendReady ? "good" : "danger"}>
-                  {data.n8n.manualSendReady ? "ready" : "check env"}
+                <StatusBadge
+                  tone={data.n8n.manualSendReady ? 'good' : 'danger'}
+                >
+                  {data.n8n.manualSendReady ? 'ready' : 'check env'}
                 </StatusBadge>
               </div>
               <div className="space-y-2">
@@ -203,9 +228,11 @@ export default async function DashboardPage() {
                     key={check.key}
                     className="flex items-center justify-between gap-3 text-xs"
                   >
-                    <span className="truncate text-slate-400">{check.label}</span>
-                    <StatusBadge tone={check.configured ? "good" : "danger"}>
-                      {check.configured ? "set" : "missing"}
+                    <span className="truncate text-slate-400">
+                      {check.label}
+                    </span>
+                    <StatusBadge tone={check.configured ? 'good' : 'danger'}>
+                      {check.configured ? 'set' : 'missing'}
                     </StatusBadge>
                   </div>
                 ))}
@@ -228,21 +255,21 @@ function MetricTile({
   label,
   value,
   detail,
-  tone = "normal",
+  tone = 'normal',
 }: {
   icon: typeof CalendarCheck;
   label: string;
   value: string;
   detail: string;
-  tone?: "normal" | "warn" | "danger";
+  tone?: 'normal' | 'warn' | 'danger';
 }) {
   return (
     <div
       className={cn(
-        "rounded-xl border bg-slate-900 p-5",
-        tone === "warn" && "border-amber-500/30",
-        tone === "danger" && "border-red-500/30",
-        tone === "normal" && "border-slate-800",
+        'ops-surface p-5',
+        tone === 'warn' && 'border-amber-500/30',
+        tone === 'danger' && 'border-red-500/30',
+        tone === 'normal' && 'border-slate-800'
       )}
     >
       <div className="flex items-start justify-between">
@@ -251,7 +278,7 @@ function MetricTile({
           <Icon className="h-4 w-4" />
         </div>
       </div>
-      <p className="mt-3 text-[28px] leading-none font-bold tabular-nums text-white">
+      <p className="mt-3 text-[28px] leading-none font-bold text-white tabular-nums">
         {value}
       </p>
       <p className="mt-2 text-sm text-slate-500">{detail}</p>
@@ -267,82 +294,97 @@ function PriorityStrip({ data }: { data: SaluDashboardData }) {
     (data.setupHealth.active_services ? 0 : 1) +
     (data.setupHealth.active_stylists ? 0 : 1) +
     (data.setupHealth.active_stylist_services ? 0 : 1) +
-    (data.setupHealth.availability_rules + data.setupHealth.stylist_availability_rules
+    (data.setupHealth.availability_rules +
+    data.setupHealth.stylist_availability_rules
       ? 0
       : 1);
   const handoffHref = data.handoffQueue[0]?.conversation_id
     ? `/inbox?conversation=${data.handoffQueue[0].conversation_id}`
-    : "/inbox";
+    : '/inbox';
 
   const items = [
     {
-      label: "Human queue",
+      label: 'Human queue',
       value: data.handoffQueue.length,
       detail: data.handoffQueue[0]
         ? `${data.handoffQueue[0].customer_name || compactPhone(data.handoffQueue[0].phone)} · ${formatOpsAge(data.handoffQueue[0].handoff_requested_at || data.handoffQueue[0].last_message_at)}`
-        : "No active handoffs",
+        : 'No active handoffs',
       href: handoffHref,
-      tone: data.handoffQueue.length ? ("danger" as const) : ("good" as const),
+      tone: data.handoffQueue.length ? ('danger' as const) : ('good' as const),
     },
     {
-      label: "Deposit queue",
+      label: 'Deposit queue',
       value: data.opsQueue.length,
       detail: data.opsQueue[0]
-        ? `${paymentQueueLabel(data.opsQueue[0])} · ${formatOpsCountdown(data.opsQueue[0].expires_at || data.opsQueue[0].hold_expires_at) || "no expiry"}`
-        : "No payment exceptions",
-      href: "/dashboard",
-      tone: data.opsQueue.length ? ("warn" as const) : ("good" as const),
+        ? `${paymentQueueLabel(data.opsQueue[0])} · ${formatOpsCountdown(data.opsQueue[0].expires_at || data.opsQueue[0].hold_expires_at) || 'no expiry'}`
+        : 'No payment exceptions',
+      href: '/dashboard',
+      tone: data.opsQueue.length ? ('warn' as const) : ('good' as const),
     },
     {
-      label: "Salon setup",
+      label: 'Salon setup',
       value: setupIssues,
-      detail:
-        setupIssues
-          ? `${setupIssues} setup checks need review`
-          : "Supabase setup looks steady",
-      href: "/salon-control",
-      tone: setupIssues ? ("warn" as const) : ("good" as const),
+      detail: setupIssues
+        ? `${setupIssues} setup checks need review`
+        : 'Supabase setup looks steady',
+      href: '/salon-control',
+      tone: setupIssues ? ('warn' as const) : ('good' as const),
     },
     {
-      label: "Bridge",
+      label: 'Bridge',
       value: data.n8n.activeCount,
       detail: data.n8n.ok
-        ? "n8n and manual-send ready"
+        ? 'n8n and manual-send ready'
         : `${data.n8n.activeCount}/${data.n8n.expectedCount} workflows active`,
-      href: "/system-health",
-      tone: data.n8n.ok ? ("good" as const) : ("danger" as const),
+      href: '/system-health',
+      tone: data.n8n.ok ? ('good' as const) : ('danger' as const),
     },
   ];
 
   return (
-    <section className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-      {items.map((item) => (
-        <Link
-          key={item.label}
-          href={item.href}
-          className={cn(
-            "group rounded-xl border bg-slate-900 p-4 transition-colors hover:border-primary/50 hover:bg-slate-900/80",
-            item.tone === "good" && "border-emerald-500/25",
-            item.tone === "warn" && "border-amber-500/30",
-            item.tone === "danger" && "border-red-500/30",
-          )}
-        >
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                {item.label}
-              </p>
-              <p className="mt-2 text-2xl font-bold tabular-nums text-white">
-                {item.value.toLocaleString("en-IN")}
-              </p>
-              <p className="mt-1 truncate text-sm text-slate-400">
-                {item.detail}
-              </p>
+    <section aria-labelledby="priority-title" className="ops-surface p-3">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1">
+        <div>
+          <h2 id="priority-title" className="ops-section-title">
+            Act next
+          </h2>
+          <p className="mt-0.5 text-xs text-slate-500">
+            The queues that can affect a customer&apos;s experience today.
+          </p>
+        </div>
+        <span className="text-xs font-medium text-slate-500">
+          Live operational view
+        </span>
+      </div>
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+        {items.map((item) => (
+          <Link
+            key={item.label}
+            href={item.href}
+            className={cn(
+              'ops-focus-ring group hover:border-primary/50 rounded-xl border bg-slate-950/50 p-4 transition-colors hover:bg-slate-900/80',
+              item.tone === 'good' && 'border-emerald-500/25',
+              item.tone === 'warn' && 'border-amber-500/30',
+              item.tone === 'danger' && 'border-red-500/30'
+            )}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xs font-medium tracking-wide text-slate-500 uppercase">
+                  {item.label}
+                </p>
+                <p className="mt-2 text-2xl font-bold text-white tabular-nums">
+                  {item.value.toLocaleString('en-IN')}
+                </p>
+                <p className="mt-1 truncate text-sm text-slate-400">
+                  {item.detail}
+                </p>
+              </div>
+              <ArrowRight className="group-hover:text-primary mt-1 h-4 w-4 shrink-0 text-slate-600 transition-colors" />
             </div>
-            <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-slate-600 transition-colors group-hover:text-primary" />
-          </div>
-        </Link>
-      ))}
+          </Link>
+        ))}
+      </div>
     </section>
   );
 }
@@ -359,7 +401,7 @@ function Panel({
   children: ReactNode;
 }) {
   return (
-    <section className={cn("rounded-xl border border-slate-800 bg-slate-900", className)}>
+    <section className={cn('ops-surface', className)}>
       <div className="flex items-center justify-between gap-3 border-b border-slate-800 px-4 py-3">
         <h2 className="text-sm font-semibold text-white">{title}</h2>
         {action}
@@ -372,7 +414,7 @@ function Panel({
 function BookingList({
   bookings,
   showDate = false,
-  emptyText = "No appointments on the board for today.",
+  emptyText = 'No appointments on the board for today.',
 }: {
   bookings: SaluBookingRow[];
   showDate?: boolean;
@@ -409,17 +451,25 @@ function BookingList({
             <p className="mt-1 truncate text-xs text-slate-500">
               {booking.service_assignments_summary ||
                 [
-                  booking.service_labels || booking.service_label || "Service",
-                  booking.stylist_names || booking.stylist_name ? `with ${booking.stylist_names || booking.stylist_name}` : "",
-                ].filter(Boolean).join(" ")}
+                  booking.service_labels || booking.service_label || 'Service',
+                  booking.stylist_names || booking.stylist_name
+                    ? `with ${booking.stylist_names || booking.stylist_name}`
+                    : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-            <StatusBadge tone={booking.status === "confirmed" ? "good" : "warn"}>
+            <StatusBadge
+              tone={booking.status === 'confirmed' ? 'good' : 'warn'}
+            >
               {booking.status}
             </StatusBadge>
-            <StatusBadge tone={booking.payment_status === "paid" ? "good" : "neutral"}>
-              {booking.payment_status || "no payment"}
+            <StatusBadge
+              tone={booking.payment_status === 'paid' ? 'good' : 'neutral'}
+            >
+              {booking.payment_status || 'no payment'}
             </StatusBadge>
           </div>
         </div>
@@ -429,7 +479,10 @@ function BookingList({
 }
 
 function HandoffQueue({ rows }: { rows: SaluHandoffRow[] }) {
-  if (!rows.length) return <EmptyLine text="No active handoffs. The bot is carrying the queue." />;
+  if (!rows.length)
+    return (
+      <EmptyLine text="No active handoffs. The bot is carrying the queue." />
+    );
 
   return (
     <div className="space-y-3">
@@ -437,7 +490,7 @@ function HandoffQueue({ rows }: { rows: SaluHandoffRow[] }) {
         <Link
           key={row.conversation_id}
           href={`/inbox?conversation=${row.conversation_id}`}
-          className="block rounded-lg border border-slate-800 bg-slate-950/50 p-3 transition-colors hover:border-primary/40 hover:bg-slate-950"
+          className="hover:border-primary/40 block rounded-lg border border-slate-800 bg-slate-950/50 p-3 transition-colors hover:bg-slate-950"
         >
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
@@ -445,10 +498,12 @@ function HandoffQueue({ rows }: { rows: SaluHandoffRow[] }) {
                 {row.customer_name || compactPhone(row.phone)}
               </p>
               <p className="mt-1 line-clamp-2 text-xs text-slate-500">
-                {row.last_message_text || row.handoff_reason || "Needs human help"}
+                {row.last_message_text ||
+                  row.handoff_reason ||
+                  'Needs human help'}
               </p>
             </div>
-            <StatusBadge tone={row.unread_count ? "warn" : "neutral"}>
+            <StatusBadge tone={row.unread_count ? 'warn' : 'neutral'}>
               {row.unread_count
                 ? `${row.unread_count} unread`
                 : formatOpsAge(row.handoff_requested_at || row.last_message_at)}
@@ -456,7 +511,7 @@ function HandoffQueue({ rows }: { rows: SaluHandoffRow[] }) {
           </div>
           <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
             <span>{compactPhone(row.phone)}</span>
-            <span>{row.handoff_category || "handoff"}</span>
+            <span>{row.handoff_category || 'handoff'}</span>
             {row.handoff_reason ? <span>{row.handoff_reason}</span> : null}
             {row.handoff_requested_at ? (
               <span>{formatDateTime(row.handoff_requested_at)}</span>
@@ -469,20 +524,28 @@ function HandoffQueue({ rows }: { rows: SaluHandoffRow[] }) {
 }
 
 function PaymentQueue({ rows }: { rows: SaluPaymentQueueRow[] }) {
-  if (!rows.length) return <EmptyLine text="No active payment or refund issues." />;
+  if (!rows.length)
+    return <EmptyLine text="No active payment or refund issues." />;
 
   return (
     <div className="space-y-3">
       {rows.map((row) => (
-        <div key={`${row.booking_id}-${row.reference_id}`} className="rounded-lg border border-slate-800 bg-slate-950/50 p-3">
+        <div
+          key={`${row.booking_id}-${row.reference_id}`}
+          className="rounded-lg border border-slate-800 bg-slate-950/50 p-3"
+        >
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
               <p className="truncate text-sm font-medium text-white">
                 {row.customer_name || compactPhone(row.phone)}
               </p>
               <p className="mt-1 text-xs text-slate-500">
-                {formatDate(row.appointment_date)} at {formatTime(row.appointment_time)} ·{" "}
-                {row.service_assignments_summary || row.service_labels || row.service_label || "Service"}
+                {formatDate(row.appointment_date)} at{' '}
+                {formatTime(row.appointment_time)} ·{' '}
+                {row.service_assignments_summary ||
+                  row.service_labels ||
+                  row.service_label ||
+                  'Service'}
               </p>
             </div>
             <div className="flex flex-wrap gap-2 sm:justify-end">
@@ -490,7 +553,7 @@ function PaymentQueue({ rows }: { rows: SaluPaymentQueueRow[] }) {
                 {paymentQueueLabel(row)}
               </StatusBadge>
               <StatusBadge tone={paymentQueueTone(row)}>
-                {row.payment_status_row || row.payment_status || "payment"}
+                {row.payment_status_row || row.payment_status || 'payment'}
               </StatusBadge>
             </div>
           </div>
@@ -498,7 +561,7 @@ function PaymentQueue({ rows }: { rows: SaluPaymentQueueRow[] }) {
             <span>{formatPaise(row.amount_paise)} deposit</span>
             {row.expires_at || row.hold_expires_at ? (
               <span>
-                {formatOpsCountdown(row.expires_at || row.hold_expires_at)} ·{" "}
+                {formatOpsCountdown(row.expires_at || row.hold_expires_at)} ·{' '}
                 {formatDateTime(row.expires_at || row.hold_expires_at)}
               </span>
             ) : null}
@@ -509,7 +572,9 @@ function PaymentQueue({ rows }: { rows: SaluPaymentQueueRow[] }) {
               <Button
                 size="sm"
                 variant="outline"
-                render={<Link href={`/inbox?conversation=${row.conversation_id}`} />}
+                render={
+                  <Link href={`/inbox?conversation=${row.conversation_id}`} />
+                }
               >
                 <MessageSquareText className="h-3.5 w-3.5" />
                 Open chat
@@ -535,14 +600,20 @@ function PaymentQueue({ rows }: { rows: SaluPaymentQueueRow[] }) {
 }
 
 function ActivityList({ rows }: { rows: SaluActivityRow[] }) {
-  if (!rows.length) return <EmptyLine text="No WhatsApp events recorded yet." />;
+  if (!rows.length)
+    return <EmptyLine text="No WhatsApp events recorded yet." />;
 
   return (
     <div className="divide-y divide-slate-800">
       {rows.map((row) => (
-        <div key={row.event_id} className="grid gap-3 py-3 sm:grid-cols-[160px_1fr_auto]">
+        <div
+          key={row.event_id}
+          className="grid gap-3 py-3 sm:grid-cols-[160px_1fr_auto]"
+        >
           <div className="text-xs text-slate-500">
-            <span className="block text-slate-400">{formatOpsAge(row.created_at)}</span>
+            <span className="block text-slate-400">
+              {formatOpsAge(row.created_at)}
+            </span>
             <span>{formatDateTime(row.created_at)}</span>
           </div>
           <div className="min-w-0">
@@ -550,10 +621,11 @@ function ActivityList({ rows }: { rows: SaluActivityRow[] }) {
               {row.raw_text || row.summary || row.intent || row.event_type}
             </p>
             <p className="mt-1 truncate text-xs text-slate-500">
-              {compactPhone(row.phone)} · {row.route || "route"} · {row.intent || "intent"}
+              {compactPhone(row.phone)} · {row.route || 'route'} ·{' '}
+              {row.intent || 'intent'}
             </p>
           </div>
-          <StatusBadge tone={row.status === "processed" ? "good" : "neutral"}>
+          <StatusBadge tone={row.status === 'processed' ? 'good' : 'neutral'}>
             {row.event_type || row.status}
           </StatusBadge>
         </div>
@@ -564,25 +636,51 @@ function ActivityList({ rows }: { rows: SaluActivityRow[] }) {
 
 function SetupHealth({ data }: { data: SaluDashboardData }) {
   const items = [
-    { label: "Active services", value: data.setupHealth.active_services, tone: "good" as const },
-    { label: "Active stylists", value: data.setupHealth.active_stylists, tone: "good" as const },
     {
-      label: "Missing stylist photos",
+      label: 'Active services',
+      value: data.setupHealth.active_services,
+      tone: 'good' as const,
+    },
+    {
+      label: 'Active stylists',
+      value: data.setupHealth.active_stylists,
+      tone: 'good' as const,
+    },
+    {
+      label: 'Missing stylist photos',
       value: data.setupHealth.stylists_missing_images,
-      tone: data.setupHealth.stylists_missing_images ? ("warn" as const) : ("good" as const),
+      tone: data.setupHealth.stylists_missing_images
+        ? ('warn' as const)
+        : ('good' as const),
     },
-    { label: "Stylist service mappings", value: data.setupHealth.active_stylist_services, tone: "good" as const },
-    { label: "Salon availability rules", value: data.setupHealth.availability_rules, tone: "neutral" as const },
-    { label: "Stylist availability rules", value: data.setupHealth.stylist_availability_rules, tone: "neutral" as const },
     {
-      label: "Stale pending holds",
+      label: 'Stylist service mappings',
+      value: data.setupHealth.active_stylist_services,
+      tone: 'good' as const,
+    },
+    {
+      label: 'Salon availability rules',
+      value: data.setupHealth.availability_rules,
+      tone: 'neutral' as const,
+    },
+    {
+      label: 'Stylist availability rules',
+      value: data.setupHealth.stylist_availability_rules,
+      tone: 'neutral' as const,
+    },
+    {
+      label: 'Stale pending holds',
       value: data.setupHealth.stale_pending_holds,
-      tone: data.setupHealth.stale_pending_holds ? ("danger" as const) : ("good" as const),
+      tone: data.setupHealth.stale_pending_holds
+        ? ('danger' as const)
+        : ('good' as const),
     },
     {
-      label: "Failed/refund payments",
+      label: 'Failed/refund payments',
       value: data.setupHealth.failed_payments,
-      tone: data.setupHealth.failed_payments ? ("danger" as const) : ("good" as const),
+      tone: data.setupHealth.failed_payments
+        ? ('danger' as const)
+        : ('good' as const),
     },
   ];
 
@@ -595,7 +693,9 @@ function SetupHealth({ data }: { data: SaluDashboardData }) {
             className="flex items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950/50 px-3 py-2"
           >
             <span className="text-sm text-slate-400">{item.label}</span>
-            <StatusBadge tone={item.tone}>{item.value.toLocaleString("en-IN")}</StatusBadge>
+            <StatusBadge tone={item.tone}>
+              {item.value.toLocaleString('en-IN')}
+            </StatusBadge>
           </div>
         ))}
       </div>
@@ -629,13 +729,24 @@ function SetupError({ error }: { error: unknown }) {
       <div className="flex items-start gap-3">
         <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-300" />
         <div>
-          <h1 className="text-lg font-semibold text-white">Dashboard setup needs attention</h1>
+          <h1 className="text-lg font-semibold text-white">
+            Dashboard setup needs attention
+          </h1>
           <p className="mt-2 text-sm text-red-100">
-            {error instanceof Error ? error.message : "Unable to load Salu dashboard data."}
+            {error instanceof Error
+              ? error.message
+              : 'Unable to load Salu dashboard data.'}
           </p>
           <p className="mt-3 text-sm text-slate-300">
-            Run <code className="rounded bg-slate-950 px-1.5 py-0.5">npm run setup:salu-env</code>, then{" "}
-            <code className="rounded bg-slate-950 px-1.5 py-0.5">npm run check:salu-setup</code>.
+            Run{' '}
+            <code className="rounded bg-slate-950 px-1.5 py-0.5">
+              npm run setup:salu-env
+            </code>
+            , then{' '}
+            <code className="rounded bg-slate-950 px-1.5 py-0.5">
+              npm run check:salu-setup
+            </code>
+            .
           </p>
         </div>
       </div>
@@ -647,21 +758,22 @@ function StatusBadge({
   tone,
   children,
 }: {
-  tone: "good" | "warn" | "danger" | "neutral";
+  tone: 'good' | 'warn' | 'danger' | 'neutral';
   children: ReactNode;
 }) {
   return (
     <Badge
       variant="outline"
       className={cn(
-        "capitalize",
-        tone === "good" && "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
-        tone === "warn" && "border-amber-500/30 bg-amber-500/10 text-amber-300",
-        tone === "danger" && "border-red-500/30 bg-red-500/10 text-red-300",
-        tone === "neutral" && "border-slate-700 bg-slate-800 text-slate-300",
+        'capitalize',
+        tone === 'good' &&
+          'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
+        tone === 'warn' && 'border-amber-500/30 bg-amber-500/10 text-amber-300',
+        tone === 'danger' && 'border-red-500/30 bg-red-500/10 text-red-300',
+        tone === 'neutral' && 'border-slate-700 bg-slate-800 text-slate-300'
       )}
     >
-      {tone === "good" ? <CheckCircle2 className="h-3 w-3" /> : null}
+      {tone === 'good' ? <CheckCircle2 className="h-3 w-3" /> : null}
       {children}
     </Badge>
   );
@@ -672,10 +784,10 @@ function EmptyLine({ text }: { text: string }) {
 }
 
 function todayKey() {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Kolkata",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
   }).format(new Date());
 }

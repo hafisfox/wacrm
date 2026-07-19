@@ -768,7 +768,7 @@ export function MessageThread({
               type="button"
               onClick={onBack}
               aria-label="Back to conversations"
-              className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md text-[#aebac1] hover:bg-[#202c33] hover:text-white lg:hidden"
+              className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-md text-[#aebac1] hover:bg-[#202c33] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#00a884] lg:hidden"
             >
               <ArrowLeft className="h-5 w-5" />
             </button>
@@ -782,7 +782,9 @@ export function MessageThread({
             </h2>
             <p className="truncate text-xs text-[#8696a0]">{contact.phone}</p>
           </div>
-          {(conversation.bot_paused || conversation.handoff_state === 'requested' || conversation.handoff_state === 'active') && (
+          {(conversation.bot_paused ||
+            conversation.handoff_state === 'requested' ||
+            conversation.handoff_state === 'active') && (
             <Badge className="ml-1 shrink-0 border border-red-400/40 bg-red-500/20 text-[10px] font-semibold text-red-200 hover:bg-red-500/20">
               Needs human
             </Badge>
@@ -808,7 +810,7 @@ export function MessageThread({
               onClick={onOpenDetails}
               aria-label="Open customer details"
               title="Customer details"
-              className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[#aebac1] transition-colors hover:bg-[#202c33] hover:text-white 2xl:hidden"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-md text-[#aebac1] transition-colors hover:bg-[#202c33] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#00a884] 2xl:hidden"
             >
               <PanelRightOpen className="h-3.5 w-3.5" />
             </button>
@@ -827,7 +829,7 @@ export function MessageThread({
               aria-label="Refresh conversation"
               title="Refresh"
               className={cn(
-                'inline-flex h-7 w-7 items-center justify-center rounded-md text-[#aebac1] transition-colors hover:bg-[#202c33] hover:text-white disabled:opacity-60'
+                'inline-flex h-9 w-9 items-center justify-center rounded-md text-[#aebac1] transition-colors hover:bg-[#202c33] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#00a884] disabled:opacity-60'
               )}
             >
               <RefreshCw
@@ -840,7 +842,7 @@ export function MessageThread({
           <DropdownMenu>
             <DropdownMenuTrigger
               className={cn(
-                'inline-flex h-7 items-center justify-center gap-1 rounded-md px-2 text-xs hover:bg-[#202c33]',
+                'inline-flex h-9 items-center justify-center gap-1 rounded-md px-2 text-xs hover:bg-[#202c33] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#00a884]',
                 currentStatus?.color ?? 'text-slate-400'
               )}
             >

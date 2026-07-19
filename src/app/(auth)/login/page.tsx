@@ -133,7 +133,7 @@ function LoginPageInner() {
           <CardDescription className="text-slate-400">
             {inviteToken
               ? "Sign in and we'll take you to the invitation."
-              : 'Sign in to your account'}
+              : 'Sign in to manage bookings, customer conversations, and your salon team.'}
           </CardDescription>
         </CardHeader>
         <CardContent>

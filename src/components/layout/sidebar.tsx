@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect } from "react";
-import { cn } from "@/lib/utils";
-import { useAuth } from "@/hooks/use-auth";
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { useEffect, useRef } from 'react';
+import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/use-auth';
 import {
   CalendarCheck,
   Crown,
@@ -20,8 +20,8 @@ import {
   UsersRound,
   Workflow,
   X,
-} from "lucide-react";
-import type { AccountRole } from "@/lib/auth/roles";
+} from 'lucide-react';
+import type { AccountRole } from '@/lib/auth/roles';
 
 // Per-role chip metadata used in the sidebar's account strip + the
 // Members tab roster. Keeping this near both consumers in a single
@@ -33,45 +33,37 @@ const ROLE_CHIP: Record<
 > = {
   owner: {
     icon: Crown,
-    label: "Owner",
+    label: 'Owner',
     // Amber: scarce, immutable, "the boss" — gets visual emphasis.
-    className:
-      "border-amber-500/40 bg-amber-500/10 text-amber-300",
+    className: 'border-amber-500/40 bg-amber-500/10 text-amber-300',
   },
   admin: {
     icon: Shield,
-    label: "Admin",
+    label: 'Admin',
     // Primary-tinted: significant but not as scarce as owner.
-    className:
-      "border-primary/40 bg-primary/10 text-primary",
+    className: 'border-primary/40 bg-primary/10 text-primary',
   },
   agent: {
     icon: UserCog,
-    label: "Agent",
+    label: 'Agent',
     // Neutral slate: the operational default.
-    className:
-      "border-slate-700 bg-slate-800 text-slate-300",
+    className: 'border-slate-700 bg-slate-800 text-slate-300',
   },
   viewer: {
     icon: User,
-    label: "Viewer",
+    label: 'Viewer',
     // Muted slate: read-only role; visually quieter than agent.
-    className:
-      "border-slate-800 bg-slate-900 text-slate-500",
+    className: 'border-slate-800 bg-slate-900 text-slate-500',
   },
 };
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu';
 
 interface NavItem {
   href: string;
@@ -85,15 +77,15 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { href: "/dashboard", label: "Ops Dashboard", icon: LayoutDashboard },
-  { href: "/salon-control", label: "Salon Control", icon: Scissors },
-  { href: "/inbox", label: "WhatsApp Inbox", icon: MessageSquare },
-  { href: "/contacts", label: "Customers", icon: Users },
+  { href: '/dashboard', label: 'Ops Dashboard', icon: LayoutDashboard },
+  { href: '/salon-control', label: 'Salon Control', icon: Scissors },
+  { href: '/inbox', label: 'WhatsApp Inbox', icon: MessageSquare },
+  { href: '/contacts', label: 'Customers', icon: Users },
 ];
 
 const bottomNavItems = [
-  { href: "/system-health", label: "System Health", icon: Workflow },
-  { href: "/settings", label: "Settings", icon: Settings },
+  { href: '/system-health', label: 'System Health', icon: Workflow },
+  { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
 interface SidebarProps {
@@ -105,6 +97,7 @@ interface SidebarProps {
 export function Sidebar({ open = false, onClose }: SidebarProps) {
   const pathname = usePathname();
   const { profile, profileLoading, account, accountRole, signOut } = useAuth();
+  const drawerRef = useRef<HTMLElement>(null);
   // Only surface the account-name strip when it actually carries
   // information. A solo user's personal account is named after them
   // (the 017 signup trigger seeds it from `full_name`), so showing it
@@ -114,9 +107,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
   // we gate on. Wait for the profile fetch to settle first, otherwise
   // the strip flashes in once the row resolves (a layout jump).
   const showAccountStrip =
-    !profileLoading &&
-    !!account?.name &&
-    account.name !== profile?.full_name;
+    !profileLoading && !!account?.name && account.name !== profile?.full_name;
 
   // Close the drawer when route changes — users opened it to navigate,
   // so once they pick a destination the drawer should get out of the way.
@@ -126,19 +117,52 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
-  // Lock body scroll and allow Escape to close while the drawer is open on
-  // mobile. No-ops on desktop because the sidebar isn't positioned there.
+  // A mobile drawer is modal navigation: lock background scrolling, keep
+  // keyboard focus in the drawer, and return it to the menu button on close.
   useEffect(() => {
     if (!open) return;
     const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose?.();
+    const previousFocus = document.activeElement as HTMLElement | null;
+    document.body.style.overflow = 'hidden';
+
+    const focusFirst = () => {
+      const first = drawerRef.current?.querySelector<HTMLElement>(
+        'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      first?.focus();
     };
-    window.addEventListener("keydown", onKey);
+    const timer = window.setTimeout(focusFirst, 0);
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose?.();
+        return;
+      }
+      if (e.key !== 'Tab' || !drawerRef.current) return;
+
+      const focusable = Array.from(
+        drawerRef.current.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )
+      );
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    window.addEventListener('keydown', onKey);
     return () => {
+      window.clearTimeout(timer);
       document.body.style.overflow = prev;
-      window.removeEventListener("keydown", onKey);
+      window.removeEventListener('keydown', onKey);
+      previousFocus?.focus();
     };
   }, [open, onClose]);
 
@@ -152,40 +176,46 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
         aria-label="Close menu"
         onClick={onClose}
         className={cn(
-          "fixed inset-0 z-30 bg-slate-950/70 backdrop-blur-sm transition-opacity lg:hidden",
+          'fixed inset-0 z-30 bg-slate-950/70 backdrop-blur-sm transition-opacity lg:hidden',
           open
-            ? "pointer-events-auto opacity-100"
-            : "pointer-events-none opacity-0",
+            ? 'pointer-events-auto opacity-100'
+            : 'pointer-events-none opacity-0'
         )}
       />
 
       <aside
+        ref={drawerRef}
         className={cn(
           // Mobile: fixed drawer that slides in from the left.
-          "fixed inset-y-0 left-0 z-40 flex h-full w-64 flex-col border-r border-slate-800 bg-slate-900",
-          "transition-transform duration-200 ease-out will-change-transform",
-          open ? "translate-x-0" : "-translate-x-full",
+          'fixed inset-y-0 left-0 z-40 flex h-full w-64 flex-col border-r border-slate-800 bg-slate-900',
+          'transition-transform duration-200 ease-out will-change-transform',
+          open ? 'translate-x-0' : '-translate-x-full',
           // Desktop: static, always visible — reset all the mobile framing.
-          "lg:static lg:z-0 lg:w-60 lg:translate-x-0 lg:transition-none",
+          'lg:static lg:z-0 lg:w-60 lg:translate-x-0 lg:transition-none'
         )}
         aria-label="Primary"
+        aria-modal={open || undefined}
+        role={open ? 'dialog' : undefined}
       >
         {/* Logo row. On mobile we put a close button here; on desktop the
             close button is hidden since the sidebar is always-visible. */}
         <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-slate-800 px-4">
-          <Link href="/dashboard" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+          <Link
+            href="/dashboard"
+            className="ops-focus-ring flex items-center gap-2 rounded-md"
+          >
+            <div className="bg-primary text-primary-foreground flex h-8 w-8 items-center justify-center rounded-lg">
               <CalendarCheck className="h-4 w-4" />
             </div>
             <span className="text-sm font-semibold text-white">
-              Salu WhatsApp
+              Salu Operations
             </span>
           </Link>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close menu"
-            className="flex h-9 w-9 items-center justify-center rounded-md text-slate-400 hover:bg-slate-800 hover:text-white lg:hidden"
+            className="ops-focus-ring flex h-11 w-11 items-center justify-center rounded-md text-slate-400 hover:bg-slate-800 hover:text-white lg:hidden"
           >
             <X className="h-5 w-5" />
           </button>
@@ -197,18 +227,19 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
             {navItems.map((item) => {
               const isActive =
                 pathname === item.href ||
-                (item.href !== "/dashboard" && pathname.startsWith(item.href));
+                (item.href !== '/dashboard' && pathname.startsWith(item.href));
 
               return (
                 <li key={item.href}>
                   <Link
                     href={item.href}
+                    aria-current={isActive ? 'page' : undefined}
                     className={cn(
                       // Taller on mobile so fingers can hit the row reliably (≥44px).
-                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors lg:py-2",
+                      'ops-focus-ring flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors lg:min-h-0 lg:py-2',
                       isActive
-                        ? "bg-primary/10 text-primary"
-                        : "text-slate-400 hover:bg-slate-800 hover:text-white",
+                        ? 'bg-primary/10 text-primary'
+                        : 'text-slate-400 hover:bg-slate-800 hover:text-white'
                     )}
                   >
                     <item.icon className="h-4 w-4" />
@@ -216,7 +247,7 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                     {item.beta && (
                       <span
                         aria-label="Beta feature"
-                        className="rounded-full border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-amber-300"
+                        className="rounded-full border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-semibold tracking-wider text-amber-300 uppercase"
                       >
                         Beta
                       </span>
@@ -236,11 +267,12 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                 <li key={item.href}>
                   <Link
                     href={item.href}
+                    aria-current={isActive ? 'page' : undefined}
                     className={cn(
-                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors lg:py-2",
+                      'ops-focus-ring flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors lg:min-h-0 lg:py-2',
                       isActive
-                        ? "bg-primary/10 text-primary"
-                        : "text-slate-400 hover:bg-slate-800 hover:text-white",
+                        ? 'bg-primary/10 text-primary'
+                        : 'text-slate-400 hover:bg-slate-800 hover:text-white'
                     )}
                   >
                     <item.icon className="h-4 w-4" />
@@ -269,47 +301,47 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
               <span className="truncate" title={account.name}>
                 {account.name}
               </span>
-              {accountRole ? (
-                // Always render the chip — owners used to be
-                // invisible here, which made them indistinguishable
-                // from admins at a glance. Now everyone sees their
-                // role (with a colour cue) regardless of tier.
-                (() => {
-                  const meta = ROLE_CHIP[accountRole];
-                  const Icon = meta.icon;
-                  return (
-                    <span
-                      className={`ml-auto inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider ${meta.className}`}
-                    >
-                      <Icon className="size-3" />
-                      {meta.label}
-                    </span>
-                  );
-                })()
-              ) : null}
+              {accountRole
+                ? // Always render the chip — owners used to be
+                  // invisible here, which made them indistinguishable
+                  // from admins at a glance. Now everyone sees their
+                  // role (with a colour cue) regardless of tier.
+                  (() => {
+                    const meta = ROLE_CHIP[accountRole];
+                    const Icon = meta.icon;
+                    return (
+                      <span
+                        className={`ml-auto inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium tracking-wider uppercase ${meta.className}`}
+                      >
+                        <Icon className="size-3" />
+                        {meta.label}
+                      </span>
+                    );
+                  })()
+                : null}
             </div>
           ) : null}
           <DropdownMenu>
-            <DropdownMenuTrigger className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-slate-800/60 focus:bg-slate-800/60 focus:outline-none data-popup-open:bg-slate-800/60">
+            <DropdownMenuTrigger className="ops-focus-ring flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-slate-800/60 data-popup-open:bg-slate-800/60">
               <Avatar className="size-8 shrink-0">
                 {profile?.avatar_url ? (
                   <AvatarImage
                     src={profile.avatar_url}
-                    alt={profile.full_name ?? "Avatar"}
+                    alt={profile.full_name ?? 'Avatar'}
                   />
                 ) : null}
-                <AvatarFallback className="bg-primary/10 text-sm font-medium text-primary">
+                <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">
                   {profile?.full_name?.charAt(0)?.toUpperCase() ??
                     profile?.email?.charAt(0)?.toUpperCase() ??
-                    "U"}
+                    'U'}
                 </AvatarFallback>
               </Avatar>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-white">
-                  {profile?.full_name ?? "User"}
+                  {profile?.full_name ?? 'User'}
                 </p>
                 <p className="truncate text-xs text-slate-400">
-                  {profile?.email ?? ""}
+                  {profile?.email ?? ''}
                 </p>
               </div>
             </DropdownMenuTrigger>

@@ -1,28 +1,22 @@
-import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
-import Script from "next/script";
-import { Toaster } from "sonner";
-import "./globals.css";
-import { ThemeProvider } from "@/hooks/use-theme";
-import { DEFAULT_THEME, STORAGE_KEY, THEME_IDS } from "@/lib/themes";
-
-const inter = Inter({
-  variable: "--font-sans",
-  subsets: ["latin"],
-});
+import type { Metadata, Viewport } from 'next';
+import Script from 'next/script';
+import { Toaster } from 'sonner';
+import './globals.css';
+import { ThemeProvider } from '@/hooks/use-theme';
+import { DEFAULT_THEME, STORAGE_KEY, THEME_IDS } from '@/lib/themes';
 
 export const metadata: Metadata = {
   title: {
-    default: "Salu WhatsApp Dashboard",
-    template: "%s — Salu WhatsApp",
+    default: 'Salu WhatsApp Dashboard',
+    template: '%s — Salu WhatsApp',
   },
-  description: "WhatsApp operations dashboard for Salu Salon.",
+  description: 'WhatsApp operations dashboard for Salu Salon.',
   robots: {
     index: false,
     follow: false,
   },
   icons: {
-    icon: [{ url: "/icon" }],
+    icon: [{ url: '/icon' }],
   },
   formatDetection: {
     email: false,
@@ -32,8 +26,8 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#020617",
-  colorScheme: "dark",
+  themeColor: '#020617',
+  colorScheme: 'dark',
 };
 
 // Inline boot script — runs before React hydrates so the user's
@@ -69,7 +63,7 @@ export default function RootLayout({
     <html
       lang="en"
       data-theme={DEFAULT_THEME}
-      className={`${inter.variable} h-full antialiased`}
+      className="h-full antialiased"
       // The `theme-boot` script below rewrites `data-theme` on <html>
       // from localStorage before React hydrates, so for any non-default
       // theme the client DOM intentionally differs from the server-
@@ -85,7 +79,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }}
         />
       </head>
-      <body className="min-h-full bg-background text-foreground font-sans">
+      <body className="bg-background text-foreground min-h-full font-sans">
         <ThemeProvider>
           {children}
           <Toaster
@@ -93,9 +87,9 @@ export default function RootLayout({
             position="top-right"
             toastOptions={{
               style: {
-                background: "rgb(30 41 59)",
-                border: "1px solid rgb(51 65 85)",
-                color: "white",
+                background: 'rgb(30 41 59)',
+                border: '1px solid rgb(51 65 85)',
+                color: 'white',
               },
             }}
           />

@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { useMemo, useState } from "react";
+import Link from 'next/link';
+import { useMemo, useState } from 'react';
 import {
   CalendarClock,
   CreditCard,
@@ -9,20 +9,20 @@ import {
   Phone,
   Search,
   UserRoundCheck,
-} from "lucide-react";
+} from 'lucide-react';
 
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { compactPhone, formatDateTime } from "@/lib/salu/format";
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { compactPhone, formatDateTime } from '@/lib/salu/format';
 import {
   customerIsIdle,
   formatOpsAge,
   matchesCustomerOpsFilter,
   matchesCustomerSearch,
   type CustomerOpsFilter,
-} from "@/lib/salu/ops";
-import { cn } from "@/lib/utils";
-import type { SaluCustomerRow, SaluMetrics } from "@/lib/salu/queries";
+} from '@/lib/salu/ops';
+import { cn } from '@/lib/utils';
+import type { SaluCustomerRow, SaluMetrics } from '@/lib/salu/queries';
 
 interface ContactsClientProps {
   customers: SaluCustomerRow[];
@@ -30,32 +30,33 @@ interface ContactsClientProps {
 }
 
 const FILTERS: Array<{ value: CustomerOpsFilter; label: string }> = [
-  { value: "all", label: "All" },
-  { value: "handoff", label: "Handoff" },
-  { value: "payment", label: "Payment" },
-  { value: "booking", label: "Booking" },
-  { value: "recent", label: "Recent" },
-  { value: "idle", label: "Idle" },
+  { value: 'all', label: 'All' },
+  { value: 'handoff', label: 'Handoff' },
+  { value: 'payment', label: 'Payment' },
+  { value: 'booking', label: 'Booking' },
+  { value: 'recent', label: 'Recent' },
+  { value: 'idle', label: 'Idle' },
 ];
 
 export function ContactsClient({ customers, metrics }: ContactsClientProps) {
-  const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<CustomerOpsFilter>("all");
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState<CustomerOpsFilter>('all');
 
   const filtered = useMemo(
     () =>
       customers.filter(
         (customer) =>
           matchesCustomerOpsFilter(customer, filter) &&
-          matchesCustomerSearch(customer, search),
+          matchesCustomerSearch(customer, search)
       ),
-    [customers, filter, search],
+    [customers, filter, search]
   );
 
   return (
-    <div className="space-y-5">
+    <div className="ops-page">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
+          <p className="ops-eyebrow">Customer memory</p>
           <h1 className="text-2xl font-bold text-white">Customers</h1>
           <p className="mt-1 text-sm text-slate-400">
             Durable WhatsApp customer memory from the Salu booking concierge.
@@ -68,7 +69,7 @@ export function ContactsClient({ customers, metrics }: ContactsClientProps) {
         </div>
       </div>
 
-      <section className="rounded-xl border border-slate-800 bg-slate-900 p-3">
+      <section className="ops-surface p-3" aria-label="Customer filters">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="relative max-w-xl flex-1">
             <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-500" />
@@ -79,17 +80,18 @@ export function ContactsClient({ customers, metrics }: ContactsClientProps) {
               className="border-slate-800 bg-slate-950 pl-9 text-slate-100"
             />
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex [scrollbar-width:none] gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden">
             {FILTERS.map((item) => (
               <button
                 key={item.value}
                 type="button"
                 onClick={() => setFilter(item.value)}
+                aria-pressed={filter === item.value}
                 className={cn(
-                  "h-9 rounded-md border px-3 text-sm transition-colors",
+                  'ops-focus-ring h-10 shrink-0 rounded-md border px-3 text-sm transition-colors',
                   filter === item.value
-                    ? "border-primary/60 bg-primary/10 text-primary"
-                    : "border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700 hover:text-white",
+                    ? 'border-primary/60 bg-primary/10 text-primary'
+                    : 'border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700 hover:text-white'
                 )}
               >
                 {item.label}
@@ -97,14 +99,14 @@ export function ContactsClient({ customers, metrics }: ContactsClientProps) {
             ))}
           </div>
         </div>
-        <p className="mt-3 text-xs text-slate-500">
-          {filtered.length.toLocaleString("en-IN")} of{" "}
-          {customers.length.toLocaleString("en-IN")} customers
+        <p className="mt-3 text-xs text-slate-500" aria-live="polite">
+          {filtered.length.toLocaleString('en-IN')} of{' '}
+          {customers.length.toLocaleString('en-IN')} customers
         </p>
       </section>
 
-      <section className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900">
-        <div className="grid grid-cols-[1.2fr_1fr_1fr_150px] gap-3 border-b border-slate-800 px-4 py-3 text-xs font-medium uppercase tracking-wide text-slate-500 max-lg:hidden">
+      <section className="ops-surface overflow-hidden">
+        <div className="grid grid-cols-[1.2fr_1fr_1fr_150px] gap-3 border-b border-slate-800 px-4 py-3 text-xs font-medium tracking-wide text-slate-500 uppercase max-lg:hidden">
           <span>Customer</span>
           <span>Preference</span>
           <span>Current State</span>
@@ -115,9 +117,14 @@ export function ContactsClient({ customers, metrics }: ContactsClientProps) {
             <CustomerRow key={customer.phone} customer={customer} />
           ))}
           {!filtered.length ? (
-            <p className="px-4 py-8 text-sm text-slate-500">
-              No customers match this view.
-            </p>
+            <div className="px-4 py-10 text-center">
+              <p className="text-sm font-medium text-slate-300">
+                No customers match this view
+              </p>
+              <p className="mt-1 text-xs text-slate-500">
+                Try clearing the search or choosing another queue.
+              </p>
+            </div>
           ) : null}
         </div>
       </section>
@@ -135,7 +142,7 @@ function CustomerRow({ customer }: { customer: SaluCustomerRow }) {
         {customer.conversation_id ? (
           <Link
             href={`/inbox?conversation=${customer.conversation_id}`}
-            className="block truncate text-sm font-medium text-white hover:text-primary"
+            className="ops-focus-ring hover:text-primary block truncate rounded-sm text-sm font-medium text-white"
           >
             {displayName}
           </Link>
@@ -145,10 +152,10 @@ function CustomerRow({ customer }: { customer: SaluCustomerRow }) {
           </p>
         )}
         <a
-          href={`https://wa.me/${customer.phone.replace(/\D/g, "")}`}
+          href={`https://wa.me/${customer.phone.replace(/\D/g, '')}`}
           target="_blank"
           rel="noreferrer"
-          className="mt-1 inline-flex items-center gap-1 text-xs text-slate-500 hover:text-primary"
+          className="ops-focus-ring hover:text-primary mt-1 inline-flex items-center gap-1 rounded-sm text-xs text-slate-500"
         >
           <Phone className="h-3 w-3" />
           {compactPhone(customer.phone)}
@@ -157,10 +164,10 @@ function CustomerRow({ customer }: { customer: SaluCustomerRow }) {
 
       <div className="min-w-0 text-sm text-slate-400">
         <p className="truncate">
-          {customer.preferred_services_summary || "No service preference"}
+          {customer.preferred_services_summary || 'No service preference'}
         </p>
         <p className="mt-1 truncate text-xs text-slate-500">
-          {customer.preferred_stylist_name || "No stylist preference"}
+          {customer.preferred_stylist_name || 'No stylist preference'}
         </p>
       </div>
 
@@ -191,7 +198,7 @@ function CustomerRow({ customer }: { customer: SaluCustomerRow }) {
         {customer.conversation_id ? (
           <Link
             href={`/inbox?conversation=${customer.conversation_id}`}
-            className="inline-flex items-center gap-1 rounded-md border border-slate-700 bg-slate-800 px-2 py-0.5 text-xs text-slate-300 hover:border-primary/50 hover:text-white"
+            className="ops-focus-ring hover:border-primary/50 inline-flex min-h-8 items-center gap-1 rounded-md border border-slate-700 bg-slate-800 px-2 py-0.5 text-xs text-slate-300 hover:text-white"
           >
             <MessageSquareText className="h-3 w-3" />
             open chat
@@ -209,7 +216,7 @@ function CustomerRow({ customer }: { customer: SaluCustomerRow }) {
             <span>{formatDateTime(customer.last_seen_at)}</span>
           </>
         ) : (
-          "Not seen"
+          'Not seen'
         )}
       </div>
 
@@ -232,7 +239,7 @@ function StateBadge({
   icon: Icon,
   children,
 }: {
-  tone: "good" | "warn" | "danger";
+  tone: 'good' | 'warn' | 'danger';
   icon: typeof CalendarClock;
   children: React.ReactNode;
 }) {
@@ -240,10 +247,11 @@ function StateBadge({
     <Badge
       variant="outline"
       className={cn(
-        "gap-1",
-        tone === "good" && "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
-        tone === "warn" && "border-amber-500/30 bg-amber-500/10 text-amber-300",
-        tone === "danger" && "border-red-500/30 bg-red-500/10 text-red-300",
+        'gap-1',
+        tone === 'good' &&
+          'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
+        tone === 'warn' && 'border-amber-500/30 bg-amber-500/10 text-amber-300',
+        tone === 'danger' && 'border-red-500/30 bg-red-500/10 text-red-300'
       )}
     >
       <Icon className="h-3 w-3" />
@@ -255,8 +263,8 @@ function StateBadge({
 function MiniStat({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-lg border border-slate-800 bg-slate-900 px-3 py-2">
-      <p className="text-lg font-semibold tabular-nums text-white">
-        {value.toLocaleString("en-IN")}
+      <p className="text-lg font-semibold text-white tabular-nums">
+        {value.toLocaleString('en-IN')}
       </p>
       <p className="text-xs text-slate-500">{label}</p>
     </div>

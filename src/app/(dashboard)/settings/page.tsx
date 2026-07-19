@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
+  CircleCheck,
   Settings,
   MessageSquare,
   User,
@@ -48,47 +49,65 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="ops-page">
       <div>
         <h1 className="text-2xl font-bold text-white">Settings</h1>
-        <p className="text-sm text-slate-400 mt-1">
+        <p className="mt-1 text-sm text-slate-400">
           Manage operator access, WhatsApp maintenance, and n8n health.
         </p>
       </div>
 
+      <section className="ops-surface flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-start gap-3">
+          <div className="bg-primary/10 text-primary mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg">
+            <CircleCheck className="size-4" />
+          </div>
+          <div>
+            <p className="ops-section-title">WhatsApp stays n8n-managed</p>
+            <p className="mt-1 text-sm text-slate-400">
+              Daily replies and booking automation continue through n8n. Meta
+              credentials are only needed for template maintenance.
+            </p>
+          </div>
+        </div>
+        <span className="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-300">
+          Live workflow mode
+        </span>
+      </section>
+
       <Tabs value={tab} onValueChange={(v) => onChange(v as TabValue)}>
-        <TabsList className="bg-slate-900 border border-slate-700">
+        <TabsList className="flex w-full [scrollbar-width:none] justify-start gap-1 overflow-x-auto border border-slate-700 bg-slate-900 p-1 [&::-webkit-scrollbar]:hidden">
           <TabsTrigger
             value="profile"
-            className="data-active:bg-slate-800 data-active:text-primary text-slate-400"
+            className="data-active:text-primary min-w-24 shrink-0 text-slate-400 data-active:bg-slate-800"
           >
             <User className="size-4" />
             Profile
           </TabsTrigger>
           <TabsTrigger
             value="whatsapp"
-            className="data-active:bg-slate-800 data-active:text-primary text-slate-400"
+            className="data-active:text-primary min-w-36 shrink-0 text-slate-400 data-active:bg-slate-800"
           >
             <Settings className="size-4" />
             WhatsApp Config
           </TabsTrigger>
           <TabsTrigger
             value="templates"
-            className="data-active:bg-slate-800 data-active:text-primary text-slate-400"
+            className="data-active:text-primary min-w-28 shrink-0 text-slate-400 data-active:bg-slate-800"
           >
             <MessageSquare className="size-4" />
             Templates
           </TabsTrigger>
           <TabsTrigger
             value="members"
-            className="data-active:bg-slate-800 data-active:text-primary text-slate-400"
+            className="data-active:text-primary min-w-28 shrink-0 text-slate-400 data-active:bg-slate-800"
           >
             <UsersRound className="size-4" />
             Members
           </TabsTrigger>
           <TabsTrigger
             value="system"
-            className="data-active:bg-slate-800 data-active:text-primary text-slate-400"
+            className="data-active:text-primary min-w-24 shrink-0 text-slate-400 data-active:bg-slate-800"
           >
             <Workflow className="size-4" />
             System
