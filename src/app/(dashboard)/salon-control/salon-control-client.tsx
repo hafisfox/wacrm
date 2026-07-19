@@ -1,260 +1,210 @@
 'use client';
 
+/* Controlled editors reset their local draft when the selected record changes.
+ * Photos can be public Supabase objects or an operator's external fallback URL,
+ * so Next Image remote-host allowlisting is intentionally not appropriate here. */
+/* eslint-disable react-hooks/set-state-in-effect, @next/next/no-img-element */
+
 import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import {
   CalendarClock,
-  Clock,
-  Eye,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Clock3,
+  ImagePlus,
   Loader2,
   Plus,
-  RefreshCw,
-  Save,
   Scissors,
   Trash2,
   UserRound,
-  type LucideIcon,
+  UsersRound,
+  X,
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCan } from '@/hooks/use-can';
 import { paiseToRupeesInput, rupeesToPaiseInput } from '@/lib/salu/money-input';
-import { cn } from '@/lib/utils';
-import type {
-  AvailabilityRow,
-  ControlRoomData,
-  SalonConfigRow,
-  SalonServiceRow,
-  SalonStylistRow,
-  StylistAvailabilityRow,
-  StylistServiceRow,
+import {
+  type AvailabilityRow,
+  type ControlRoomData,
+  type SalonConfigRow,
+  type SalonServiceRow,
+  type SalonStylistRow,
+  type StylistAvailabilityRow,
+  type StylistServiceRow,
 } from '@/lib/salu/control-room';
+import {
+  SKILL_LEVELS,
+  WEEKDAYS,
+  skillsFromSummary,
+} from '@/lib/salu/control-room-shared';
+import { cn } from '@/lib/utils';
 
-const WEEKDAYS = [
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday',
-  'Sunday',
-] as const;
+const API = '/api/salu/control-room';
+const INPUT =
+  'h-9 w-full rounded-lg border border-slate-700 bg-slate-950/50 px-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60';
+const TEXTAREA = `${INPUT} h-auto py-2`;
+const WEEKDAY_SET = new Set<string>(WEEKDAYS);
 
-const API_BASE = '/api/salu/control-room';
+type Weekday = (typeof WEEKDAYS)[number];
+type DraftRule = {
+  id?: string;
+  day_name: Weekday;
+  open_time: string;
+  close_time: string;
+  slot_interval_minutes: number;
+  effective_from?: string;
+  effective_to?: string;
+};
+type AssignmentDraft = {
+  enabled: boolean;
+  skill_level: string;
+  customize: boolean;
+  override_duration_minutes: string;
+  override_price_rupees: string;
+  override_deposit_rupees: string;
+  existing?: StylistServiceRow;
+};
 
-type MutateMethod = 'POST' | 'PATCH' | 'DELETE';
-
-function formPayload(form: HTMLFormElement) {
-  const formData = new FormData(form);
-  const payload: Record<string, FormDataEntryValue> = {};
-  for (const key of new Set(formData.keys())) {
-    const values = formData.getAll(key);
-    const value = values[values.length - 1];
-    if (value !== undefined) payload[key] = value;
-  }
-  return payload;
-}
-
-function normaliseMoneyPayload(payload: Record<string, FormDataEntryValue>) {
-  const moneyFields = [
-    ['price_rupees', 'price_paise'],
-    ['deposit_rupees', 'deposit_paise'],
-    ['override_price_rupees', 'override_price_paise'],
-    ['override_deposit_rupees', 'override_deposit_paise'],
-  ] as const;
-
-  for (const [inputKey, apiKey] of moneyFields) {
-    if (!(inputKey in payload)) continue;
-    payload[apiKey] = rupeesToPaiseInput(payload[inputKey]);
-    delete payload[inputKey];
-  }
-  return payload;
-}
-
-function boolField(name: string, checked: boolean, disabled: boolean) {
+function Field({
+  label,
+  children,
+  hint,
+}: {
+  label: string;
+  children: ReactNode;
+  hint?: string;
+}) {
   return (
-    <label className="flex h-9 items-center gap-2 rounded-md border border-slate-800 bg-slate-950/40 px-3 text-xs text-slate-300">
-      <input type="hidden" name={name} value="false" />
+    <label className="grid gap-1.5 text-sm font-medium text-slate-200">
+      <span>{label}</span>
+      {children}
+      {hint ? (
+        <span className="text-xs font-normal text-slate-500">{hint}</span>
+      ) : null}
+    </label>
+  );
+}
+
+function StatusToggle({
+  checked,
+  onChange,
+  label = 'Active',
+  disabled,
+}: {
+  checked: boolean;
+  onChange: (next: boolean) => void;
+  label?: string;
+  disabled?: boolean;
+}) {
+  return (
+    <label className="inline-flex h-8 items-center gap-2 rounded-lg border border-slate-700 bg-slate-950/40 px-2.5 text-xs text-slate-200">
       <input
-        name={name}
         type="checkbox"
-        value="true"
-        defaultChecked={checked}
+        checked={checked}
         disabled={disabled}
-        className="h-4 w-4 rounded border-slate-700 bg-slate-950"
+        onChange={(event) => onChange(event.target.checked)}
+        className="accent-primary size-4"
       />
-      Active
+      {label}
     </label>
   );
 }
 
 function money(value: number) {
-  return `Rs ${Math.round(value / 100).toLocaleString('en-IN')}`;
+  return `₹${Math.round(value / 100).toLocaleString('en-IN')}`;
 }
 
-function TextInput({
-  name,
-  defaultValue,
-  placeholder,
-  disabled,
-  type = 'text',
-  className,
-  min,
-  step,
-  label,
-  hint,
-}: {
-  name: string;
-  defaultValue?: string | number | null;
-  placeholder?: string;
-  disabled: boolean;
-  type?: string;
-  className?: string;
-  min?: number;
-  step?: number | string;
-  label?: string;
-  hint?: string;
-}) {
-  const input = (
-    <input
-      name={name}
-      type={type}
-      defaultValue={defaultValue ?? ''}
-      placeholder={placeholder}
-      disabled={disabled}
-      min={min}
-      step={step}
-      className={cn(
-        'focus-visible:border-primary/60 focus-visible:ring-primary/20 h-10 w-full rounded-md border border-slate-800 bg-slate-950/70 px-3 text-sm text-slate-100 transition outline-none focus-visible:ring-3 disabled:cursor-not-allowed disabled:opacity-60',
-        className
-      )}
-    />
-  );
+function humanSkill(value: string) {
+  return value ? value.charAt(0).toUpperCase() + value.slice(1) : 'Qualified';
+}
 
-  if (!label) return input;
+function slug(value: string) {
   return (
-    <label className="grid gap-1.5 text-sm font-medium text-slate-200">
-      <span>{label}</span>
-      {input}
-      {hint ? (
-        <span className="text-xs font-normal text-slate-500">{hint}</span>
-      ) : null}
-    </label>
+    value
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .slice(0, 80) || 'stylist'
   );
 }
 
-function TextArea({
-  name,
-  defaultValue,
-  placeholder,
-  disabled,
-  rows = 3,
-  label,
-  hint,
-}: {
-  name: string;
-  defaultValue?: string | null;
-  placeholder?: string;
-  disabled: boolean;
-  rows?: number;
-  label?: string;
-  hint?: string;
-}) {
-  const textarea = (
-    <textarea
-      name={name}
-      defaultValue={defaultValue ?? ''}
-      placeholder={placeholder}
-      disabled={disabled}
-      rows={rows}
-      className="focus-visible:border-primary/60 focus-visible:ring-primary/20 w-full resize-y rounded-md border border-slate-800 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 transition outline-none focus-visible:ring-3 disabled:cursor-not-allowed disabled:opacity-60"
-    />
-  );
+function weekdayForDate(value: string): Weekday {
+  const day = new Date(`${value}T00:00:00Z`).getUTCDay();
+  return WEEKDAYS[(day + 6) % 7];
+}
 
-  if (!label) return textarea;
-  return (
-    <label className="grid gap-1.5 text-sm font-medium text-slate-200">
-      <span>{label}</span>
-      {textarea}
-      {hint ? (
-        <span className="text-xs font-normal text-slate-500">{hint}</span>
-      ) : null}
-    </label>
+function isManagedPhoto(url: string) {
+  return /\/storage\/v1\/object\/public\/salu-stylist-photos\/stylists\//.test(
+    url
   );
 }
 
-function SelectField({
-  name,
-  defaultValue,
-  disabled,
-  children,
-  label,
-}: {
-  name: string;
-  defaultValue?: string | null;
-  disabled: boolean;
-  children: ReactNode;
-  label?: string;
-}) {
-  const select = (
-    <select
-      name={name}
-      defaultValue={defaultValue ?? ''}
-      disabled={disabled}
-      className="focus-visible:border-primary/60 focus-visible:ring-primary/20 h-10 w-full rounded-md border border-slate-800 bg-slate-950/70 px-3 text-sm text-slate-100 transition outline-none focus-visible:ring-3 disabled:cursor-not-allowed disabled:opacity-60"
-    >
-      {children}
-    </select>
-  );
-  if (!label) return select;
-  return (
-    <label className="grid gap-1.5 text-sm font-medium text-slate-200">
-      <span>{label}</span>
-      {select}
-    </label>
-  );
+function emptyWeek(): Record<Weekday, DraftRule[]> {
+  return {
+    Monday: [],
+    Tuesday: [],
+    Wednesday: [],
+    Thursday: [],
+    Friday: [],
+    Saturday: [],
+    Sunday: [],
+  };
 }
 
-function SectionTitle({
-  icon: Icon,
-  title,
-  count,
-}: {
-  icon: LucideIcon;
-  title: string;
-  count?: number;
-}) {
-  return (
-    <div className="flex items-center gap-2">
-      <Icon className="text-primary h-4 w-4" />
-      <span>{title}</span>
-      {typeof count === 'number' && (
-        <Badge variant="outline" className="border-slate-700 text-slate-300">
-          {count}
-        </Badge>
-      )}
-    </div>
-  );
+function weekFromRows(
+  rows: Array<AvailabilityRow | StylistAvailabilityRow>,
+  scope: 'salon' | 'stylist'
+) {
+  const week = emptyWeek();
+  rows
+    .filter(
+      (row) =>
+        row.active &&
+        !row.blackout_date &&
+        WEEKDAY_SET.has(row.day_name) &&
+        (scope === 'stylist' || ('service_id' in row && !row.service_id))
+    )
+    .forEach((row) => {
+      const day = row.day_name as Weekday;
+      week[day].push({
+        id:
+          'availability_id' in row
+            ? row.availability_id
+            : row.stylist_availability_id,
+        day_name: day,
+        open_time: row.open_time,
+        close_time: row.close_time,
+        slot_interval_minutes: row.slot_interval_minutes ?? 30,
+        effective_from: 'effective_from' in row ? row.effective_from : '',
+        effective_to: 'effective_to' in row ? row.effective_to : '',
+      });
+    });
+  return week;
 }
 
-function SaveButton({
-  disabled,
-  busy,
-  label = 'Save',
-}: {
-  disabled: boolean;
-  busy: boolean;
-  label?: string;
-}) {
-  return (
-    <Button type="submit" size="sm" disabled={disabled || busy}>
-      {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save />}
-      {label}
-    </Button>
-  );
+function defaultRule(day: Weekday): DraftRule {
+  return {
+    day_name: day,
+    open_time: '10:00',
+    close_time: '18:00',
+    slot_interval_minutes: 30,
+  };
 }
 
 export function SalonControlClient({
@@ -265,395 +215,621 @@ export function SalonControlClient({
   const canEdit = useCan('edit-settings');
   const [data, setData] = useState(initialData);
   const [saving, setSaving] = useState('');
-  const [error, setError] = useState('');
+  const [serviceEditor, setServiceEditor] = useState<
+    SalonServiceRow | 'new' | null
+  >(null);
+  const [stylistEditor, setStylistEditor] = useState<
+    SalonStylistRow | 'new' | null
+  >(null);
 
-  useEffect(() => {
-    setData(initialData);
-  }, [initialData]);
+  useEffect(() => setData(initialData), [initialData]);
 
-  const activeStylists = useMemo(
-    () => data.stylists.filter((row) => row.active),
-    [data.stylists]
-  );
   const activeServices = useMemo(
-    () => data.services.filter((row) => row.active),
+    () => data.services.filter((service) => service.active),
     [data.services]
   );
+  const activeStylists = useMemo(
+    () => data.stylists.filter((stylist) => stylist.active),
+    [data.stylists]
+  );
 
-  async function reload() {
-    setSaving('refresh');
-    setError('');
-    try {
-      const response = await fetch(API_BASE);
-      const next = (await response.json()) as
-        | ControlRoomData
-        | { error: string };
-      if (!response.ok)
-        throw new Error('error' in next ? next.error : 'Refresh failed');
-      setData(next as ControlRoomData);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Refresh failed');
-    } finally {
-      setSaving('');
-    }
-  }
-
-  async function mutate(
+  async function request(
     path: string,
-    method: MutateMethod,
-    body?: Record<string, unknown>,
+    method: 'POST' | 'PATCH' | 'PUT' | 'DELETE',
+    body?: unknown,
     busyKey = path
   ) {
-    if (!canEdit) return;
+    if (!canEdit) return false;
     setSaving(busyKey);
-    setError('');
     try {
       const response = await fetch(path, {
         method,
         headers: body ? { 'Content-Type': 'application/json' } : undefined,
         body: body ? JSON.stringify(body) : undefined,
       });
-      const next = (await response.json()) as
+      const result = (await response.json()) as
         | ControlRoomData
-        | { error: string };
+        | { error?: string };
       if (!response.ok)
-        throw new Error('error' in next ? next.error : 'Update failed');
-      setData(next as ControlRoomData);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Update failed');
+        throw new Error(
+          'error' in result ? result.error : 'Could not save changes'
+        );
+      setData(result as ControlRoomData);
+      return true;
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Could not save changes'
+      );
+      return false;
     } finally {
       setSaving('');
     }
   }
 
-  function submit(
-    event: FormEvent<HTMLFormElement>,
-    path: string,
-    method: 'POST' | 'PATCH',
-    busyKey: string
+  async function refresh() {
+    setSaving('refresh');
+    try {
+      const response = await fetch(API);
+      const result = (await response.json()) as
+        | ControlRoomData
+        | { error?: string };
+      if (!response.ok)
+        throw new Error('error' in result ? result.error : 'Could not refresh');
+      setData(result as ControlRoomData);
+      toast.success('Salon setup refreshed');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not refresh');
+    } finally {
+      setSaving('');
+    }
+  }
+
+  async function reorder(
+    entity: 'services' | 'stylists',
+    id: string,
+    direction: -1 | 1
   ) {
-    event.preventDefault();
-    mutate(
-      path,
-      method,
-      normaliseMoneyPayload(formPayload(event.currentTarget)),
-      busyKey
-    );
+    const ids =
+      entity === 'services'
+        ? data.services.map((service) => service.service_id)
+        : data.stylists.map((stylist) => stylist.stylist_id);
+    const index = ids.indexOf(id);
+    const destination = index + direction;
+    if (index < 0 || destination < 0 || destination >= ids.length) return;
+    [ids[index], ids[destination]] = [ids[destination], ids[index]];
+    await request(`${API}/order`, 'PUT', { entity, ids }, `order:${entity}`);
   }
 
-  function confirmDeactivate(label: string) {
-    return window.confirm(
-      `Deactivate this ${label}? Existing bookings stay intact, but it will no longer be offered in new bookings.`
-    );
+  async function remove(path: string, label: string) {
+    if (
+      !window.confirm(
+        `Deactivate this ${label}? Existing bookings will remain unchanged.`
+      )
+    )
+      return;
+    if (await request(path, 'DELETE', undefined, `remove:${label}`)) {
+      toast.success(`${label} deactivated`);
+    }
   }
 
-  const disabled = !canEdit;
+  async function saveStylist(
+    payload: Record<string, unknown>,
+    assignments: Record<string, AssignmentDraft>,
+    photo: File | null,
+    oldImageUrl: string,
+    isNew: boolean
+  ) {
+    const stylistId = String(
+      payload.stylist_id || slug(String(payload.stylist_name || ''))
+    );
+    let uploadedUrl = '';
+    let imageUrl = String(payload.image_url || '');
+    setSaving('stylist-save');
+    try {
+      if (photo) {
+        const form = new FormData();
+        form.set('stylist_id', stylistId);
+        form.set('image', photo);
+        const upload = await fetch(`${API}/stylist-photo`, {
+          method: 'POST',
+          body: form,
+        });
+        const result = (await upload.json()) as {
+          image_url?: string;
+          error?: string;
+        };
+        if (!upload.ok || !result.image_url)
+          throw new Error(result.error || 'Photo upload failed');
+        uploadedUrl = result.image_url;
+        imageUrl = uploadedUrl;
+      }
+      const saved = await fetch(`${API}/stylists`, {
+        method: isNew ? 'POST' : 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...payload,
+          stylist_id: stylistId,
+          image_url: imageUrl,
+        }),
+      });
+      const next = (await saved.json()) as ControlRoomData | { error?: string };
+      if (!saved.ok)
+        throw new Error(
+          'error' in next ? next.error : 'Could not save stylist'
+        );
+      setData(next as ControlRoomData);
+
+      for (const [serviceId, assignment] of Object.entries(assignments)) {
+        const wasEnabled = assignment.existing?.active ?? false;
+        if (!assignment.enabled && !wasEnabled) continue;
+        const mappingSaved = await fetch(`${API}/stylist-services`, {
+          method: assignment.existing ? 'PATCH' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            stylist_service_id: assignment.existing?.stylist_service_id,
+            stylist_id: stylistId,
+            service_id: serviceId,
+            active: assignment.enabled,
+            skill_level: assignment.skill_level,
+            override_duration_minutes: assignment.customize
+              ? assignment.override_duration_minutes
+              : '',
+            override_price_paise: assignment.customize
+              ? rupeesToPaiseInput(assignment.override_price_rupees)
+              : '',
+            override_deposit_paise: assignment.customize
+              ? rupeesToPaiseInput(assignment.override_deposit_rupees)
+              : '',
+            flow_order:
+              activeServices.findIndex(
+                (service) => service.service_id === serviceId
+              ) + 1,
+          }),
+        });
+        const mappingNext = (await mappingSaved.json()) as
+          | ControlRoomData
+          | { error?: string };
+        if (!mappingSaved.ok) {
+          throw new Error(
+            'error' in mappingNext
+              ? mappingNext.error
+              : 'Could not save service coverage'
+          );
+        }
+        setData(mappingNext as ControlRoomData);
+      }
+      if (
+        oldImageUrl &&
+        oldImageUrl !== imageUrl &&
+        isManagedPhoto(oldImageUrl)
+      ) {
+        fetch(`${API}/stylist-photo`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image_url: oldImageUrl }),
+        }).catch(() => undefined);
+      }
+      toast.success(isNew ? 'Stylist added' : 'Stylist updated');
+      return true;
+    } catch (error) {
+      if (uploadedUrl) {
+        fetch(`${API}/stylist-photo`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image_url: uploadedUrl }),
+        }).catch(() => undefined);
+      }
+      toast.error(
+        error instanceof Error ? error.message : 'Could not save stylist'
+      );
+      return false;
+    } finally {
+      setSaving('');
+    }
+  }
+
+  const blockers = [
+    data.readiness.missing_stylist_images
+      ? `${data.readiness.missing_stylist_images} active stylist${data.readiness.missing_stylist_images === 1 ? '' : 's'} need a photo`
+      : '',
+    data.readiness.unmapped_active_stylists
+      ? `${data.readiness.unmapped_active_stylists} stylist${data.readiness.unmapped_active_stylists === 1 ? '' : 's'} need service coverage`
+      : '',
+    data.readiness.unmapped_active_services
+      ? `${data.readiness.unmapped_active_services} service${data.readiness.unmapped_active_services === 1 ? '' : 's'} need a stylist`
+      : '',
+  ].filter(Boolean);
 
   return (
     <div className="ops-page text-slate-100">
       <div className="mx-auto flex max-w-7xl flex-col gap-5">
-        <div className="flex flex-col gap-3 border-b border-slate-800 pb-4 lg:flex-row lg:items-center lg:justify-between">
+        <header className="flex flex-col gap-3 border-b border-slate-800 pb-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <div className="flex items-center gap-2">
-              <Scissors className="text-primary h-5 w-5" />
-              <h1 className="text-2xl font-semibold tracking-normal text-white">
+            <div className="flex flex-wrap items-center gap-2">
+              <Scissors className="text-primary size-5" />
+              <h1 className="text-2xl font-semibold text-white">
                 Salon Control
               </h1>
-              <Badge
-                variant={data.readiness.ready ? 'default' : 'destructive'}
-                className="h-6"
-              >
-                {data.readiness.ready ? 'Ready' : 'Needs Setup'}
+              <Badge variant={data.readiness.ready ? 'default' : 'destructive'}>
+                {data.readiness.ready ? 'Booking ready' : 'Setup needed'}
               </Badge>
             </div>
             <p className="mt-1 text-sm text-slate-400">
-              Set up services, staff, and availability without touching the live
-              booking workflow.
+              Manage the customer-facing services, team, and booking schedule in
+              one place.
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {!canEdit && (
-              <Badge
-                variant="outline"
-                className="border-slate-700 text-slate-300"
-              >
-                <Eye className="h-3 w-3" />
-                Read-only
-              </Badge>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={refresh}
+            disabled={saving === 'refresh'}
+          >
+            {saving === 'refresh' ? (
+              <Loader2 className="animate-spin" />
+            ) : (
+              <Clock3 />
             )}
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={reload}
-              disabled={saving === 'refresh'}
-            >
-              <RefreshCw
-                className={cn(
-                  'h-3.5 w-3.5',
-                  saving === 'refresh' && 'animate-spin'
-                )}
-              />
-              Refresh
-            </Button>
-          </div>
+            Refresh
+          </Button>
+        </header>
+
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Metric
+            icon={Scissors}
+            label="Active services"
+            value={data.readiness.active_services}
+          />
+          <Metric
+            icon={UsersRound}
+            label="Active stylists"
+            value={data.readiness.active_stylists}
+          />
+          <Metric
+            icon={Check}
+            label="Service assignments"
+            value={data.readiness.active_mappings}
+          />
+          <Metric
+            icon={CalendarClock}
+            label="Schedule rules"
+            value={
+              data.readiness.availability_rules +
+              data.readiness.stylist_availability_rules
+            }
+          />
         </div>
 
-        {error && (
-          <div
-            className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200"
-            role="alert"
-          >
-            {error}
+        {blockers.length ? (
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+            <p className="font-medium text-amber-100">
+              Finish these setup tasks
+            </p>
+            <ul className="mt-2 grid gap-1 text-sm text-amber-200/85 sm:grid-cols-2">
+              {blockers.map((blocker) => (
+                <li key={blocker}>• {blocker}</li>
+              ))}
+            </ul>
           </div>
-        )}
+        ) : null}
 
-        <ReadinessStrip data={data} />
-
-        <Tabs defaultValue="details" className="w-full">
-          <TabsList className="flex w-full [scrollbar-width:none] justify-start gap-1 overflow-x-auto border border-slate-800 bg-slate-900 p-1 [&::-webkit-scrollbar]:hidden">
-            <TabsTrigger className="min-w-24 shrink-0" value="details">
-              Details
-            </TabsTrigger>
-            <TabsTrigger className="min-w-24 shrink-0" value="services">
-              Services
-            </TabsTrigger>
-            <TabsTrigger className="min-w-20 shrink-0" value="staff">
-              Staff
-            </TabsTrigger>
-            <TabsTrigger className="min-w-24 shrink-0" value="mapping">
-              Mappings
-            </TabsTrigger>
-            <TabsTrigger className="min-w-28 shrink-0" value="hours">
-              Salon Hours
-            </TabsTrigger>
-            <TabsTrigger className="min-w-30 shrink-0" value="stylist-hours">
-              Stylist Hours
-            </TabsTrigger>
+        <Tabs defaultValue="overview">
+          <TabsList className="flex w-full justify-start gap-1 overflow-x-auto border border-slate-800 bg-slate-900 p-1">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="services">Services</TabsTrigger>
+            <TabsTrigger value="team">Team & expertise</TabsTrigger>
+            <TabsTrigger value="schedule">Schedule</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="details" className="mt-4">
-            <ConfigPanel
+          <TabsContent value="overview" className="mt-4">
+            <SalonDetails
               config={data.config}
-              disabled={disabled}
-              busy={saving === 'config'}
-              onSubmit={(event) =>
-                submit(event, `${API_BASE}/config`, 'PATCH', 'config')
+              disabled={!canEdit}
+              saving={saving === 'config'}
+              onSave={(payload) =>
+                request(`${API}/config`, 'PATCH', payload, 'config')
               }
             />
           </TabsContent>
-
           <TabsContent value="services" className="mt-4">
-            <ServicesPanel
-              rows={data.services}
-              disabled={disabled}
-              saving={saving}
-              onSubmit={submit}
-              onDelete={(id) => {
-                if (!confirmDeactivate('service')) return;
-                mutate(
-                  `${API_BASE}/services?service_id=${encodeURIComponent(id)}`,
-                  'DELETE',
-                  undefined,
-                  `delete-service:${id}`
-                );
-              }}
-            />
+            <section className="grid gap-4">
+              <SectionHeader
+                icon={Scissors}
+                title="Services"
+                description="What customers can book. Price labels are generated automatically from the price."
+                action={
+                  <Button
+                    disabled={!canEdit}
+                    onClick={() => setServiceEditor('new')}
+                  >
+                    <Plus /> Add service
+                  </Button>
+                }
+              />
+              <div className="grid gap-3">
+                {data.services.map((service, index) => (
+                  <ServiceCard
+                    key={service.service_id}
+                    service={service}
+                    index={index}
+                    lastIndex={data.services.length - 1}
+                    disabled={!canEdit}
+                    onEdit={() => setServiceEditor(service)}
+                    onMove={(direction) =>
+                      reorder('services', service.service_id, direction)
+                    }
+                    onDeactivate={() =>
+                      remove(
+                        `${API}/services?service_id=${encodeURIComponent(service.service_id)}`,
+                        service.service_name
+                      )
+                    }
+                  />
+                ))}
+              </div>
+            </section>
           </TabsContent>
-
-          <TabsContent value="staff" className="mt-4">
-            <StylistsPanel
-              rows={data.stylists}
-              disabled={disabled}
-              saving={saving}
-              onSubmit={submit}
-              onDelete={(id) => {
-                if (!confirmDeactivate('stylist')) return;
-                mutate(
-                  `${API_BASE}/stylists?stylist_id=${encodeURIComponent(id)}`,
-                  'DELETE',
-                  undefined,
-                  `delete-stylist:${id}`
-                );
-              }}
-            />
+          <TabsContent value="team" className="mt-4">
+            <section className="grid gap-4">
+              <SectionHeader
+                icon={UserRound}
+                title="Team & expertise"
+                description="Profiles, customer-facing specialties, and the services each stylist can perform."
+                action={
+                  <Button
+                    disabled={!canEdit}
+                    onClick={() => setStylistEditor('new')}
+                  >
+                    <Plus /> Add stylist
+                  </Button>
+                }
+              />
+              <div className="grid gap-4 lg:grid-cols-2">
+                {data.stylists.map((stylist, index) => (
+                  <StylistCard
+                    key={stylist.stylist_id}
+                    stylist={stylist}
+                    mappings={data.stylistServices.filter(
+                      (mapping) =>
+                        mapping.stylist_id === stylist.stylist_id &&
+                        mapping.active
+                    )}
+                    services={data.services}
+                    index={index}
+                    lastIndex={data.stylists.length - 1}
+                    disabled={!canEdit}
+                    onEdit={() => setStylistEditor(stylist)}
+                    onMove={(direction) =>
+                      reorder('stylists', stylist.stylist_id, direction)
+                    }
+                    onDeactivate={() =>
+                      remove(
+                        `${API}/stylists?stylist_id=${encodeURIComponent(stylist.stylist_id)}`,
+                        stylist.stylist_name
+                      )
+                    }
+                  />
+                ))}
+              </div>
+            </section>
           </TabsContent>
-
-          <TabsContent value="mapping" className="mt-4">
-            <MappingsPanel
-              rows={data.stylistServices}
-              stylists={activeStylists}
-              services={activeServices}
-              disabled={disabled}
+          <TabsContent value="schedule" className="mt-4">
+            <SchedulePanel
+              data={data}
+              disabled={!canEdit}
               saving={saving}
-              onSubmit={submit}
-              onDelete={(id) => {
-                if (!confirmDeactivate('stylist mapping')) return;
-                mutate(
-                  `${API_BASE}/stylist-services?stylist_service_id=${encodeURIComponent(id)}`,
-                  'DELETE',
-                  undefined,
-                  `delete-mapping:${id}`
-                );
-              }}
-            />
-          </TabsContent>
-
-          <TabsContent value="hours" className="mt-4">
-            <AvailabilityPanel
-              rows={data.availability}
-              services={activeServices}
-              disabled={disabled}
-              saving={saving}
-              onSubmit={submit}
-              onDelete={(id) => {
-                if (!confirmDeactivate('availability rule')) return;
-                mutate(
-                  `${API_BASE}/availability?availability_id=${encodeURIComponent(id)}`,
-                  'DELETE',
-                  undefined,
-                  `delete-availability:${id}`
-                );
-              }}
-            />
-          </TabsContent>
-
-          <TabsContent value="stylist-hours" className="mt-4">
-            <StylistAvailabilityPanel
-              rows={data.stylistAvailability}
-              stylists={activeStylists}
-              disabled={disabled}
-              saving={saving}
-              onSubmit={submit}
-              onDelete={(id) => {
-                if (!confirmDeactivate('stylist availability rule')) return;
-                mutate(
-                  `${API_BASE}/stylist-availability?stylist_availability_id=${encodeURIComponent(id)}`,
-                  'DELETE',
-                  undefined,
-                  `delete-stylist-availability:${id}`
-                );
-              }}
+              onRequest={request}
+              activeStylists={activeStylists}
             />
           </TabsContent>
         </Tabs>
       </div>
+
+      <ServiceEditor
+        open={serviceEditor !== null}
+        service={
+          serviceEditor === 'new' ? undefined : (serviceEditor ?? undefined)
+        }
+        disabled={!canEdit}
+        busy={saving === 'service-save'}
+        onOpenChange={(open) => !open && setServiceEditor(null)}
+        onSave={async (payload) => {
+          const success = await request(
+            `${API}/services`,
+            serviceEditor === 'new' ? 'POST' : 'PATCH',
+            payload,
+            'service-save'
+          );
+          if (success) setServiceEditor(null);
+          return success;
+        }}
+      />
+      <StylistEditor
+        open={stylistEditor !== null}
+        stylist={
+          stylistEditor === 'new' ? undefined : (stylistEditor ?? undefined)
+        }
+        services={activeServices}
+        mappings={data.stylistServices}
+        disabled={!canEdit}
+        busy={saving === 'stylist-save'}
+        onOpenChange={(open) => !open && setStylistEditor(null)}
+        onSave={async (payload, assignments, photo, oldImageUrl) => {
+          const saved = await saveStylist(
+            payload,
+            assignments,
+            photo,
+            oldImageUrl,
+            stylistEditor === 'new'
+          );
+          if (saved) setStylistEditor(null);
+          return saved;
+        }}
+      />
     </div>
   );
 }
 
-function ReadinessStrip({ data }: { data: ControlRoomData }) {
-  const items = [
-    ['Services', data.readiness.active_services, Scissors],
-    ['Stylists', data.readiness.active_stylists, UserRound],
-    ['Mappings', data.readiness.active_mappings, CalendarClock],
-    [
-      'Hours',
-      data.readiness.availability_rules +
-        data.readiness.stylist_availability_rules,
-      Clock,
-    ],
-  ] as const;
+function Metric({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof Scissors;
+  label: string;
+  value: number;
+}) {
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      {items.map(([label, value, Icon]) => (
-        <div
-          key={label}
-          className="min-h-24 rounded-lg border border-slate-800 bg-slate-900/70 p-4"
-        >
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-sm text-slate-400">{label}</span>
-            <Icon className="text-primary h-4 w-4" />
-          </div>
-          <div className="mt-3 text-2xl font-semibold text-white">{value}</div>
+    <Card className="border-slate-800 bg-slate-900/60">
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between text-sm text-slate-400">
+          <span>{label}</span>
+          <Icon className="text-primary size-4" />
         </div>
-      ))}
+        <strong className="mt-2 block text-2xl text-white">{value}</strong>
+      </CardContent>
+    </Card>
+  );
+}
+
+function SectionHeader({
+  icon: Icon,
+  title,
+  description,
+  action,
+}: {
+  icon: typeof Scissors;
+  title: string;
+  description: string;
+  action: ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <div className="flex items-center gap-2">
+          <Icon className="text-primary size-5" />
+          <h2 className="text-lg font-semibold text-white">{title}</h2>
+        </div>
+        <p className="mt-1 text-sm text-slate-400">{description}</p>
+      </div>
+      {action}
     </div>
   );
 }
 
-function ConfigPanel({
+function SalonDetails({
   config,
   disabled,
-  busy,
-  onSubmit,
+  saving,
+  onSave,
 }: {
   config: SalonConfigRow;
   disabled: boolean;
-  busy: boolean;
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  saving: boolean;
+  onSave: (payload: Record<string, unknown>) => Promise<boolean>;
 }) {
+  const [form, setForm] = useState(config);
+  useEffect(() => setForm(config), [config]);
+  function update(key: keyof SalonConfigRow, value: string) {
+    setForm((current) => ({ ...current, [key]: value }));
+  }
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    if (await onSave({ ...form })) toast.success('Salon details updated');
+  }
   return (
-    <Card className="ops-surface bg-slate-900/70">
+    <Card className="border-slate-800 bg-slate-900/60">
       <CardHeader>
-        <CardTitle>
-          <SectionTitle icon={Scissors} title="Salon Details" />
-        </CardTitle>
+        <CardTitle>Salon details</CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={onSubmit} className="grid gap-4 lg:grid-cols-2">
-          <TextInput
-            name="salon_name"
-            defaultValue={config.salon_name}
-            disabled={disabled}
-            label="Salon name"
-            placeholder="Salu Salon"
-          />
-          <TextInput
-            name="timezone"
-            defaultValue={config.timezone}
-            disabled={disabled}
-            label="Timezone"
-            placeholder="Asia/Kolkata"
-          />
-          <TextInput
-            name="owner_number"
-            defaultValue={config.owner_number}
-            disabled={disabled}
-            label="Owner WhatsApp number"
-            placeholder="+91…"
-          />
-          <TextInput
-            name="default_language"
-            defaultValue={config.default_language}
-            disabled={disabled}
-            label="Default language"
-            placeholder="English"
-          />
-          <div className="lg:col-span-2">
-            <TextArea
-              name="address"
-              defaultValue={config.address}
+        <form onSubmit={submit} className="grid gap-4 lg:grid-cols-2">
+          <Field label="Salon name">
+            <input
+              className={INPUT}
+              value={form.salon_name}
               disabled={disabled}
-              rows={2}
-              label="Salon address"
-              placeholder="Address"
+              onChange={(event) => update('salon_name', event.target.value)}
             />
-          </div>
-          <div className="lg:col-span-2">
-            <TextArea
-              name="hours"
-              defaultValue={config.hours}
+          </Field>
+          <Field label="Timezone">
+            <select
+              className={INPUT}
+              value={form.timezone}
               disabled={disabled}
-              rows={2}
-              label="Public hours"
-              hint="Shown to customers in booking messages."
-              placeholder="Tuesday–Sunday, 10am–7pm"
-            />
-          </div>
-          <div className="lg:col-span-2">
-            <TextArea
-              name="bot_policy_text"
-              defaultValue={config.bot_policy_text}
+              onChange={(event) => update('timezone', event.target.value)}
+            >
+              <option value="Asia/Kolkata">India (Asia/Kolkata)</option>
+              <option value="Asia/Dubai">Dubai (Asia/Dubai)</option>
+              <option value="Asia/Singapore">Singapore (Asia/Singapore)</option>
+            </select>
+          </Field>
+          <Field label="Owner WhatsApp number">
+            <input
+              className={INPUT}
+              value={form.owner_number}
+              placeholder="+91…"
               disabled={disabled}
-              rows={4}
-              label="Bot policy"
-              hint="Use this for operator-approved booking and handoff guidance."
-              placeholder="Bot policy"
+              onChange={(event) => update('owner_number', event.target.value)}
             />
+          </Field>
+          <Field label="Default language">
+            <input
+              className={INPUT}
+              value={form.default_language}
+              disabled={disabled}
+              onChange={(event) =>
+                update('default_language', event.target.value)
+              }
+            />
+          </Field>
+          <div className="lg:col-span-2">
+            <Field label="Salon address">
+              <textarea
+                className={TEXTAREA}
+                rows={2}
+                value={form.address}
+                disabled={disabled}
+                onChange={(event) => update('address', event.target.value)}
+              />
+            </Field>
           </div>
+          <div className="rounded-lg border border-slate-800 bg-slate-950/40 p-3 lg:col-span-2">
+            <p className="text-sm font-medium text-slate-200">
+              Customer-facing booking hours
+            </p>
+            <p className="mt-1 text-sm text-slate-400">
+              These are generated from the main weekly schedule so WhatsApp and
+              booking slots stay aligned.
+            </p>
+            <p className="mt-2 text-sm text-white">
+              {config.hours ||
+                'Set your weekly schedule to generate customer hours.'}
+            </p>
+          </div>
+          <details className="rounded-lg border border-slate-800 p-3 lg:col-span-2">
+            <summary className="cursor-pointer text-sm font-medium text-slate-200">
+              Advanced bot policy
+            </summary>
+            <div className="mt-3">
+              <Field label="Bot policy">
+                <textarea
+                  className={TEXTAREA}
+                  rows={4}
+                  value={form.bot_policy_text}
+                  disabled={disabled}
+                  onChange={(event) =>
+                    update('bot_policy_text', event.target.value)
+                  }
+                />
+              </Field>
+            </div>
+          </details>
           <div className="flex justify-end lg:col-span-2">
-            <SaveButton disabled={disabled} busy={busy} />
+            <Button disabled={disabled || saving}>
+              {saving ? <Loader2 className="animate-spin" /> : <Check />} Save
+              details
+            </Button>
           </div>
         </form>
       </CardContent>
@@ -661,1059 +837,1388 @@ function ConfigPanel({
   );
 }
 
-function ServicesPanel({
-  rows,
+function ServiceCard({
+  service,
+  index,
+  lastIndex,
   disabled,
-  saving,
-  onSubmit,
-  onDelete,
+  onEdit,
+  onMove,
+  onDeactivate,
 }: {
-  rows: SalonServiceRow[];
+  service: SalonServiceRow;
+  index: number;
+  lastIndex: number;
   disabled: boolean;
-  saving: string;
-  onSubmit: (
-    event: FormEvent<HTMLFormElement>,
-    path: string,
-    method: 'POST' | 'PATCH',
-    busyKey: string
-  ) => void;
-  onDelete: (id: string) => void;
+  onEdit: () => void;
+  onMove: (direction: -1 | 1) => void;
+  onDeactivate: () => void;
 }) {
   return (
-    <div className="grid gap-4">
-      <Card className="rounded-lg border-slate-800 bg-slate-900/70">
-        <CardHeader>
-          <CardTitle>
-            <SectionTitle icon={Plus} title="New Service" />
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form
-            onSubmit={(event) =>
-              onSubmit(event, `${API_BASE}/services`, 'POST', 'new-service')
-            }
-            className="grid gap-3 lg:grid-cols-6"
+    <Card
+      className={cn(
+        'border-slate-800 bg-slate-900/60',
+        !service.active && 'opacity-60'
+      )}
+    >
+      <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="font-semibold text-white">{service.service_name}</h3>
+            <Badge variant={service.active ? 'default' : 'outline'}>
+              {service.active ? 'Active' : 'Inactive'}
+            </Badge>
+            {service.payment_required ? (
+              <Badge variant="outline">
+                Deposit {money(service.deposit_paise)}
+              </Badge>
+            ) : (
+              <Badge variant="outline">No deposit</Badge>
+            )}
+          </div>
+          <p className="mt-1 text-sm text-slate-400">
+            {service.duration_minutes} min ·{' '}
+            {service.price_display || money(service.price_paise)}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon-sm"
+            title="Move up"
+            disabled={disabled || index === 0}
+            onClick={() => onMove(-1)}
           >
-            <TextInput
-              name="service_name"
-              disabled={disabled}
-              placeholder="Service name"
-              className="lg:col-span-2"
-            />
-            <TextInput
-              name="duration_minutes"
-              type="number"
-              min={5}
-              disabled={disabled}
-              placeholder="Minutes"
-            />
-            <TextInput
-              name="price_display"
-              disabled={disabled}
-              placeholder="Customer price label"
-            />
-            <TextInput
-              name="price_rupees"
-              type="number"
-              min={0}
-              step="0.01"
-              disabled={disabled}
-              placeholder="Price (₹)"
-            />
-            <TextInput
-              name="deposit_rupees"
-              type="number"
-              min={0}
-              step="0.01"
-              disabled={disabled}
-              placeholder="Deposit (₹)"
-            />
-            <div className="flex justify-end lg:col-span-6">
-              <SaveButton
+            <ChevronUp />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon-sm"
+            title="Move down"
+            disabled={disabled || index === lastIndex}
+            onClick={() => onMove(1)}
+          >
+            <ChevronDown />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={disabled}
+            onClick={onEdit}
+          >
+            Edit
+          </Button>
+          <Button
+            variant="destructive"
+            size="icon-sm"
+            title="Deactivate"
+            disabled={disabled || !service.active}
+            onClick={onDeactivate}
+          >
+            <Trash2 />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ServiceEditor({
+  open,
+  service,
+  disabled,
+  busy,
+  onOpenChange,
+  onSave,
+}: {
+  open: boolean;
+  service?: SalonServiceRow;
+  disabled: boolean;
+  busy: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSave: (payload: Record<string, unknown>) => Promise<boolean>;
+}) {
+  const [name, setName] = useState('');
+  const [duration, setDuration] = useState('60');
+  const [price, setPrice] = useState('');
+  const [deposit, setDeposit] = useState('');
+  const [payment, setPayment] = useState(true);
+  const [active, setActive] = useState(true);
+  const [customLabel, setCustomLabel] = useState('');
+  const [notes, setNotes] = useState('');
+  useEffect(() => {
+    setName(service?.service_name ?? '');
+    setDuration(String(service?.duration_minutes ?? 60));
+    setPrice(paiseToRupeesInput(service?.price_paise ?? 0));
+    setDeposit(paiseToRupeesInput(service?.deposit_paise ?? 0));
+    setPayment(service?.payment_required ?? true);
+    setActive(service?.active ?? true);
+    setCustomLabel(service?.price_display ?? '');
+    setNotes(service?.notes ?? '');
+  }, [service, open]);
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    const pricePaise = Number(rupeesToPaiseInput(price) || 0);
+    const depositPaise = payment ? Number(rupeesToPaiseInput(deposit) || 0) : 0;
+    if (depositPaise > pricePaise && pricePaise > 0) {
+      toast.error('Deposit cannot be greater than the service price');
+      return;
+    }
+    await onSave({
+      service_id: service?.service_id,
+      service_name: name,
+      duration_minutes: duration,
+      price_paise: pricePaise,
+      deposit_paise: depositPaise,
+      payment_required: payment,
+      active,
+      price_display: customLabel,
+      payment_label: payment ? 'Deposit required' : '',
+      flow_order: service?.flow_order ?? 999,
+      notes,
+    });
+  }
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {service ? `Edit ${service.service_name}` : 'Add service'}
+          </DialogTitle>
+          <DialogDescription>
+            Start with the booking essentials. Less common controls are kept out
+            of the way.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={submit} className="grid gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Service name">
+              <input
+                className={INPUT}
+                required
+                value={name}
                 disabled={disabled}
-                busy={saving === 'new-service'}
-                label="Add"
+                onChange={(event) => setName(event.target.value)}
               />
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-      <div className="grid gap-3">
-        {rows.map((row) => (
-          <ServiceRow
-            key={row.service_id}
-            row={row}
-            disabled={disabled}
-            busy={saving === `service:${row.service_id}`}
-            deleting={saving === `delete-service:${row.service_id}`}
-            onSubmit={onSubmit}
-            onDelete={onDelete}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function ServiceRow({
-  row,
-  disabled,
-  busy,
-  deleting,
-  onSubmit,
-  onDelete,
-}: {
-  row: SalonServiceRow;
-  disabled: boolean;
-  busy: boolean;
-  deleting: boolean;
-  onSubmit: (
-    event: FormEvent<HTMLFormElement>,
-    path: string,
-    method: 'POST' | 'PATCH',
-    busyKey: string
-  ) => void;
-  onDelete: (id: string) => void;
-}) {
-  return (
-    <form
-      onSubmit={(event) =>
-        onSubmit(
-          event,
-          `${API_BASE}/services`,
-          'PATCH',
-          `service:${row.service_id}`
-        )
-      }
-      className="rounded-lg border border-slate-800 bg-slate-900/60 p-3"
-    >
-      <input type="hidden" name="service_id" value={row.service_id} />
-      <div className="grid gap-3 lg:grid-cols-[1.2fr_0.7fr_0.7fr_0.7fr_0.7fr_0.7fr_auto]">
-        <TextInput
-          name="service_name"
-          defaultValue={row.service_name}
-          disabled={disabled}
-        />
-        <TextInput
-          name="duration_minutes"
-          type="number"
-          min={5}
-          defaultValue={row.duration_minutes}
-          disabled={disabled}
-        />
-        <TextInput
-          name="price_display"
-          defaultValue={row.price_display || money(row.price_paise)}
-          disabled={disabled}
-        />
-        <TextInput
-          name="price_rupees"
-          type="number"
-          min={0}
-          step="0.01"
-          defaultValue={paiseToRupeesInput(row.price_paise)}
-          disabled={disabled}
-          placeholder="Price (₹)"
-        />
-        <TextInput
-          name="deposit_rupees"
-          type="number"
-          min={0}
-          step="0.01"
-          defaultValue={paiseToRupeesInput(row.deposit_paise)}
-          disabled={disabled}
-          placeholder="Deposit (₹)"
-        />
-        <TextInput
-          name="flow_order"
-          type="number"
-          min={0}
-          defaultValue={row.flow_order}
-          disabled={disabled}
-        />
-        <div className="flex gap-2">
-          {boolField('active', row.active, disabled)}
-          <input type="hidden" name="payment_required" value="false" />
-          <label className="flex h-9 items-center gap-2 rounded-md border border-slate-800 bg-slate-950/40 px-3 text-xs text-slate-300">
-            <input
-              name="payment_required"
-              type="checkbox"
-              value="true"
-              defaultChecked={row.payment_required}
-              disabled={disabled}
-              className="h-4 w-4 rounded border-slate-700 bg-slate-950"
-            />
-            Pay
-          </label>
-        </div>
-      </div>
-      <div className="mt-3 grid gap-3 lg:grid-cols-[1fr_1fr_auto]">
-        <TextInput
-          name="payment_label"
-          defaultValue={row.payment_label}
-          disabled={disabled}
-          placeholder="Payment label"
-        />
-        <TextInput
-          name="notes"
-          defaultValue={row.notes}
-          disabled={disabled}
-          placeholder="Notes"
-        />
-        <div className="flex justify-end gap-2">
-          <SaveButton disabled={disabled} busy={busy} />
-          <Button
-            type="button"
-            variant="destructive"
-            size="icon-sm"
-            title="Deactivate"
-            disabled={disabled || deleting}
-            onClick={() => onDelete(row.service_id)}
-          >
-            {deleting ? <Loader2 className="animate-spin" /> : <Trash2 />}
-          </Button>
-        </div>
-      </div>
-    </form>
-  );
-}
-
-function StylistsPanel({
-  rows,
-  disabled,
-  saving,
-  onSubmit,
-  onDelete,
-}: {
-  rows: SalonStylistRow[];
-  disabled: boolean;
-  saving: string;
-  onSubmit: (
-    event: FormEvent<HTMLFormElement>,
-    path: string,
-    method: 'POST' | 'PATCH',
-    busyKey: string
-  ) => void;
-  onDelete: (id: string) => void;
-}) {
-  return (
-    <div className="grid gap-4">
-      <Card className="rounded-lg border-slate-800 bg-slate-900/70">
-        <CardHeader>
-          <CardTitle>
-            <SectionTitle icon={Plus} title="New Stylist" />
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form
-            onSubmit={(event) =>
-              onSubmit(event, `${API_BASE}/stylists`, 'POST', 'new-stylist')
-            }
-            className="grid gap-3 lg:grid-cols-4"
-          >
-            <TextInput
-              name="stylist_name"
-              disabled={disabled}
-              placeholder="Name"
-            />
-            <TextInput
-              name="specialty"
-              disabled={disabled}
-              placeholder="Specialty"
-            />
-            <TextInput
-              name="image_url"
-              disabled={disabled}
-              placeholder="Image URL"
-            />
-            <TextInput
-              name="flow_order"
-              type="number"
-              min={0}
-              disabled={disabled}
-              placeholder="Order"
-            />
-            <div className="flex justify-end lg:col-span-4">
-              <SaveButton
+            </Field>
+            <Field label="Duration">
+              <select
+                className={INPUT}
+                value={duration}
                 disabled={disabled}
-                busy={saving === 'new-stylist'}
-                label="Add"
+                onChange={(event) => setDuration(event.target.value)}
+              >
+                {[15, 30, 45, 60, 75, 90, 120].map((minutes) => (
+                  <option key={minutes} value={minutes}>
+                    {minutes} minutes
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Customer price (₹)">
+              <input
+                className={INPUT}
+                type="number"
+                min="0"
+                step="0.01"
+                value={price}
+                disabled={disabled}
+                onChange={(event) => setPrice(event.target.value)}
               />
+            </Field>
+            <Field label="Deposit (₹)" hint="Set 0 for no deposit">
+              <input
+                className={INPUT}
+                type="number"
+                min="0"
+                step="0.01"
+                value={deposit}
+                disabled={disabled || !payment}
+                onChange={(event) => setDeposit(event.target.value)}
+              />
+            </Field>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <StatusToggle
+              checked={active}
+              onChange={setActive}
+              disabled={disabled}
+            />
+            <StatusToggle
+              checked={payment}
+              onChange={setPayment}
+              label="Take deposit"
+              disabled={disabled}
+            />
+          </div>
+          <details className="rounded-lg border border-slate-800 p-3">
+            <summary className="cursor-pointer text-sm font-medium text-slate-200">
+              Advanced settings
+            </summary>
+            <div className="mt-3 grid gap-3">
+              <Field
+                label="Customer price label"
+                hint="Leave blank to show the exact price above."
+              >
+                <input
+                  className={INPUT}
+                  value={customLabel}
+                  disabled={disabled}
+                  placeholder={price ? `₹${price}` : 'For example: From ₹1,200'}
+                  onChange={(event) => setCustomLabel(event.target.value)}
+                />
+              </Field>
+              <Field label="Internal notes">
+                <textarea
+                  className={TEXTAREA}
+                  rows={2}
+                  value={notes}
+                  disabled={disabled}
+                  onChange={(event) => setNotes(event.target.value)}
+                />
+              </Field>
             </div>
-          </form>
-        </CardContent>
-      </Card>
-      <div className="grid gap-3 lg:grid-cols-2">
-        {rows.map((row) => (
-          <StylistRow
-            key={row.stylist_id}
-            row={row}
-            disabled={disabled}
-            busy={saving === `stylist:${row.stylist_id}`}
-            deleting={saving === `delete-stylist:${row.stylist_id}`}
-            onSubmit={onSubmit}
-            onDelete={onDelete}
-          />
-        ))}
-      </div>
-    </div>
+          </details>
+          <DialogFooter>
+            <Button type="submit" disabled={disabled || busy}>
+              {busy ? <Loader2 className="animate-spin" /> : <Check />}
+              {service ? 'Save service' : 'Add service'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
-function StylistRow({
-  row,
+function StylistCard({
+  stylist,
+  mappings,
+  services,
+  index,
+  lastIndex,
   disabled,
-  busy,
-  deleting,
-  onSubmit,
-  onDelete,
+  onEdit,
+  onMove,
+  onDeactivate,
 }: {
-  row: SalonStylistRow;
+  stylist: SalonStylistRow;
+  mappings: StylistServiceRow[];
+  services: SalonServiceRow[];
+  index: number;
+  lastIndex: number;
   disabled: boolean;
-  busy: boolean;
-  deleting: boolean;
-  onSubmit: (
-    event: FormEvent<HTMLFormElement>,
-    path: string,
-    method: 'POST' | 'PATCH',
-    busyKey: string
-  ) => void;
-  onDelete: (id: string) => void;
+  onEdit: () => void;
+  onMove: (direction: -1 | 1) => void;
+  onDeactivate: () => void;
 }) {
+  const serviceNames = mappings
+    .map(
+      (mapping) =>
+        services.find((service) => service.service_id === mapping.service_id)
+          ?.service_name
+    )
+    .filter(Boolean);
   return (
-    <form
-      onSubmit={(event) =>
-        onSubmit(
-          event,
-          `${API_BASE}/stylists`,
-          'PATCH',
-          `stylist:${row.stylist_id}`
-        )
-      }
-      className="rounded-lg border border-slate-800 bg-slate-900/60 p-3"
+    <Card
+      className={cn(
+        'overflow-hidden border-slate-800 bg-slate-900/60',
+        !stylist.active && 'opacity-60'
+      )}
     >
-      <input type="hidden" name="stylist_id" value={row.stylist_id} />
-      <div className="grid gap-3 sm:grid-cols-2">
-        <TextInput
-          name="stylist_name"
-          defaultValue={row.stylist_name}
-          disabled={disabled}
-        />
-        <TextInput
-          name="specialty"
-          defaultValue={row.specialty}
-          disabled={disabled}
-        />
-        <TextInput
-          name="image_url"
-          defaultValue={row.image_url}
-          disabled={disabled}
-          placeholder="Image URL"
-        />
-        <TextInput
-          name="image_alt"
-          defaultValue={row.image_alt}
-          disabled={disabled}
-          placeholder="Image alt"
-        />
-        <TextInput
-          name="skills_summary"
-          defaultValue={row.skills_summary}
-          disabled={disabled}
-          placeholder="Skills"
-        />
-        <TextInput
-          name="flow_order"
-          type="number"
-          min={0}
-          defaultValue={row.flow_order}
-          disabled={disabled}
-        />
-      </div>
-      <div className="mt-3">
-        <TextArea
-          name="bio"
-          defaultValue={row.bio}
-          disabled={disabled}
-          rows={2}
-          placeholder="Bio"
-        />
-      </div>
-      <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto]">
-        <TextInput
-          name="notes"
-          defaultValue={row.notes}
-          disabled={disabled}
-          placeholder="Notes"
-        />
-        <div className="flex justify-end gap-2">
-          {boolField('active', row.active, disabled)}
-          <SaveButton disabled={disabled} busy={busy} />
+      <CardContent className="p-0">
+        <div className="flex gap-4 p-4">
+          <PhotoPreview
+            src={stylist.image_url}
+            alt={stylist.image_alt || stylist.stylist_name}
+            fallback={stylist.stylist_name}
+          />
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="font-semibold text-white">
+                {stylist.stylist_name}
+              </h3>
+              <Badge variant={stylist.active ? 'default' : 'outline'}>
+                {stylist.active ? 'Active' : 'Inactive'}
+              </Badge>
+            </div>
+            <p className="mt-1 text-sm text-slate-300">
+              {stylist.specialty || 'No primary specialty yet'}
+            </p>
+            <div className="mt-2 flex flex-wrap gap-1">
+              {skillsFromSummary(stylist.skills_summary).map((skill) => (
+                <Badge key={skill} variant="outline">
+                  {skill}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="border-t border-slate-800 px-4 py-3">
+          <p className="text-xs font-medium tracking-wide text-slate-500 uppercase">
+            Bookable services
+          </p>
+          <p className="mt-1 text-sm text-slate-300">
+            {serviceNames.length
+              ? serviceNames.join(' · ')
+              : 'No services assigned'}
+          </p>
+        </div>
+        <div className="flex flex-wrap justify-end gap-2 border-t border-slate-800 bg-slate-950/20 p-3">
           <Button
-            type="button"
+            variant="outline"
+            size="icon-sm"
+            title="Move up"
+            disabled={disabled || index === 0}
+            onClick={() => onMove(-1)}
+          >
+            <ChevronUp />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon-sm"
+            title="Move down"
+            disabled={disabled || index === lastIndex}
+            onClick={() => onMove(1)}
+          >
+            <ChevronDown />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={disabled}
+            onClick={onEdit}
+          >
+            Manage profile
+          </Button>
+          <Button
             variant="destructive"
             size="icon-sm"
             title="Deactivate"
-            disabled={disabled || deleting}
-            onClick={() => onDelete(row.stylist_id)}
+            disabled={disabled || !stylist.active}
+            onClick={onDeactivate}
           >
-            {deleting ? <Loader2 className="animate-spin" /> : <Trash2 />}
+            <Trash2 />
           </Button>
         </div>
-      </div>
-    </form>
+      </CardContent>
+    </Card>
   );
 }
 
-function MappingsPanel({
-  rows,
-  stylists,
-  services,
-  disabled,
-  saving,
-  onSubmit,
-  onDelete,
+function PhotoPreview({
+  src,
+  alt,
+  fallback,
 }: {
-  rows: StylistServiceRow[];
-  stylists: SalonStylistRow[];
-  services: SalonServiceRow[];
-  disabled: boolean;
-  saving: string;
-  onSubmit: (
-    event: FormEvent<HTMLFormElement>,
-    path: string,
-    method: 'POST' | 'PATCH',
-    busyKey: string
-  ) => void;
-  onDelete: (id: string) => void;
+  src: string;
+  alt: string;
+  fallback: string;
 }) {
-  return (
-    <div className="grid gap-4">
-      <Card className="rounded-lg border-slate-800 bg-slate-900/70">
-        <CardHeader>
-          <CardTitle>
-            <SectionTitle icon={Plus} title="New Mapping" />
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <MappingForm
-            disabled={disabled}
-            busy={saving === 'new-mapping'}
-            stylists={stylists}
-            services={services}
-            onSubmit={(event) =>
-              onSubmit(
-                event,
-                `${API_BASE}/stylist-services`,
-                'POST',
-                'new-mapping'
-              )
-            }
-          />
-        </CardContent>
-      </Card>
-      <div className="grid gap-3">
-        {rows.map((row) => (
-          <div
-            key={row.stylist_service_id}
-            className="rounded-lg border border-slate-800 bg-slate-900/60 p-3"
-          >
-            <MappingForm
-              row={row}
-              disabled={disabled}
-              busy={saving === `mapping:${row.stylist_service_id}`}
-              stylists={stylists}
-              services={services}
-              onSubmit={(event) =>
-                onSubmit(
-                  event,
-                  `${API_BASE}/stylist-services`,
-                  'PATCH',
-                  `mapping:${row.stylist_service_id}`
-                )
-              }
-              onDelete={() => onDelete(row.stylist_service_id)}
-              deleting={saving === `delete-mapping:${row.stylist_service_id}`}
-            />
-          </div>
-        ))}
+  const [broken, setBroken] = useState(false);
+  useEffect(() => setBroken(false), [src]);
+  if (!src || broken)
+    return (
+      <div className="bg-primary/15 text-primary flex size-16 shrink-0 items-center justify-center rounded-xl text-lg font-semibold">
+        {fallback.charAt(0).toUpperCase()}
       </div>
-    </div>
+    );
+  return (
+    <img
+      src={src}
+      alt={alt}
+      onError={() => setBroken(true)}
+      className="size-16 shrink-0 rounded-xl object-cover ring-1 ring-slate-700"
+    />
   );
 }
 
-function MappingForm({
-  row,
+function StylistEditor({
+  open,
+  stylist,
+  services,
+  mappings,
   disabled,
   busy,
-  stylists,
-  services,
-  onSubmit,
-  onDelete,
-  deleting,
+  onOpenChange,
+  onSave,
 }: {
-  row?: StylistServiceRow;
+  open: boolean;
+  stylist?: SalonStylistRow;
+  services: SalonServiceRow[];
+  mappings: StylistServiceRow[];
   disabled: boolean;
   busy: boolean;
-  stylists: SalonStylistRow[];
-  services: SalonServiceRow[];
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
-  onDelete?: () => void;
-  deleting?: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSave: (
+    payload: Record<string, unknown>,
+    assignments: Record<string, AssignmentDraft>,
+    photo: File | null,
+    oldImageUrl: string
+  ) => Promise<boolean>;
 }) {
-  return (
-    <form
-      onSubmit={onSubmit}
-      className="grid gap-3 lg:grid-cols-[1fr_1fr_0.7fr_0.7fr_0.7fr_0.7fr_auto]"
-    >
-      {row && (
-        <input
-          type="hidden"
-          name="stylist_service_id"
-          value={row.stylist_service_id}
-        />
-      )}
-      <SelectField
-        name="stylist_id"
-        defaultValue={row?.stylist_id}
-        disabled={disabled}
-      >
-        <option value="">Stylist</option>
-        {stylists.map((stylist) => (
-          <option key={stylist.stylist_id} value={stylist.stylist_id}>
-            {stylist.stylist_name}
-          </option>
-        ))}
-      </SelectField>
-      <SelectField
-        name="service_id"
-        defaultValue={row?.service_id}
-        disabled={disabled}
-      >
-        <option value="">Service</option>
-        {services.map((service) => (
-          <option key={service.service_id} value={service.service_id}>
-            {service.service_name}
-          </option>
-        ))}
-      </SelectField>
-      <TextInput
-        name="override_duration_minutes"
-        type="number"
-        min={5}
-        defaultValue={row?.override_duration_minutes ?? ''}
-        disabled={disabled}
-        placeholder="Minutes"
-      />
-      <TextInput
-        name="override_price_rupees"
-        type="number"
-        min={0}
-        step="0.01"
-        defaultValue={paiseToRupeesInput(row?.override_price_paise)}
-        disabled={disabled}
-        placeholder="Price (₹)"
-      />
-      <TextInput
-        name="override_deposit_rupees"
-        type="number"
-        min={0}
-        step="0.01"
-        defaultValue={paiseToRupeesInput(row?.override_deposit_paise)}
-        disabled={disabled}
-        placeholder="Deposit (₹)"
-      />
-      <TextInput
-        name="skill_level"
-        defaultValue={row?.skill_level ?? ''}
-        disabled={disabled}
-        placeholder="Skill"
-      />
-      <div className="flex justify-end gap-2">
-        {boolField('active', row?.active ?? true, disabled)}
-        <SaveButton
-          disabled={disabled}
-          busy={busy}
-          label={row ? 'Save' : 'Add'}
-        />
-        {row && onDelete && (
-          <Button
-            type="button"
-            variant="destructive"
-            size="icon-sm"
-            title="Deactivate"
-            disabled={disabled || deleting}
-            onClick={onDelete}
-          >
-            {deleting ? <Loader2 className="animate-spin" /> : <Trash2 />}
-          </Button>
-        )}
-      </div>
-      <TextInput
-        name="flow_order"
-        type="number"
-        min={0}
-        defaultValue={row?.flow_order ?? ''}
-        disabled={disabled}
-        placeholder="Order"
-        className="lg:col-span-1"
-      />
-      <TextInput
-        name="notes"
-        defaultValue={row?.notes ?? ''}
-        disabled={disabled}
-        placeholder="Notes"
-        className="lg:col-span-6"
-      />
-    </form>
+  const [name, setName] = useState('');
+  const [specialty, setSpecialty] = useState('');
+  const [bio, setBio] = useState('');
+  const [skills, setSkills] = useState<string[]>([]);
+  const [skillInput, setSkillInput] = useState('');
+  const [active, setActive] = useState(true);
+  const [imageUrl, setImageUrl] = useState('');
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState('');
+  const [notes, setNotes] = useState('');
+  const [assignments, setAssignments] = useState<
+    Record<string, AssignmentDraft>
+  >({});
+  useEffect(() => {
+    const current = Object.fromEntries(
+      services.map((service) => {
+        const existing = mappings.find(
+          (mapping) =>
+            mapping.stylist_id === stylist?.stylist_id &&
+            mapping.service_id === service.service_id
+        );
+        return [
+          service.service_id,
+          {
+            enabled: existing?.active ?? false,
+            skill_level: existing?.skill_level || 'skilled',
+            customize: Boolean(
+              existing?.override_duration_minutes ||
+              existing?.override_price_paise ||
+              existing?.override_deposit_paise
+            ),
+            override_duration_minutes: existing?.override_duration_minutes
+              ? String(existing.override_duration_minutes)
+              : '',
+            override_price_rupees: paiseToRupeesInput(
+              existing?.override_price_paise
+            ),
+            override_deposit_rupees: paiseToRupeesInput(
+              existing?.override_deposit_paise
+            ),
+            existing,
+          },
+        ];
+      })
+    );
+    setName(stylist?.stylist_name ?? '');
+    setSpecialty(stylist?.specialty ?? '');
+    setBio(stylist?.bio ?? '');
+    setSkills(skillsFromSummary(stylist?.skills_summary));
+    setSkillInput('');
+    setActive(stylist?.active ?? true);
+    setImageUrl(stylist?.image_url ?? '');
+    setFile(null);
+    setPreview('');
+    setNotes(stylist?.notes ?? '');
+    setAssignments(current);
+  }, [open, stylist, services, mappings]);
+  useEffect(
+    () => () => {
+      if (preview) URL.revokeObjectURL(preview);
+    },
+    [preview]
   );
-}
-
-function AvailabilityPanel({
-  rows,
-  services,
-  disabled,
-  saving,
-  onSubmit,
-  onDelete,
-}: {
-  rows: AvailabilityRow[];
-  services: SalonServiceRow[];
-  disabled: boolean;
-  saving: string;
-  onSubmit: (
-    event: FormEvent<HTMLFormElement>,
-    path: string,
-    method: 'POST' | 'PATCH',
-    busyKey: string
-  ) => void;
-  onDelete: (id: string) => void;
-}) {
+  function addSkill() {
+    const next = skillInput.trim().replace(/,/g, '');
+    if (
+      next &&
+      !skills.some((skill) => skill.toLowerCase() === next.toLowerCase())
+    )
+      setSkills((current) => [...current, next]);
+    setSkillInput('');
+  }
+  function updateAssignment(serviceId: string, next: Partial<AssignmentDraft>) {
+    setAssignments((current) => ({
+      ...current,
+      [serviceId]: { ...current[serviceId], ...next },
+    }));
+  }
+  function choosePhoto(next: File | null) {
+    if (!next) return;
+    if (!['image/jpeg', 'image/png'].includes(next.type)) {
+      toast.error('Use a JPG or PNG photo');
+      return;
+    }
+    if (next.size > 5 * 1024 * 1024) {
+      toast.error('Stylist photos must be 5 MB or smaller');
+      return;
+    }
+    if (preview) URL.revokeObjectURL(preview);
+    setFile(next);
+    setPreview(URL.createObjectURL(next));
+  }
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    if (!name.trim()) return;
+    await onSave(
+      {
+        stylist_id: stylist?.stylist_id || slug(name),
+        stylist_name: name,
+        specialty,
+        bio,
+        skills,
+        active,
+        image_url: imageUrl,
+        notes,
+        flow_order: stylist?.flow_order ?? 999,
+      },
+      assignments,
+      file,
+      stylist?.image_url ?? ''
+    );
+  }
   return (
-    <div className="grid gap-4">
-      <Card className="rounded-lg border-slate-800 bg-slate-900/70">
-        <CardHeader>
-          <CardTitle>
-            <SectionTitle icon={Clock} title="New Salon Hours" />
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <AvailabilityForm
-            disabled={disabled}
-            busy={saving === 'new-availability'}
-            services={services}
-            onSubmit={(event) =>
-              onSubmit(
-                event,
-                `${API_BASE}/availability`,
-                'POST',
-                'new-availability'
-              )
-            }
-          />
-        </CardContent>
-      </Card>
-      <div className="grid gap-3">
-        {rows.map((row) => (
-          <div
-            key={row.availability_id}
-            className="rounded-lg border border-slate-800 bg-slate-900/60 p-3"
-          >
-            <AvailabilityForm
-              row={row}
-              disabled={disabled}
-              busy={saving === `availability:${row.availability_id}`}
-              services={services}
-              onSubmit={(event) =>
-                onSubmit(
-                  event,
-                  `${API_BASE}/availability`,
-                  'PATCH',
-                  `availability:${row.availability_id}`
-                )
-              }
-              onDelete={() => onDelete(row.availability_id)}
-              deleting={saving === `delete-availability:${row.availability_id}`}
-            />
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function AvailabilityForm({
-  row,
-  disabled,
-  busy,
-  services,
-  onSubmit,
-  onDelete,
-  deleting,
-}: {
-  row?: AvailabilityRow;
-  disabled: boolean;
-  busy: boolean;
-  services: SalonServiceRow[];
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
-  onDelete?: () => void;
-  deleting?: boolean;
-}) {
-  return (
-    <form
-      onSubmit={onSubmit}
-      className="grid gap-3 lg:grid-cols-[1fr_0.8fr_0.8fr_0.8fr_1fr_1fr_auto]"
-    >
-      {row && (
-        <input
-          type="hidden"
-          name="availability_id"
-          value={row.availability_id}
-        />
-      )}
-      <SelectField
-        name="day_name"
-        defaultValue={row?.day_name}
-        disabled={disabled}
-      >
-        <option value="">Day</option>
-        {WEEKDAYS.map((day) => (
-          <option key={day} value={day}>
-            {day}
-          </option>
-        ))}
-      </SelectField>
-      <TextInput
-        name="open_time"
-        type="time"
-        defaultValue={row?.open_time ?? ''}
-        disabled={disabled}
-      />
-      <TextInput
-        name="close_time"
-        type="time"
-        defaultValue={row?.close_time ?? ''}
-        disabled={disabled}
-      />
-      <TextInput
-        name="slot_interval_minutes"
-        type="number"
-        min={5}
-        defaultValue={row?.slot_interval_minutes ?? 30}
-        disabled={disabled}
-        placeholder="Interval"
-      />
-      <TextInput
-        name="blackout_date"
-        type="date"
-        defaultValue={row?.blackout_date ?? ''}
-        disabled={disabled}
-      />
-      <SelectField
-        name="service_id"
-        defaultValue={row?.service_id}
-        disabled={disabled}
-      >
-        <option value="">All services</option>
-        {services.map((service) => (
-          <option key={service.service_id} value={service.service_id}>
-            {service.service_name}
-          </option>
-        ))}
-      </SelectField>
-      <div className="flex justify-end gap-2">
-        {boolField('active', row?.active ?? true, disabled)}
-        <SaveButton
-          disabled={disabled}
-          busy={busy}
-          label={row ? 'Save' : 'Add'}
-        />
-        {row && onDelete && (
-          <Button
-            type="button"
-            variant="destructive"
-            size="icon-sm"
-            title="Deactivate"
-            disabled={disabled || deleting}
-            onClick={onDelete}
-          >
-            {deleting ? <Loader2 className="animate-spin" /> : <Trash2 />}
-          </Button>
-        )}
-      </div>
-      <TextInput
-        name="notes"
-        defaultValue={row?.notes ?? ''}
-        disabled={disabled}
-        placeholder="Notes"
-        className="lg:col-span-7"
-      />
-    </form>
-  );
-}
-
-function StylistAvailabilityPanel({
-  rows,
-  stylists,
-  disabled,
-  saving,
-  onSubmit,
-  onDelete,
-}: {
-  rows: StylistAvailabilityRow[];
-  stylists: SalonStylistRow[];
-  disabled: boolean;
-  saving: string;
-  onSubmit: (
-    event: FormEvent<HTMLFormElement>,
-    path: string,
-    method: 'POST' | 'PATCH',
-    busyKey: string
-  ) => void;
-  onDelete: (id: string) => void;
-}) {
-  return (
-    <div className="grid gap-4">
-      <Card className="rounded-lg border-slate-800 bg-slate-900/70">
-        <CardHeader>
-          <CardTitle>
-            <SectionTitle
-              icon={CalendarClock}
-              title="New Stylist Availability"
-            />
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <StylistAvailabilityForm
-            disabled={disabled}
-            busy={saving === 'new-stylist-availability'}
-            stylists={stylists}
-            onSubmit={(event) =>
-              onSubmit(
-                event,
-                `${API_BASE}/stylist-availability`,
-                'POST',
-                'new-stylist-availability'
-              )
-            }
-          />
-        </CardContent>
-      </Card>
-      <WeeklyAvailabilityGrid rows={rows} stylists={stylists} />
-      <div className="grid gap-3">
-        {rows.map((row) => (
-          <div
-            key={row.stylist_availability_id}
-            className="rounded-lg border border-slate-800 bg-slate-900/60 p-3"
-          >
-            <StylistAvailabilityForm
-              row={row}
-              disabled={disabled}
-              busy={
-                saving === `stylist-availability:${row.stylist_availability_id}`
-              }
-              stylists={stylists}
-              onSubmit={(event) =>
-                onSubmit(
-                  event,
-                  `${API_BASE}/stylist-availability`,
-                  'PATCH',
-                  `stylist-availability:${row.stylist_availability_id}`
-                )
-              }
-              onDelete={() => onDelete(row.stylist_availability_id)}
-              deleting={
-                saving ===
-                `delete-stylist-availability:${row.stylist_availability_id}`
-              }
-            />
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function StylistAvailabilityForm({
-  row,
-  disabled,
-  busy,
-  stylists,
-  onSubmit,
-  onDelete,
-  deleting,
-}: {
-  row?: StylistAvailabilityRow;
-  disabled: boolean;
-  busy: boolean;
-  stylists: SalonStylistRow[];
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
-  onDelete?: () => void;
-  deleting?: boolean;
-}) {
-  return (
-    <form
-      onSubmit={onSubmit}
-      className="grid gap-3 lg:grid-cols-[1fr_1fr_0.75fr_0.75fr_0.7fr_0.9fr_0.9fr_auto]"
-    >
-      {row && (
-        <input
-          type="hidden"
-          name="stylist_availability_id"
-          value={row.stylist_availability_id}
-        />
-      )}
-      <SelectField
-        name="stylist_id"
-        defaultValue={row?.stylist_id}
-        disabled={disabled}
-      >
-        <option value="">Stylist</option>
-        {stylists.map((stylist) => (
-          <option key={stylist.stylist_id} value={stylist.stylist_id}>
-            {stylist.stylist_name}
-          </option>
-        ))}
-      </SelectField>
-      <SelectField
-        name="day_name"
-        defaultValue={row?.day_name}
-        disabled={disabled}
-      >
-        <option value="">Day</option>
-        {WEEKDAYS.map((day) => (
-          <option key={day} value={day}>
-            {day}
-          </option>
-        ))}
-      </SelectField>
-      <TextInput
-        name="open_time"
-        type="time"
-        defaultValue={row?.open_time ?? ''}
-        disabled={disabled}
-      />
-      <TextInput
-        name="close_time"
-        type="time"
-        defaultValue={row?.close_time ?? ''}
-        disabled={disabled}
-      />
-      <TextInput
-        name="slot_interval_minutes"
-        type="number"
-        min={5}
-        defaultValue={row?.slot_interval_minutes ?? 30}
-        disabled={disabled}
-        placeholder="Interval"
-      />
-      <TextInput
-        name="effective_from"
-        type="date"
-        defaultValue={row?.effective_from ?? ''}
-        disabled={disabled}
-      />
-      <TextInput
-        name="effective_to"
-        type="date"
-        defaultValue={row?.effective_to ?? ''}
-        disabled={disabled}
-      />
-      <div className="flex justify-end gap-2">
-        {boolField('active', row?.active ?? true, disabled)}
-        <SaveButton
-          disabled={disabled}
-          busy={busy}
-          label={row ? 'Save' : 'Add'}
-        />
-        {row && onDelete && (
-          <Button
-            type="button"
-            variant="destructive"
-            size="icon-sm"
-            title="Deactivate"
-            disabled={disabled || deleting}
-            onClick={onDelete}
-          >
-            {deleting ? <Loader2 className="animate-spin" /> : <Trash2 />}
-          </Button>
-        )}
-      </div>
-      <TextInput
-        name="blackout_date"
-        type="date"
-        defaultValue={row?.blackout_date ?? ''}
-        disabled={disabled}
-      />
-      <TextInput
-        name="notes"
-        defaultValue={row?.notes ?? ''}
-        disabled={disabled}
-        placeholder="Notes"
-        className="lg:col-span-7"
-      />
-    </form>
-  );
-}
-
-function WeeklyAvailabilityGrid({
-  rows,
-  stylists,
-}: {
-  rows: StylistAvailabilityRow[];
-  stylists: SalonStylistRow[];
-}) {
-  const activeRows = rows.filter((row) => row.active && !row.blackout_date);
-  return (
-    <div className="overflow-x-auto rounded-lg border border-slate-800 bg-slate-900/60">
-      <div className="grid min-w-[760px] grid-cols-[160px_repeat(7,minmax(92px,1fr))]">
-        <div className="border-b border-slate-800 p-3 text-xs font-medium text-slate-500 uppercase">
-          Stylist
-        </div>
-        {WEEKDAYS.map((day) => (
-          <div
-            key={day}
-            className="border-b border-l border-slate-800 p-3 text-xs font-medium text-slate-500 uppercase"
-          >
-            {day.slice(0, 3)}
-          </div>
-        ))}
-        {stylists.map((stylist) => (
-          <div key={stylist.stylist_id} className="contents">
-            <div className="border-b border-slate-800 p-3 text-sm font-medium text-white">
-              {stylist.stylist_name}
-            </div>
-            {WEEKDAYS.map((day) => {
-              const slots = activeRows.filter(
-                (row) =>
-                  row.stylist_id === stylist.stylist_id &&
-                  row.day_name.toLowerCase() === day.toLowerCase()
-              );
-              return (
-                <div
-                  key={day}
-                  className="min-h-16 border-b border-l border-slate-800 p-2"
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[92vh] max-w-4xl overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {stylist ? `Manage ${stylist.stylist_name}` : 'Add stylist'}
+          </DialogTitle>
+          <DialogDescription>
+            Create the profile customers see, then choose exactly which services
+            this stylist can perform.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={submit} className="grid gap-5">
+          <div className="grid gap-4 md:grid-cols-[auto_1fr_1fr]">
+            <div className="grid content-start gap-2">
+              <PhotoPreview
+                src={preview || imageUrl}
+                alt={name || 'Stylist photo'}
+                fallback={name || 'S'}
+              />
+              <input
+                id="stylist-photo"
+                type="file"
+                accept="image/jpeg,image/png"
+                className="sr-only"
+                disabled={disabled}
+                onChange={(event) =>
+                  choosePhoto(event.target.files?.[0] ?? null)
+                }
+              />
+              <label htmlFor="stylist-photo">
+                <span className="inline-flex h-8 cursor-pointer items-center gap-1 rounded-lg border border-slate-700 px-2.5 text-xs text-slate-200 hover:bg-slate-800">
+                  <ImagePlus className="size-3.5" />
+                  {imageUrl || preview ? 'Change photo' : 'Upload photo'}
+                </span>
+              </label>
+              {imageUrl || preview ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="xs"
+                  disabled={disabled}
+                  onClick={() => {
+                    if (preview) URL.revokeObjectURL(preview);
+                    setPreview('');
+                    setFile(null);
+                    setImageUrl('');
+                  }}
                 >
-                  {slots.length ? (
-                    <div className="flex flex-col gap-1">
-                      {slots.map((slot) => (
-                        <span
-                          key={slot.stylist_availability_id}
-                          className="rounded-md bg-emerald-500/10 px-2 py-1 text-xs text-emerald-200"
-                        >
-                          {slot.open_time}-{slot.close_time}
-                        </span>
-                      ))}
-                    </div>
-                  ) : (
-                    <span className="text-xs text-slate-600">Closed</span>
-                  )}
-                </div>
-              );
-            })}
+                  <X /> Remove
+                </Button>
+              ) : null}
+            </div>
+            <Field label="Stylist name">
+              <input
+                className={INPUT}
+                required
+                value={name}
+                disabled={disabled}
+                onChange={(event) => setName(event.target.value)}
+              />
+            </Field>
+            <Field label="Primary specialty">
+              <input
+                className={INPUT}
+                value={specialty}
+                placeholder="For example: Color and hair spa"
+                disabled={disabled}
+                onChange={(event) => setSpecialty(event.target.value)}
+              />
+            </Field>
           </div>
-        ))}
-      </div>
-    </div>
+          <Field
+            label="Expertise tags"
+            hint="Press Enter or Add after each expertise area."
+          >
+            <div className="rounded-lg border border-slate-700 bg-slate-950/50 p-2">
+              <div className="flex flex-wrap gap-1">
+                {skills.map((skill) => (
+                  <Badge key={skill} variant="outline">
+                    {skill}
+                    <button
+                      type="button"
+                      className="ml-1"
+                      disabled={disabled}
+                      onClick={() =>
+                        setSkills((current) =>
+                          current.filter((item) => item !== skill)
+                        )
+                      }
+                    >
+                      <X className="size-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+              <div className="mt-2 flex gap-2">
+                <input
+                  className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+                  value={skillInput}
+                  disabled={disabled}
+                  placeholder="Add an expertise area"
+                  onChange={(event) => setSkillInput(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      addSkill();
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="xs"
+                  disabled={disabled || !skillInput.trim()}
+                  onClick={addSkill}
+                >
+                  Add
+                </Button>
+              </div>
+            </div>
+          </Field>
+          <Field label="Short bio">
+            <textarea
+              className={TEXTAREA}
+              rows={2}
+              value={bio}
+              disabled={disabled}
+              placeholder="A short, customer-friendly introduction"
+              onChange={(event) => setBio(event.target.value)}
+            />
+          </Field>
+          <StatusToggle
+            checked={active}
+            onChange={setActive}
+            disabled={disabled}
+          />
+          <section className="rounded-xl border border-slate-800 p-4">
+            <div>
+              <h3 className="font-medium text-white">Services and expertise</h3>
+              <p className="mt-1 text-sm text-slate-400">
+                Select the services this stylist can book. Price and duration
+                inherit from the service unless you customise them.
+              </p>
+            </div>
+            <div className="mt-4 grid gap-3">
+              {services.map((service) => {
+                const assignment = assignments[service.service_id];
+                return (
+                  <div
+                    key={service.service_id}
+                    className="rounded-lg border border-slate-800 bg-slate-950/30 p-3"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <label className="flex items-center gap-2 font-medium text-slate-200">
+                        <input
+                          type="checkbox"
+                          className="accent-primary size-4"
+                          checked={assignment?.enabled ?? false}
+                          disabled={disabled}
+                          onChange={(event) =>
+                            updateAssignment(service.service_id, {
+                              enabled: event.target.checked,
+                            })
+                          }
+                        />
+                        {service.service_name}
+                        <span className="text-sm font-normal text-slate-500">
+                          {service.duration_minutes} min ·{' '}
+                          {money(service.price_paise)}
+                        </span>
+                      </label>
+                      {assignment?.enabled ? (
+                        <select
+                          className="h-8 rounded-lg border border-slate-700 bg-slate-950 px-2 text-sm text-slate-100"
+                          value={
+                            SKILL_LEVELS.includes(
+                              assignment.skill_level as (typeof SKILL_LEVELS)[number]
+                            )
+                              ? assignment.skill_level
+                              : '__custom'
+                          }
+                          disabled={disabled}
+                          onChange={(event) =>
+                            updateAssignment(service.service_id, {
+                              skill_level:
+                                event.target.value === '__custom'
+                                  ? assignment.skill_level
+                                  : event.target.value,
+                            })
+                          }
+                        >
+                          {!SKILL_LEVELS.includes(
+                            assignment.skill_level as (typeof SKILL_LEVELS)[number]
+                          ) ? (
+                            <option value="__custom">
+                              {humanSkill(assignment.skill_level)}
+                            </option>
+                          ) : null}
+                          {SKILL_LEVELS.map((level) => (
+                            <option key={level} value={level}>
+                              {humanSkill(level)}
+                            </option>
+                          ))}
+                        </select>
+                      ) : null}
+                    </div>
+                    {assignment?.enabled ? (
+                      <details className="mt-3">
+                        <summary className="cursor-pointer text-xs font-medium text-slate-400">
+                          Customise this service for this stylist
+                        </summary>
+                        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                          <StatusToggle
+                            checked={assignment.customize}
+                            label="Use custom values"
+                            disabled={disabled}
+                            onChange={(customize) =>
+                              updateAssignment(service.service_id, {
+                                customize,
+                              })
+                            }
+                          />
+                          {assignment.customize ? (
+                            <>
+                              <Field label="Duration (min)">
+                                <input
+                                  className={INPUT}
+                                  type="number"
+                                  min="5"
+                                  value={assignment.override_duration_minutes}
+                                  disabled={disabled}
+                                  onChange={(event) =>
+                                    updateAssignment(service.service_id, {
+                                      override_duration_minutes:
+                                        event.target.value,
+                                    })
+                                  }
+                                />
+                              </Field>
+                              <Field label="Price (₹)">
+                                <input
+                                  className={INPUT}
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  value={assignment.override_price_rupees}
+                                  disabled={disabled}
+                                  onChange={(event) =>
+                                    updateAssignment(service.service_id, {
+                                      override_price_rupees: event.target.value,
+                                    })
+                                  }
+                                />
+                              </Field>
+                              <Field label="Deposit (₹)">
+                                <input
+                                  className={INPUT}
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  value={assignment.override_deposit_rupees}
+                                  disabled={disabled}
+                                  onChange={(event) =>
+                                    updateAssignment(service.service_id, {
+                                      override_deposit_rupees:
+                                        event.target.value,
+                                    })
+                                  }
+                                />
+                              </Field>
+                            </>
+                          ) : null}
+                        </div>
+                      </details>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+          <details className="rounded-lg border border-slate-800 p-3">
+            <summary className="cursor-pointer text-sm font-medium text-slate-200">
+              Advanced profile settings
+            </summary>
+            <div className="mt-3 grid gap-3">
+              <Field
+                label="External image URL"
+                hint="Use only when an image cannot be uploaded to Supabase."
+              >
+                <input
+                  className={INPUT}
+                  type="url"
+                  value={imageUrl}
+                  disabled={disabled || Boolean(file)}
+                  placeholder="https://…"
+                  onChange={(event) => setImageUrl(event.target.value)}
+                />
+              </Field>
+              <Field label="Internal notes">
+                <textarea
+                  className={TEXTAREA}
+                  rows={2}
+                  value={notes}
+                  disabled={disabled}
+                  onChange={(event) => setNotes(event.target.value)}
+                />
+              </Field>
+            </div>
+          </details>
+          <DialogFooter>
+            <Button type="submit" disabled={disabled || busy}>
+              {busy ? <Loader2 className="animate-spin" /> : <Check />}
+              {stylist ? 'Save stylist' : 'Add stylist'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function SchedulePanel({
+  data,
+  disabled,
+  saving,
+  onRequest,
+  activeStylists,
+}: {
+  data: ControlRoomData;
+  disabled: boolean;
+  saving: string;
+  onRequest: (
+    path: string,
+    method: 'POST' | 'PATCH' | 'PUT' | 'DELETE',
+    body?: unknown,
+    busyKey?: string
+  ) => Promise<boolean>;
+  activeStylists: SalonStylistRow[];
+}) {
+  const [stylistId, setStylistId] = useState(
+    activeStylists[0]?.stylist_id ?? ''
+  );
+  const [custom, setCustom] = useState(false);
+  const [closureDate, setClosureDate] = useState('');
+  const [closureStylist, setClosureStylist] = useState('');
+  const [closureNotes, setClosureNotes] = useState('');
+  useEffect(() => {
+    if (!activeStylists.some((stylist) => stylist.stylist_id === stylistId))
+      setStylistId(activeStylists[0]?.stylist_id ?? '');
+  }, [activeStylists, stylistId]);
+  const salonRows = data.availability.filter(
+    (row) => row.active && !row.blackout_date && !row.service_id
+  );
+  const stylistRows = data.stylistAvailability.filter(
+    (row) => row.active && !row.blackout_date && row.stylist_id === stylistId
+  );
+  const hasCustom = stylistRows.length > 0;
+  useEffect(() => setCustom(hasCustom), [stylistId, hasCustom]);
+  const exceptions = [
+    ...data.availability.map((row) => ({ ...row, scope: 'Salon' })),
+    ...data.stylistAvailability.map((row) => ({
+      ...row,
+      scope:
+        activeStylists.find((stylist) => stylist.stylist_id === row.stylist_id)
+          ?.stylist_name || 'Stylist',
+    })),
+  ].filter((row) => row.active && row.blackout_date);
+  async function saveClosure(event: FormEvent) {
+    event.preventDefault();
+    if (!closureDate) return;
+    const day = weekdayForDate(closureDate);
+    const isStylist = Boolean(closureStylist);
+    const result = await onRequest(
+      `${API}/${isStylist ? 'stylist-availability' : 'availability'}`,
+      'POST',
+      isStylist
+        ? {
+            stylist_id: closureStylist,
+            day_name: day,
+            open_time: '00:00',
+            close_time: '00:05',
+            slot_interval_minutes: 30,
+            blackout_date: closureDate,
+            active: true,
+            notes: closureNotes,
+          }
+        : {
+            day_name: day,
+            open_time: '00:00',
+            close_time: '00:05',
+            slot_interval_minutes: 30,
+            blackout_date: closureDate,
+            service_id: '',
+            active: true,
+            notes: closureNotes,
+          },
+      'closure'
+    );
+    if (result) {
+      setClosureDate('');
+      setClosureNotes('');
+      toast.success('Closure added');
+    }
+  }
+  return (
+    <section className="grid gap-6">
+      <SectionHeader
+        icon={CalendarClock}
+        title="Booking schedule"
+        description="Open days, booking hours, slot spacing, and temporary closures. Weekend slots follow this schedule."
+        action={null}
+      />
+      <ScheduleGrid
+        key={`salon-${data.availability.map((row) => `${row.availability_id}:${row.updated_at}`).join('|')}`}
+        title="Salon weekly hours"
+        description="These are the default hours used by every stylist who follows the salon schedule."
+        initialRows={salonRows}
+        scope="salon"
+        disabled={disabled}
+        saving={saving === 'salon-schedule'}
+        onSave={(rules, deactivateIds) =>
+          onRequest(
+            `${API}/schedule`,
+            'PUT',
+            { scope: 'salon', rules, deactivate_ids: deactivateIds },
+            'salon-schedule'
+          )
+        }
+      />
+      <Card className="border-slate-800 bg-slate-900/60">
+        <CardHeader>
+          <CardTitle>Stylist schedule</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4">
+          <Field label="Stylist">
+            <select
+              className={INPUT}
+              value={stylistId}
+              disabled={disabled || !activeStylists.length}
+              onChange={(event) => setStylistId(event.target.value)}
+            >
+              {activeStylists.map((stylist) => (
+                <option key={stylist.stylist_id} value={stylist.stylist_id}>
+                  {stylist.stylist_name}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950/30 p-3">
+            <div>
+              <p className="font-medium text-slate-200">
+                {custom ? 'Custom weekly hours' : 'Following salon hours'}
+              </p>
+              <p className="mt-1 text-sm text-slate-400">
+                {custom
+                  ? 'Days without a custom range are closed for this stylist.'
+                  : 'The salon hours above are used until a custom schedule is saved.'}
+              </p>
+            </div>
+            <StatusToggle
+              checked={custom}
+              label="Use custom hours"
+              disabled={disabled || !stylistId}
+              onChange={async (next) => {
+                if (next) {
+                  setCustom(true);
+                  return;
+                }
+                if (
+                  await onRequest(
+                    `${API}/schedule`,
+                    'PUT',
+                    {
+                      scope: 'stylist',
+                      stylist_id: stylistId,
+                      rules: [],
+                      deactivate_ids: stylistRows.map(
+                        (row) => row.stylist_availability_id
+                      ),
+                    },
+                    'stylist-schedule'
+                  )
+                ) {
+                  setCustom(false);
+                  toast.success('Stylist now follows salon hours');
+                }
+              }}
+            />
+          </div>
+          {custom ? (
+            <ScheduleGrid
+              key={`stylist-${stylistId}-${stylistRows.map((row) => `${row.stylist_availability_id}:${row.updated_at}`).join('|')}`}
+              title="Custom weekly availability"
+              description="Copy the salon schedule, then adjust only the days this stylist works."
+              initialRows={stylistRows}
+              copyRows={salonRows}
+              scope="stylist"
+              disabled={disabled}
+              saving={saving === 'stylist-schedule'}
+              onSave={(rules, deactivateIds) =>
+                onRequest(
+                  `${API}/schedule`,
+                  'PUT',
+                  {
+                    scope: 'stylist',
+                    stylist_id: stylistId,
+                    rules,
+                    deactivate_ids: deactivateIds,
+                  },
+                  'stylist-schedule'
+                )
+              }
+            />
+          ) : null}
+        </CardContent>
+      </Card>
+      <Card className="border-slate-800 bg-slate-900/60">
+        <CardHeader>
+          <CardTitle>Temporary closures</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form
+            onSubmit={saveClosure}
+            className="grid gap-3 lg:grid-cols-[1fr_1fr_2fr_auto]"
+          >
+            <Field label="Date">
+              <input
+                className={INPUT}
+                type="date"
+                value={closureDate}
+                disabled={disabled}
+                onChange={(event) => setClosureDate(event.target.value)}
+              />
+            </Field>
+            <Field label="Applies to">
+              <select
+                className={INPUT}
+                value={closureStylist}
+                disabled={disabled}
+                onChange={(event) => setClosureStylist(event.target.value)}
+              >
+                <option value="">Entire salon</option>
+                {activeStylists.map((stylist) => (
+                  <option key={stylist.stylist_id} value={stylist.stylist_id}>
+                    {stylist.stylist_name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Reason (optional)">
+              <input
+                className={INPUT}
+                value={closureNotes}
+                disabled={disabled}
+                placeholder="For example: public holiday"
+                onChange={(event) => setClosureNotes(event.target.value)}
+              />
+            </Field>
+            <div className="flex items-end">
+              <Button disabled={disabled || saving === 'closure'}>
+                {saving === 'closure' ? (
+                  <Loader2 className="animate-spin" />
+                ) : (
+                  <Plus />
+                )}{' '}
+                Add closure
+              </Button>
+            </div>
+          </form>
+          <div className="mt-5 grid gap-2">
+            {exceptions.length ? (
+              exceptions.map((row) => (
+                <div
+                  key={
+                    'availability_id' in row
+                      ? row.availability_id
+                      : row.stylist_availability_id
+                  }
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-800 px-3 py-2 text-sm"
+                >
+                  <span className="font-medium text-slate-200">
+                    {row.blackout_date}
+                  </span>
+                  <span className="text-slate-400">
+                    {row.scope}
+                    {row.notes ? ` · ${row.notes}` : ''}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-slate-500">
+                No temporary closures scheduled.
+              </p>
+            )}
+          </div>
+          <details className="mt-4 rounded-lg border border-slate-800 p-3">
+            <summary className="cursor-pointer text-sm font-medium text-slate-200">
+              Advanced scheduling notes
+            </summary>
+            <p className="mt-2 text-sm text-slate-400">
+              Existing service-specific rules and effective date windows are
+              retained. The weekly grids edit normal hours only, keeping
+              temporary booking rules safe.
+            </p>
+          </details>
+        </CardContent>
+      </Card>
+    </section>
+  );
+}
+
+function ScheduleGrid({
+  title,
+  description,
+  initialRows,
+  copyRows,
+  scope,
+  disabled,
+  saving,
+  onSave,
+}: {
+  title: string;
+  description: string;
+  initialRows: Array<AvailabilityRow | StylistAvailabilityRow>;
+  copyRows?: Array<AvailabilityRow | StylistAvailabilityRow>;
+  scope: 'salon' | 'stylist';
+  disabled: boolean;
+  saving: boolean;
+  onSave: (rules: DraftRule[], deactivateIds: string[]) => Promise<boolean>;
+}) {
+  const [week, setWeek] = useState(() => weekFromRows(initialRows, scope));
+  const knownIds = useMemo(
+    () =>
+      initialRows.map((row) =>
+        'availability_id' in row
+          ? row.availability_id
+          : row.stylist_availability_id
+      ),
+    [initialRows]
+  );
+  function setDay(day: Weekday, next: DraftRule[]) {
+    setWeek((current) => ({ ...current, [day]: next }));
+  }
+  function copy(day: Weekday, days: Weekday[]) {
+    const source = week[day].length ? week[day] : [defaultRule(day)];
+    setWeek((current) => ({
+      ...current,
+      ...Object.fromEntries(
+        days.map((target) => [
+          target,
+          source.map((rule, index) => ({
+            ...rule,
+            id: current[target][index]?.id,
+            day_name: target,
+          })),
+        ])
+      ),
+    }));
+  }
+  async function save() {
+    const draftRules = WEEKDAYS.flatMap((day) => week[day]);
+    const activeIds = new Set(
+      draftRules.map((rule) => rule.id).filter(Boolean)
+    );
+    const deactivateIds = knownIds.filter((id) => !activeIds.has(id));
+    const rules = draftRules.map((rule) =>
+      scope === 'salon'
+        ? { ...rule, availability_id: rule.id }
+        : { ...rule, stylist_availability_id: rule.id }
+    );
+    if (!rules.length && !deactivateIds.length) {
+      toast.message('No schedule changes to save');
+      return;
+    }
+    if (await onSave(rules, deactivateIds)) toast.success(`${title} saved`);
+  }
+  return (
+    <Card className="border-slate-800 bg-slate-900/60">
+      <CardHeader>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <CardTitle>{title}</CardTitle>
+            <p className="mt-1 text-sm text-slate-400">{description}</p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={disabled}
+              onClick={() => copy('Monday', WEEKDAYS.slice(1) as Weekday[])}
+            >
+              Copy Monday to all days
+            </Button>
+            {copyRows ? (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={disabled}
+                onClick={() =>
+                  setWeek(
+                    Object.fromEntries(
+                      Object.entries(weekFromRows(copyRows, 'salon')).map(
+                        ([day, rules]) => [
+                          day,
+                          rules.map((rule) => ({ ...rule, id: undefined })),
+                        ]
+                      )
+                    ) as Record<Weekday, DraftRule[]>
+                  )
+                }
+              >
+                Copy salon hours
+              </Button>
+            ) : null}
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="grid gap-2">
+        {WEEKDAYS.map((day) => {
+          const rules = week[day];
+          return (
+            <div
+              key={day}
+              className="grid gap-3 rounded-lg border border-slate-800 bg-slate-950/30 p-3 md:grid-cols-[120px_1fr_auto]"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-medium text-slate-200">{day}</span>
+                <StatusToggle
+                  checked={Boolean(rules.length)}
+                  label={rules.length ? 'Open' : 'Closed'}
+                  disabled={disabled}
+                  onChange={(open) =>
+                    setDay(
+                      day,
+                      open ? (rules.length ? rules : [defaultRule(day)]) : []
+                    )
+                  }
+                />
+              </div>
+              <div className="grid gap-2">
+                {rules.map((rule, index) => (
+                  <div
+                    key={rule.id || `${day}-${index}`}
+                    className="grid grid-cols-[1fr_1fr_110px_auto] gap-2"
+                  >
+                    <input
+                      className={INPUT}
+                      type="time"
+                      value={rule.open_time}
+                      disabled={disabled}
+                      onChange={(event) =>
+                        setDay(
+                          day,
+                          rules.map((item, itemIndex) =>
+                            itemIndex === index
+                              ? { ...item, open_time: event.target.value }
+                              : item
+                          )
+                        )
+                      }
+                    />
+                    <input
+                      className={INPUT}
+                      type="time"
+                      value={rule.close_time}
+                      disabled={disabled}
+                      onChange={(event) =>
+                        setDay(
+                          day,
+                          rules.map((item, itemIndex) =>
+                            itemIndex === index
+                              ? { ...item, close_time: event.target.value }
+                              : item
+                          )
+                        )
+                      }
+                    />
+                    <select
+                      className={INPUT}
+                      value={rule.slot_interval_minutes}
+                      disabled={disabled}
+                      onChange={(event) =>
+                        setDay(
+                          day,
+                          rules.map((item, itemIndex) =>
+                            itemIndex === index
+                              ? {
+                                  ...item,
+                                  slot_interval_minutes: Number(
+                                    event.target.value
+                                  ),
+                                }
+                              : item
+                          )
+                        )
+                      }
+                    >
+                      {[15, 20, 30, 45, 60].map((minutes) => (
+                        <option key={minutes} value={minutes}>
+                          {minutes} min slots
+                        </option>
+                      ))}
+                    </select>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      title="Remove time range"
+                      disabled={disabled}
+                      onClick={() =>
+                        setDay(
+                          day,
+                          rules.filter((_, itemIndex) => itemIndex !== index)
+                        )
+                      }
+                    >
+                      <X />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={disabled || !rules.length}
+                onClick={() =>
+                  setDay(day, [
+                    ...rules,
+                    {
+                      ...defaultRule(day),
+                      open_time: rules.at(-1)?.close_time || '10:00',
+                      close_time: '18:00',
+                    },
+                  ])
+                }
+              >
+                <Plus /> Add range
+              </Button>
+            </div>
+          );
+        })}
+        <div className="flex justify-end pt-2">
+          <Button disabled={disabled || saving} onClick={save}>
+            {saving ? <Loader2 className="animate-spin" /> : <Check />} Save
+            weekly hours
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
