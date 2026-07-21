@@ -9,33 +9,48 @@
  * instead of a runtime rejection from Meta.
  */
 
-const META_API_VERSION = 'v21.0'
-const META_API_BASE = `https://graph.facebook.com/${META_API_VERSION}`
+import { fetchWithTimeout, TIMEOUT_EXTERNAL_MS } from '@/lib/http';
+
+const META_API_VERSION = 'v21.0';
+const META_API_BASE = `https://graph.facebook.com/${META_API_VERSION}`;
+
+/**
+ * Every call in this module goes to graph.facebook.com, so they all get
+ * the same deadline. Without one a Meta outage does not fail — it hangs,
+ * pinning the route and leaving the operator watching a spinner that
+ * never resolves.
+ */
+function metaFetch(url: string, init: RequestInit) {
+  return fetchWithTimeout(url, init, TIMEOUT_EXTERNAL_MS);
+}
 
 export interface MetaSendResult {
-  messageId: string
+  messageId: string;
 }
 
 export interface MetaPhoneInfo {
-  id: string
-  display_phone_number: string
-  verified_name?: string
-  quality_rating?: string
+  id: string;
+  display_phone_number: string;
+  verified_name?: string;
+  quality_rating?: string;
 }
 
 interface MetaErrorResponse {
-  error?: { message?: string; code?: number; type?: string }
+  error?: { message?: string; code?: number; type?: string };
 }
 
-async function throwMetaError(response: Response, fallback: string): Promise<never> {
-  let message = fallback
+async function throwMetaError(
+  response: Response,
+  fallback: string
+): Promise<never> {
+  let message = fallback;
   try {
-    const data = (await response.json()) as MetaErrorResponse
-    if (data.error?.message) message = data.error.message
+    const data = (await response.json()) as MetaErrorResponse;
+    if (data.error?.message) message = data.error.message;
   } catch {
     // response body wasn't JSON — keep the fallback
   }
-  throw new Error(message)
+  throw new Error(message);
 }
 
 // ============================================================
@@ -43,8 +58,8 @@ async function throwMetaError(response: Response, fallback: string): Promise<nev
 // ============================================================
 
 export interface VerifyPhoneNumberArgs {
-  phoneNumberId: string
-  accessToken: string
+  phoneNumberId: string;
+  accessToken: string;
 }
 
 /**
@@ -54,15 +69,15 @@ export interface VerifyPhoneNumberArgs {
 export async function verifyPhoneNumber(
   args: VerifyPhoneNumberArgs
 ): Promise<MetaPhoneInfo> {
-  const { phoneNumberId, accessToken } = args
-  const url = `${META_API_BASE}/${phoneNumberId}?fields=id,display_phone_number,verified_name,quality_rating`
-  const response = await fetch(url, {
+  const { phoneNumberId, accessToken } = args;
+  const url = `${META_API_BASE}/${phoneNumberId}?fields=id,display_phone_number,verified_name,quality_rating`;
+  const response = await metaFetch(url, {
     headers: { Authorization: `Bearer ${accessToken}` },
-  })
+  });
   if (!response.ok) {
-    await throwMetaError(response, `Meta API error: ${response.status}`)
+    await throwMetaError(response, `Meta API error: ${response.status}`);
   }
-  return response.json()
+  return response.json();
 }
 
 // ============================================================
@@ -70,13 +85,13 @@ export async function verifyPhoneNumber(
 // ============================================================
 
 export interface SendTextMessageArgs {
-  phoneNumberId: string
-  accessToken: string
-  to: string
-  text: string
+  phoneNumberId: string;
+  accessToken: string;
+  to: string;
+  text: string;
   /** Meta's message_id of the message being replied to. Adds a `context` field
    *  so WhatsApp renders the new message as a reply with a quote preview. */
-  contextMessageId?: string
+  contextMessageId?: string;
 }
 
 /**
@@ -86,47 +101,47 @@ export interface SendTextMessageArgs {
 export async function sendTextMessage(
   args: SendTextMessageArgs
 ): Promise<MetaSendResult> {
-  const { phoneNumberId, accessToken, to, text, contextMessageId } = args
-  const url = `${META_API_BASE}/${phoneNumberId}/messages`
+  const { phoneNumberId, accessToken, to, text, contextMessageId } = args;
+  const url = `${META_API_BASE}/${phoneNumberId}/messages`;
   const body: Record<string, unknown> = {
     messaging_product: 'whatsapp',
     recipient_type: 'individual',
     to,
     type: 'text',
     text: { body: text },
-  }
+  };
   if (contextMessageId) {
-    body.context = { message_id: contextMessageId }
+    body.context = { message_id: contextMessageId };
   }
-  const response = await fetch(url, {
+  const response = await metaFetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${accessToken}`,
     },
     body: JSON.stringify(body),
-  })
+  });
   if (!response.ok) {
-    await throwMetaError(response, `Meta API error: ${response.status}`)
+    await throwMetaError(response, `Meta API error: ${response.status}`);
   }
-  const data = await response.json()
-  return { messageId: data.messages[0].id }
+  const data = await response.json();
+  return { messageId: data.messages[0].id };
 }
 
-export type MediaKind = 'image' | 'video' | 'document'
+export type MediaKind = 'image' | 'video' | 'document';
 
 export interface SendMediaMessageArgs {
-  phoneNumberId: string
-  accessToken: string
-  to: string
-  kind: MediaKind
+  phoneNumberId: string;
+  accessToken: string;
+  to: string;
+  kind: MediaKind;
   /** Public URL Meta fetches at send time. */
-  link: string
+  link: string;
   /** Optional caption — Meta caps at 1024 chars. Documents + images + videos all accept it. */
-  caption?: string
+  caption?: string;
   /** Document-only. Shown in the recipient's chat as the file name. Ignored for image/video. */
-  filename?: string
-  contextMessageId?: string
+  filename?: string;
+  contextMessageId?: string;
 }
 
 /**
@@ -137,15 +152,24 @@ export interface SendMediaMessageArgs {
  * message id.
  */
 export async function sendMediaMessage(
-  args: SendMediaMessageArgs,
+  args: SendMediaMessageArgs
 ): Promise<MetaSendResult> {
-  const { phoneNumberId, accessToken, to, kind, link, caption, filename, contextMessageId } = args
-  if (!link) throw new Error('sendMediaMessage requires a link.')
-  const url = `${META_API_BASE}/${phoneNumberId}/messages`
+  const {
+    phoneNumberId,
+    accessToken,
+    to,
+    kind,
+    link,
+    caption,
+    filename,
+    contextMessageId,
+  } = args;
+  if (!link) throw new Error('sendMediaMessage requires a link.');
+  const url = `${META_API_BASE}/${phoneNumberId}/messages`;
 
-  const media: Record<string, unknown> = { link }
-  if (caption) media.caption = caption
-  if (kind === 'document' && filename) media.filename = filename
+  const media: Record<string, unknown> = { link };
+  if (caption) media.caption = caption;
+  if (kind === 'document' && filename) media.filename = filename;
 
   const body: Record<string, unknown> = {
     messaging_product: 'whatsapp',
@@ -153,59 +177,59 @@ export async function sendMediaMessage(
     to,
     type: kind,
     [kind]: media,
-  }
-  if (contextMessageId) body.context = { message_id: contextMessageId }
+  };
+  if (contextMessageId) body.context = { message_id: contextMessageId };
 
-  const response = await fetch(url, {
+  const response = await metaFetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${accessToken}`,
     },
     body: JSON.stringify(body),
-  })
+  });
   if (!response.ok) {
-    await throwMetaError(response, `Meta API error: ${response.status}`)
+    await throwMetaError(response, `Meta API error: ${response.status}`);
   }
-  const data = await response.json()
-  return { messageId: data.messages[0].id }
+  const data = await response.json();
+  return { messageId: data.messages[0].id };
 }
 
-import type { MessageTemplate } from '@/types'
+import type { MessageTemplate } from '@/types';
 import {
   buildSendComponents,
   type SendTimeParams,
-} from './template-send-builder'
+} from './template-send-builder';
 
 export interface SendTemplateMessageArgs {
-  phoneNumberId: string
-  accessToken: string
-  to: string
-  templateName: string
-  language?: string
+  phoneNumberId: string;
+  accessToken: string;
+  to: string;
+  templateName: string;
+  language?: string;
   /**
    * Legacy body-only params. Kept for backward compat with callers
    * that haven't migrated to the structured `template` + `messageParams`
    * pair below. New callers should pass `template` so media headers
    * and URL buttons land on the send.
    */
-  params?: string[]
+  params?: string[];
   /**
    * The template row from message_templates. When provided, the helper
    * builds the full components array (header + body + buttons) via
    * buildSendComponents — that's the only way image/video/document
    * headers and URL-with-variable buttons actually reach the recipient.
    */
-  template?: MessageTemplate
+  template?: MessageTemplate;
   /**
    * Structured per-send values. Body variables go in `body`; header
    * text variables in `headerText`; media overrides in
    * `headerMediaUrl` / `headerMediaId`; URL/COPY_CODE button values
    * in `buttonParams` keyed by index.
    */
-  messageParams?: SendTimeParams
+  messageParams?: SendTimeParams;
   /** Meta's message_id of the message being replied to. */
-  contextMessageId?: string
+  contextMessageId?: string;
 }
 
 /**
@@ -232,13 +256,13 @@ export async function sendTemplateMessage(
     template,
     messageParams,
     contextMessageId,
-  } = args
-  const url = `${META_API_BASE}/${phoneNumberId}/messages`
+  } = args;
+  const url = `${META_API_BASE}/${phoneNumberId}/messages`;
 
   const templatePayload: Record<string, unknown> = {
     name: templateName,
     language: { code: language },
-  }
+  };
 
   if (template) {
     const components = buildSendComponents(template, {
@@ -249,9 +273,9 @@ export async function sendTemplateMessage(
       headerMediaUrl: messageParams?.headerMediaUrl,
       headerMediaId: messageParams?.headerMediaId,
       buttonParams: messageParams?.buttonParams,
-    })
+    });
     if (components.length > 0) {
-      templatePayload.components = components
+      templatePayload.components = components;
     }
   } else if (params && params.length > 0) {
     // Legacy body-only path — no template row available.
@@ -260,7 +284,7 @@ export async function sendTemplateMessage(
         type: 'body',
         parameters: params.map((p) => ({ type: 'text', text: String(p) })),
       },
-    ]
+    ];
   }
 
   const body: Record<string, unknown> = {
@@ -269,42 +293,42 @@ export async function sendTemplateMessage(
     to,
     type: 'template',
     template: templatePayload,
-  }
+  };
   if (contextMessageId) {
-    body.context = { message_id: contextMessageId }
+    body.context = { message_id: contextMessageId };
   }
 
-  const response = await fetch(url, {
+  const response = await metaFetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${accessToken}`,
     },
     body: JSON.stringify(body),
-  })
+  });
   if (!response.ok) {
-    await throwMetaError(response, `Meta API error: ${response.status}`)
+    await throwMetaError(response, `Meta API error: ${response.status}`);
   }
-  const data = await response.json()
-  return { messageId: data.messages[0].id }
+  const data = await response.json();
+  return { messageId: data.messages[0].id };
 }
 
 // ============================================================
 // Template submission (Business Management API)
 // ============================================================
 
-import type { MetaTemplateSubmitPayload } from './template-components'
+import type { MetaTemplateSubmitPayload } from './template-components';
 
 export interface SubmitMessageTemplateArgs {
-  wabaId: string
-  accessToken: string
-  payload: MetaTemplateSubmitPayload
+  wabaId: string;
+  accessToken: string;
+  payload: MetaTemplateSubmitPayload;
 }
 
 export interface SubmitMessageTemplateResult {
-  id: string
-  status: string
-  category?: string
+  id: string;
+  status: string;
+  category?: string;
 }
 
 /**
@@ -323,42 +347,42 @@ export interface SubmitMessageTemplateResult {
 export async function submitMessageTemplate(
   args: SubmitMessageTemplateArgs
 ): Promise<SubmitMessageTemplateResult> {
-  const { wabaId, accessToken, payload } = args
-  const url = `${META_API_BASE}/${wabaId}/message_templates`
-  const response = await fetch(url, {
+  const { wabaId, accessToken, payload } = args;
+  const url = `${META_API_BASE}/${wabaId}/message_templates`;
+  const response = await metaFetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${accessToken}`,
     },
     body: JSON.stringify(payload),
-  })
+  });
   if (!response.ok) {
-    await throwMetaError(response, `Meta API error: ${response.status}`)
+    await throwMetaError(response, `Meta API error: ${response.status}`);
   }
-  const data = await response.json()
+  const data = await response.json();
   if (!data?.id) {
-    throw new Error('Meta accepted the template but returned no id.')
+    throw new Error('Meta accepted the template but returned no id.');
   }
   return {
     id: String(data.id),
     status: typeof data.status === 'string' ? data.status : 'PENDING',
     category: typeof data.category === 'string' ? data.category : undefined,
-  }
+  };
 }
 
 export interface EditMessageTemplateArgs {
   /** Meta's template id (stored locally as `meta_template_id`). */
-  metaTemplateId: string
-  accessToken: string
+  metaTemplateId: string;
+  accessToken: string;
   /** Send the full components array — Meta replaces, not patches. */
-  components: MetaTemplateSubmitPayload['components']
+  components: MetaTemplateSubmitPayload['components'];
   /** Optional — only certain category transitions are allowed by Meta. */
-  category?: MetaTemplateSubmitPayload['category']
+  category?: MetaTemplateSubmitPayload['category'];
 }
 
 export interface EditMessageTemplateResult {
-  success: boolean
+  success: boolean;
 }
 
 /**
@@ -374,34 +398,34 @@ export interface EditMessageTemplateResult {
 export async function editMessageTemplate(
   args: EditMessageTemplateArgs
 ): Promise<EditMessageTemplateResult> {
-  const { metaTemplateId, accessToken, components, category } = args
-  const body: Record<string, unknown> = { components }
-  if (category) body.category = category
-  const response = await fetch(`${META_API_BASE}/${metaTemplateId}`, {
+  const { metaTemplateId, accessToken, components, category } = args;
+  const body: Record<string, unknown> = { components };
+  if (category) body.category = category;
+  const response = await metaFetch(`${META_API_BASE}/${metaTemplateId}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${accessToken}`,
     },
     body: JSON.stringify(body),
-  })
+  });
   if (!response.ok) {
-    await throwMetaError(response, `Meta API error: ${response.status}`)
+    await throwMetaError(response, `Meta API error: ${response.status}`);
   }
-  const data = await response.json().catch(() => ({}))
-  return { success: data?.success !== false }
+  const data = await response.json().catch(() => ({}));
+  return { success: data?.success !== false };
 }
 
 export interface DeleteMessageTemplateArgs {
-  wabaId: string
-  accessToken: string
-  name: string
+  wabaId: string;
+  accessToken: string;
+  name: string;
   /**
    * Without `hsm_id`, Meta deletes EVERY language variant of the
    * template with this `name`. Pass the row's `meta_template_id`
    * to scope to a single variant.
    */
-  metaTemplateId?: string
+  metaTemplateId?: string;
 }
 
 /**
@@ -412,19 +436,19 @@ export interface DeleteMessageTemplateArgs {
 export async function deleteMessageTemplate(
   args: DeleteMessageTemplateArgs
 ): Promise<void> {
-  const { wabaId, accessToken, name, metaTemplateId } = args
-  const params = new URLSearchParams({ name })
-  if (metaTemplateId) params.set('hsm_id', metaTemplateId)
-  const url = `${META_API_BASE}/${wabaId}/message_templates?${params.toString()}`
-  const response = await fetch(url, {
+  const { wabaId, accessToken, name, metaTemplateId } = args;
+  const params = new URLSearchParams({ name });
+  if (metaTemplateId) params.set('hsm_id', metaTemplateId);
+  const url = `${META_API_BASE}/${wabaId}/message_templates?${params.toString()}`;
+  const response = await metaFetch(url, {
     method: 'DELETE',
     headers: { Authorization: `Bearer ${accessToken}` },
-  })
+  });
   // Treat a 404 as a no-op — the template is already gone on Meta's
   // side, and we still want the local row removed.
-  if (response.status === 404) return
+  if (response.status === 404) return;
   if (!response.ok) {
-    await throwMetaError(response, `Meta API error: ${response.status}`)
+    await throwMetaError(response, `Meta API error: ${response.status}`);
   }
 }
 
@@ -433,16 +457,16 @@ export async function deleteMessageTemplate(
 // ============================================================
 
 export interface MarkMessageAsReadArgs {
-  phoneNumberId: string
-  accessToken: string
+  phoneNumberId: string;
+  accessToken: string;
   /** Meta's inbound WhatsApp message ID from messages[0].id. */
-  messageId: string
+  messageId: string;
   /** Display WhatsApp's text typing indicator while a reply is prepared. */
-  typingIndicator?: boolean
+  typingIndicator?: boolean;
 }
 
 export interface MetaSuccessResult {
-  success: boolean
+  success: boolean;
 }
 
 /**
@@ -452,35 +476,43 @@ export interface MetaSuccessResult {
 export async function markMessageAsRead(
   args: MarkMessageAsReadArgs
 ): Promise<MetaSuccessResult> {
-  const { phoneNumberId, accessToken, messageId, typingIndicator = false } = args
+  const {
+    phoneNumberId,
+    accessToken,
+    messageId,
+    typingIndicator = false,
+  } = args;
   const trimmedMessageId =
-    typeof messageId === 'string' ? messageId.trim() : ''
+    typeof messageId === 'string' ? messageId.trim() : '';
   if (!trimmedMessageId) {
-    throw new Error('markMessageAsRead requires a messageId.')
+    throw new Error('markMessageAsRead requires a messageId.');
   }
 
   const body: Record<string, unknown> = {
     messaging_product: 'whatsapp',
     status: 'read',
     message_id: trimmedMessageId,
-  }
+  };
   if (typingIndicator) {
-    body.typing_indicator = { type: 'text' }
+    body.typing_indicator = { type: 'text' };
   }
 
-  const response = await fetch(`${META_API_BASE}/${phoneNumberId}/messages`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${accessToken}`,
-    },
-    body: JSON.stringify(body),
-  })
+  const response = await metaFetch(
+    `${META_API_BASE}/${phoneNumberId}/messages`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(body),
+    }
+  );
   if (!response.ok) {
-    await throwMetaError(response, `Meta API error: ${response.status}`)
+    await throwMetaError(response, `Meta API error: ${response.status}`);
   }
-  const data = await response.json()
-  return { success: data.success === true }
+  const data = await response.json();
+  return { success: data.success === true };
 }
 
 // ============================================================
@@ -488,13 +520,13 @@ export async function markMessageAsRead(
 // ============================================================
 
 export interface SendReactionMessageArgs {
-  phoneNumberId: string
-  accessToken: string
-  to: string
+  phoneNumberId: string;
+  accessToken: string;
+  to: string;
   /** Meta's message_id of the message being reacted to. */
-  targetMessageId: string
+  targetMessageId: string;
   /** Single emoji, or empty string to remove an existing reaction. */
-  emoji: string
+  emoji: string;
 }
 
 /**
@@ -504,9 +536,9 @@ export interface SendReactionMessageArgs {
 export async function sendReactionMessage(
   args: SendReactionMessageArgs
 ): Promise<MetaSendResult> {
-  const { phoneNumberId, accessToken, to, targetMessageId, emoji } = args
-  const url = `${META_API_BASE}/${phoneNumberId}/messages`
-  const response = await fetch(url, {
+  const { phoneNumberId, accessToken, to, targetMessageId, emoji } = args;
+  const url = `${META_API_BASE}/${phoneNumberId}/messages`;
+  const response = await metaFetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -519,12 +551,12 @@ export async function sendReactionMessage(
       type: 'reaction',
       reaction: { message_id: targetMessageId, emoji },
     }),
-  })
+  });
   if (!response.ok) {
-    await throwMetaError(response, `Meta API error: ${response.status}`)
+    await throwMetaError(response, `Meta API error: ${response.status}`);
   }
-  const data = await response.json()
-  return { messageId: data.messages[0].id }
+  const data = await response.json();
+  return { messageId: data.messages[0].id };
 }
 
 // ============================================================
@@ -554,29 +586,29 @@ export const INTERACTIVE_LIMITS = {
   bodyMaxLength: 1024,
   footerMaxLength: 60,
   headerTextMaxLength: 60,
-} as const
+} as const;
 
 export interface InteractiveButton {
   /** Stable id sent back in the webhook when tapped (≤ 256 chars). */
-  id: string
+  id: string;
   /** Visible label (≤ 20 chars per Meta). */
-  title: string
+  title: string;
 }
 
 export interface SendInteractiveButtonsArgs {
-  phoneNumberId: string
-  accessToken: string
-  to: string
+  phoneNumberId: string;
+  accessToken: string;
+  to: string;
   /** The body text — what the customer reads above the buttons. */
-  bodyText: string
+  bodyText: string;
   /** Optional plain-text header (≤ 60 chars). */
-  headerText?: string
+  headerText?: string;
   /** Optional grey footer line under the buttons (≤ 60 chars). */
-  footerText?: string
+  footerText?: string;
   /** 1–3 buttons. Validated against Meta's limits before sending. */
-  buttons: InteractiveButton[]
+  buttons: InteractiveButton[];
   /** Meta's message_id of the message being replied to (quote preview). */
-  contextMessageId?: string
+  contextMessageId?: string;
 }
 
 /**
@@ -591,23 +623,30 @@ export async function sendInteractiveButtons(
   args: SendInteractiveButtonsArgs
 ): Promise<MetaSendResult> {
   const {
-    phoneNumberId, accessToken, to,
-    bodyText, headerText, footerText, buttons, contextMessageId,
-  } = args
-  validateInteractiveBody(bodyText)
-  validateInteractiveHeaderFooter(headerText, footerText)
+    phoneNumberId,
+    accessToken,
+    to,
+    bodyText,
+    headerText,
+    footerText,
+    buttons,
+    contextMessageId,
+  } = args;
+  validateInteractiveBody(bodyText);
+  validateInteractiveHeaderFooter(headerText, footerText);
   if (buttons.length < 1 || buttons.length > INTERACTIVE_LIMITS.maxButtons) {
     throw new Error(
       `Interactive button message requires 1-${INTERACTIVE_LIMITS.maxButtons} buttons (got ${buttons.length}).`
-    )
+    );
   }
   for (const btn of buttons) {
-    if (!btn.id) throw new Error('Interactive button missing id.')
-    if (!btn.title) throw new Error(`Interactive button "${btn.id}" missing title.`)
+    if (!btn.id) throw new Error('Interactive button missing id.');
+    if (!btn.title)
+      throw new Error(`Interactive button "${btn.id}" missing title.`);
     if (btn.title.length > INTERACTIVE_LIMITS.buttonTitleMaxLength) {
       throw new Error(
         `Interactive button title "${btn.title}" exceeds ${INTERACTIVE_LIMITS.buttonTitleMaxLength} chars.`
-      )
+      );
     }
   }
 
@@ -620,9 +659,9 @@ export async function sendInteractiveButtons(
         reply: { id: b.id, title: b.title },
       })),
     },
-  }
-  if (headerText) interactive.header = { type: 'text', text: headerText }
-  if (footerText) interactive.footer = { text: footerText }
+  };
+  if (headerText) interactive.header = { type: 'text', text: headerText };
+  if (footerText) interactive.footer = { text: footerText };
 
   const body: Record<string, unknown> = {
     messaging_product: 'whatsapp',
@@ -630,55 +669,55 @@ export async function sendInteractiveButtons(
     to,
     type: 'interactive',
     interactive,
-  }
-  if (contextMessageId) body.context = { message_id: contextMessageId }
+  };
+  if (contextMessageId) body.context = { message_id: contextMessageId };
 
-  const url = `${META_API_BASE}/${phoneNumberId}/messages`
-  const response = await fetch(url, {
+  const url = `${META_API_BASE}/${phoneNumberId}/messages`;
+  const response = await metaFetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${accessToken}`,
     },
     body: JSON.stringify(body),
-  })
+  });
   if (!response.ok) {
-    await throwMetaError(response, `Meta API error: ${response.status}`)
+    await throwMetaError(response, `Meta API error: ${response.status}`);
   }
-  const data = await response.json()
-  return { messageId: data.messages[0].id }
+  const data = await response.json();
+  return { messageId: data.messages[0].id };
 }
 
 export interface InteractiveListRow {
   /** Stable id sent back in the webhook when tapped (≤ 200 chars). */
-  id: string
+  id: string;
   /** Visible row title (≤ 24 chars per Meta). */
-  title: string
+  title: string;
   /** Optional secondary line shown under the title (≤ 72 chars). */
-  description?: string
+  description?: string;
 }
 
 export interface InteractiveListSection {
   /** Optional section header shown above its rows. */
-  title?: string
-  rows: InteractiveListRow[]
+  title?: string;
+  rows: InteractiveListRow[];
 }
 
 export interface SendInteractiveListArgs {
-  phoneNumberId: string
-  accessToken: string
-  to: string
-  bodyText: string
+  phoneNumberId: string;
+  accessToken: string;
+  to: string;
+  bodyText: string;
   /** Label of the tap-to-expand button on the message bubble. */
-  buttonLabel: string
-  headerText?: string
-  footerText?: string
+  buttonLabel: string;
+  headerText?: string;
+  footerText?: string;
   /**
    * 1–10 rows TOTAL across all sections. Meta caps the *total*, not
    * per-section. Validation enforces this before send.
    */
-  sections: InteractiveListSection[]
-  contextMessageId?: string
+  sections: InteractiveListSection[];
+  contextMessageId?: string;
 }
 
 /**
@@ -691,41 +730,52 @@ export async function sendInteractiveList(
   args: SendInteractiveListArgs
 ): Promise<MetaSendResult> {
   const {
-    phoneNumberId, accessToken, to,
-    bodyText, buttonLabel, headerText, footerText, sections, contextMessageId,
-  } = args
-  validateInteractiveBody(bodyText)
-  validateInteractiveHeaderFooter(headerText, footerText)
-  if (!buttonLabel) throw new Error('Interactive list requires a buttonLabel.')
+    phoneNumberId,
+    accessToken,
+    to,
+    bodyText,
+    buttonLabel,
+    headerText,
+    footerText,
+    sections,
+    contextMessageId,
+  } = args;
+  validateInteractiveBody(bodyText);
+  validateInteractiveHeaderFooter(headerText, footerText);
+  if (!buttonLabel) throw new Error('Interactive list requires a buttonLabel.');
   if (buttonLabel.length > INTERACTIVE_LIMITS.buttonTitleMaxLength) {
     throw new Error(
       `Interactive list buttonLabel "${buttonLabel}" exceeds ${INTERACTIVE_LIMITS.buttonTitleMaxLength} chars.`
-    )
+    );
   }
-  if (sections.length < 1 || sections.length > INTERACTIVE_LIMITS.maxListSections) {
+  if (
+    sections.length < 1 ||
+    sections.length > INTERACTIVE_LIMITS.maxListSections
+  ) {
     throw new Error(
       `Interactive list requires 1-${INTERACTIVE_LIMITS.maxListSections} sections (got ${sections.length}).`
-    )
+    );
   }
-  const totalRows = sections.reduce((sum, s) => sum + s.rows.length, 0)
+  const totalRows = sections.reduce((sum, s) => sum + s.rows.length, 0);
   if (totalRows < 1 || totalRows > INTERACTIVE_LIMITS.maxListRowsTotal) {
     throw new Error(
       `Interactive list requires 1-${INTERACTIVE_LIMITS.maxListRowsTotal} rows total across all sections (got ${totalRows}).`
-    )
+    );
   }
-  const seenIds = new Set<string>()
+  const seenIds = new Set<string>();
   for (const section of sections) {
     for (const row of section.rows) {
-      if (!row.id) throw new Error('Interactive list row missing id.')
+      if (!row.id) throw new Error('Interactive list row missing id.');
       if (seenIds.has(row.id)) {
-        throw new Error(`Interactive list has duplicate row id "${row.id}".`)
+        throw new Error(`Interactive list has duplicate row id "${row.id}".`);
       }
-      seenIds.add(row.id)
-      if (!row.title) throw new Error(`Interactive list row "${row.id}" missing title.`)
+      seenIds.add(row.id);
+      if (!row.title)
+        throw new Error(`Interactive list row "${row.id}" missing title.`);
       if (row.title.length > INTERACTIVE_LIMITS.listRowTitleMaxLength) {
         throw new Error(
           `Interactive list row title "${row.title}" exceeds ${INTERACTIVE_LIMITS.listRowTitleMaxLength} chars.`
-        )
+        );
       }
       if (
         row.description &&
@@ -733,7 +783,7 @@ export async function sendInteractiveList(
       ) {
         throw new Error(
           `Interactive list row description for "${row.id}" exceeds ${INTERACTIVE_LIMITS.listRowDescriptionMaxLength} chars.`
-        )
+        );
       }
     }
   }
@@ -752,9 +802,9 @@ export async function sendInteractiveList(
         })),
       })),
     },
-  }
-  if (headerText) interactive.header = { type: 'text', text: headerText }
-  if (footerText) interactive.footer = { text: footerText }
+  };
+  if (headerText) interactive.header = { type: 'text', text: headerText };
+  if (footerText) interactive.footer = { text: footerText };
 
   const body: Record<string, unknown> = {
     messaging_product: 'whatsapp',
@@ -762,47 +812,50 @@ export async function sendInteractiveList(
     to,
     type: 'interactive',
     interactive,
-  }
-  if (contextMessageId) body.context = { message_id: contextMessageId }
+  };
+  if (contextMessageId) body.context = { message_id: contextMessageId };
 
-  const url = `${META_API_BASE}/${phoneNumberId}/messages`
-  const response = await fetch(url, {
+  const url = `${META_API_BASE}/${phoneNumberId}/messages`;
+  const response = await metaFetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${accessToken}`,
     },
     body: JSON.stringify(body),
-  })
+  });
   if (!response.ok) {
-    await throwMetaError(response, `Meta API error: ${response.status}`)
+    await throwMetaError(response, `Meta API error: ${response.status}`);
   }
-  const data = await response.json()
-  return { messageId: data.messages[0].id }
+  const data = await response.json();
+  return { messageId: data.messages[0].id };
 }
 
 function validateInteractiveBody(bodyText: string): void {
-  if (!bodyText) throw new Error('Interactive message requires bodyText.')
+  if (!bodyText) throw new Error('Interactive message requires bodyText.');
   if (bodyText.length > INTERACTIVE_LIMITS.bodyMaxLength) {
     throw new Error(
       `Interactive bodyText exceeds ${INTERACTIVE_LIMITS.bodyMaxLength} chars.`
-    )
+    );
   }
 }
 
 function validateInteractiveHeaderFooter(
   headerText: string | undefined,
-  footerText: string | undefined,
+  footerText: string | undefined
 ): void {
-  if (headerText && headerText.length > INTERACTIVE_LIMITS.headerTextMaxLength) {
+  if (
+    headerText &&
+    headerText.length > INTERACTIVE_LIMITS.headerTextMaxLength
+  ) {
     throw new Error(
       `Interactive headerText exceeds ${INTERACTIVE_LIMITS.headerTextMaxLength} chars.`
-    )
+    );
   }
   if (footerText && footerText.length > INTERACTIVE_LIMITS.footerMaxLength) {
     throw new Error(
       `Interactive footerText exceeds ${INTERACTIVE_LIMITS.footerMaxLength} chars.`
-    )
+    );
   }
 }
 
@@ -811,8 +864,8 @@ function validateInteractiveHeaderFooter(
 // ============================================================
 
 export interface GetMediaUrlArgs {
-  mediaId: string
-  accessToken: string
+  mediaId: string;
+  accessToken: string;
 }
 
 /**
@@ -822,21 +875,24 @@ export interface GetMediaUrlArgs {
 export async function getMediaUrl(
   args: GetMediaUrlArgs
 ): Promise<{ url: string; mimeType: string }> {
-  const { mediaId, accessToken } = args
-  const response = await fetch(`${META_API_BASE}/${mediaId}`, {
+  const { mediaId, accessToken } = args;
+  const response = await metaFetch(`${META_API_BASE}/${mediaId}`, {
     headers: { Authorization: `Bearer ${accessToken}` },
-  })
+  });
   if (!response.ok) {
-    await throwMetaError(response, `Media fetch failed: ${response.status}`)
+    await throwMetaError(response, `Media fetch failed: ${response.status}`);
   }
-  const data = await response.json()
-  if (!data.url) throw new Error('Media URL not found in Meta response')
-  return { url: data.url, mimeType: data.mime_type || 'application/octet-stream' }
+  const data = await response.json();
+  if (!data.url) throw new Error('Media URL not found in Meta response');
+  return {
+    url: data.url,
+    mimeType: data.mime_type || 'application/octet-stream',
+  };
 }
 
 export interface DownloadMediaArgs {
-  downloadUrl: string
-  accessToken: string
+  downloadUrl: string;
+  accessToken: string;
 }
 
 /**
@@ -846,15 +902,15 @@ export interface DownloadMediaArgs {
 export async function downloadMedia(
   args: DownloadMediaArgs
 ): Promise<{ buffer: Buffer; contentType: string }> {
-  const { downloadUrl, accessToken } = args
-  const response = await fetch(downloadUrl, {
+  const { downloadUrl, accessToken } = args;
+  const response = await metaFetch(downloadUrl, {
     headers: { Authorization: `Bearer ${accessToken}` },
-  })
+  });
   if (!response.ok) {
-    throw new Error(`Media download failed: ${response.status}`)
+    throw new Error(`Media download failed: ${response.status}`);
   }
   const contentType =
-    response.headers.get('content-type') || 'application/octet-stream'
-  const buffer = Buffer.from(await response.arrayBuffer())
-  return { buffer, contentType }
+    response.headers.get('content-type') || 'application/octet-stream';
+  const buffer = Buffer.from(await response.arrayBuffer());
+  return { buffer, contentType };
 }

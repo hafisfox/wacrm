@@ -15,6 +15,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { MessageSquare, UsersRound } from 'lucide-react';
+import { fetchWithTimeout } from '@/lib/http';
 
 function isEmailNotConfirmed(message: string): boolean {
   return message.toLowerCase().includes('email not confirmed');
@@ -68,7 +69,7 @@ function LoginPageInner() {
 
       if (error) {
         if (isEmailNotConfirmed(error.message)) {
-          const confirmRes = await fetch('/api/auth/confirm-login', {
+          const confirmRes = await fetchWithTimeout('/api/auth/confirm-login', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

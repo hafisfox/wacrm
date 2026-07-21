@@ -52,6 +52,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { createClient } from '@/lib/supabase/client';
+import { fetchWithTimeout } from '@/lib/http';
 
 interface PeekOk {
   ok: true;
@@ -117,7 +118,7 @@ export default function JoinPage() {
     setAuthedUserId(undefined);
     try {
       const [peekRes, authRes] = await Promise.all([
-        fetch(`/api/invitations/${encodeURIComponent(token)}/peek`, {
+        fetchWithTimeout(`/api/invitations/${encodeURIComponent(token)}/peek`, {
           cache: 'no-store',
         }),
         createClient().auth.getUser(),
@@ -142,9 +143,12 @@ export default function JoinPage() {
     (async () => {
       try {
         const [peekRes, authRes] = await Promise.all([
-          fetch(`/api/invitations/${encodeURIComponent(token)}/peek`, {
-            cache: 'no-store',
-          }),
+          fetchWithTimeout(
+            `/api/invitations/${encodeURIComponent(token)}/peek`,
+            {
+              cache: 'no-store',
+            }
+          ),
           createClient().auth.getUser(),
         ]);
         const peekBody = (await peekRes.json()) as PeekResult;

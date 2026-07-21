@@ -53,6 +53,7 @@ import {
   skillsFromSummary,
 } from '@/lib/salu/control-room-shared';
 import { cn } from '@/lib/utils';
+import { fetchWithTimeout } from '@/lib/http';
 
 const API = '/api/salu/control-room';
 const INPUT =
@@ -244,7 +245,7 @@ export function SalonControlClient({
     if (!canEdit) return false;
     setSaving(busyKey);
     try {
-      const response = await fetch(path, {
+      const response = await fetchWithTimeout(path, {
         method,
         headers: body ? { 'Content-Type': 'application/json' } : undefined,
         body: body ? JSON.stringify(body) : undefined,
@@ -271,7 +272,7 @@ export function SalonControlClient({
   async function refresh() {
     setSaving('refresh');
     try {
-      const response = await fetch(API);
+      const response = await fetchWithTimeout(API);
       const result = (await response.json()) as
         | ControlRoomData
         | { error?: string };
@@ -332,7 +333,7 @@ export function SalonControlClient({
         const form = new FormData();
         form.set('stylist_id', stylistId);
         form.set('image', photo);
-        const upload = await fetch(`${API}/stylist-photo`, {
+        const upload = await fetchWithTimeout(`${API}/stylist-photo`, {
           method: 'POST',
           body: form,
         });
@@ -345,7 +346,7 @@ export function SalonControlClient({
         uploadedUrl = result.image_url;
         imageUrl = uploadedUrl;
       }
-      const saved = await fetch(`${API}/stylists`, {
+      const saved = await fetchWithTimeout(`${API}/stylists`, {
         method: isNew ? 'POST' : 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -364,7 +365,7 @@ export function SalonControlClient({
       for (const [serviceId, assignment] of Object.entries(assignments)) {
         const wasEnabled = assignment.existing?.active ?? false;
         if (!assignment.enabled && !wasEnabled) continue;
-        const mappingSaved = await fetch(`${API}/stylist-services`, {
+        const mappingSaved = await fetchWithTimeout(`${API}/stylist-services`, {
           method: assignment.existing ? 'PATCH' : 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -405,7 +406,7 @@ export function SalonControlClient({
         oldImageUrl !== imageUrl &&
         isManagedPhoto(oldImageUrl)
       ) {
-        fetch(`${API}/stylist-photo`, {
+        fetchWithTimeout(`${API}/stylist-photo`, {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ image_url: oldImageUrl }),
@@ -415,7 +416,7 @@ export function SalonControlClient({
       return true;
     } catch (error) {
       if (uploadedUrl) {
-        fetch(`${API}/stylist-photo`, {
+        fetchWithTimeout(`${API}/stylist-photo`, {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ image_url: uploadedUrl }),

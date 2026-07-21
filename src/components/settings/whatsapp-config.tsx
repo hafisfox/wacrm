@@ -27,6 +27,7 @@ import { Label } from '@/components/ui/label';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
 import type { WhatsAppConfig as WhatsAppConfigType } from '@/types';
+import { fetchWithTimeout } from '@/lib/http';
 
 const MASKED_TOKEN = '••••••••••••••••';
 
@@ -53,7 +54,9 @@ export function WhatsAppConfig() {
   const [tokenEdited, setTokenEdited] = useState(false);
 
   const loadHealth = useCallback(async () => {
-    const res = await fetch('/api/whatsapp/config', { method: 'GET' });
+    const res = await fetchWithTimeout('/api/whatsapp/config', {
+      method: 'GET',
+    });
     const payload = await res.json().catch(() => ({}));
 
     if (payload.connected) {
@@ -143,7 +146,7 @@ export function WhatsAppConfig() {
 
     try {
       setSaving(true);
-      const res = await fetch('/api/whatsapp/config', {
+      const res = await fetchWithTimeout('/api/whatsapp/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -199,7 +202,9 @@ export function WhatsAppConfig() {
 
     try {
       setResetting(true);
-      const res = await fetch('/api/whatsapp/config', { method: 'DELETE' });
+      const res = await fetchWithTimeout('/api/whatsapp/config', {
+        method: 'DELETE',
+      });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         throw new Error(data?.error || `HTTP ${res.status}`);

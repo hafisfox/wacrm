@@ -11,6 +11,7 @@ import type {
   SaluSetupHealth,
 } from '@/lib/salu/queries';
 import { cn } from '@/lib/utils';
+import { fetchWithTimeout } from '@/lib/http';
 
 interface SystemHealthPayload {
   n8n: SaluN8nHealth;
@@ -28,7 +29,7 @@ export function SystemHealthPanel() {
     setError('');
 
     try {
-      const res = await fetch('/api/salu/system-health', {
+      const res = await fetchWithTimeout('/api/salu/system-health', {
         cache: 'no-store',
       });
       const payload = await res.json().catch(() => ({}));

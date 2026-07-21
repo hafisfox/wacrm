@@ -41,6 +41,7 @@ import type {
   TemplateSampleValues,
 } from '@/types';
 import { templateStatusConfig } from '@/lib/template-status';
+import { fetchWithTimeout } from '@/lib/http';
 import {
   extractVariableIndices,
   TEMPLATE_LIMITS,
@@ -300,7 +301,7 @@ export function TemplateManager() {
     if (!user || !accountId) return;
     setSyncing(true);
     try {
-      const res = await fetch('/api/whatsapp/templates/sync', {
+      const res = await fetchWithTimeout('/api/whatsapp/templates/sync', {
         method: 'POST',
       });
       const data = await res.json();
@@ -352,9 +353,12 @@ export function TemplateManager() {
       // Route handler scopes the Meta delete via hsm_id (so sibling
       // language variants survive) and falls through to remove the
       // local row. Local-only rows skip the Meta call.
-      const res = await fetch(`/api/whatsapp/templates/${target.id}`, {
-        method: 'DELETE',
-      });
+      const res = await fetchWithTimeout(
+        `/api/whatsapp/templates/${target.id}`,
+        {
+          method: 'DELETE',
+        }
+      );
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         throw new Error(data?.error || `Delete failed (HTTP ${res.status})`);

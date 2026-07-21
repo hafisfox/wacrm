@@ -30,6 +30,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatOpsAge, formatOpsCountdown } from '@/lib/salu/ops';
 import { format } from 'date-fns';
+import { fetchWithTimeout } from '@/lib/http';
 
 interface ContactSidebarProps {
   contact: Contact | null;
@@ -109,7 +110,9 @@ export function ContactSidebar({
     let cancelled = false;
     setSaluLoading(true);
 
-    fetch(`/api/salu/customer?phone=${encodeURIComponent(contact.phone)}`)
+    fetchWithTimeout(
+      `/api/salu/customer?phone=${encodeURIComponent(contact.phone)}`
+    )
       .then(async (res) => {
         const payload = await res.json().catch(() => ({}));
         if (!res.ok) {
@@ -186,7 +189,7 @@ export function ContactSidebar({
       if (!contact?.phone || takeoverSaving) return;
       setTakeoverSaving(true);
       try {
-        const res = await fetch('/api/salu/takeover', {
+        const res = await fetchWithTimeout('/api/salu/takeover', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

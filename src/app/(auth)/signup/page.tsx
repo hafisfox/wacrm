@@ -15,6 +15,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { MessageSquare, UsersRound } from 'lucide-react';
+import { fetchWithTimeout } from '@/lib/http';
 
 // `useSearchParams` opts the component out of static prerendering
 // unless wrapped in Suspense — same pattern as /login.
@@ -59,7 +60,7 @@ function SignupPageInner() {
     setLoading(true);
 
     try {
-      const signupRes = await fetch('/api/auth/signup', {
+      const signupRes = await fetchWithTimeout('/api/auth/signup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

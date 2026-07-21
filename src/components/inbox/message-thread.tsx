@@ -41,6 +41,7 @@ import { MessageComposer } from './message-composer';
 import { TemplatePicker } from './template-picker';
 import { buildReplyPreview } from './reply-quote';
 import { toast } from 'sonner';
+import { fetchWithTimeout } from '@/lib/http';
 
 interface ReplyDraft {
   id: string;
@@ -211,7 +212,7 @@ export function MessageThread({
     const nextHumanMode = !botPaused;
     setTogglingBot(true);
     try {
-      const res = await fetch('/api/salu/takeover', {
+      const res = await fetchWithTimeout('/api/salu/takeover', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -511,7 +512,7 @@ export function MessageThread({
       setReplyTo(null);
 
       try {
-        const res = await fetch('/api/whatsapp/send', {
+        const res = await fetchWithTimeout('/api/whatsapp/send', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -594,7 +595,7 @@ export function MessageThread({
       onNewMessage(optimisticMsg);
 
       try {
-        const res = await fetch('/api/whatsapp/send', {
+        const res = await fetchWithTimeout('/api/whatsapp/send', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -726,7 +727,7 @@ export function MessageThread({
       });
 
       try {
-        const res = await fetch('/api/whatsapp/react', {
+        const res = await fetchWithTimeout('/api/whatsapp/react', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ message_id: messageId, emoji }),

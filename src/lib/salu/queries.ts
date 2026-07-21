@@ -1,6 +1,7 @@
-import { saluQuery } from "./db";
+import { fetchWithTimeout, TIMEOUT_EXTERNAL_MS } from '@/lib/http';
+import { saluQuery } from './db';
 
-const TZ = "Asia/Kolkata";
+const TZ = 'Asia/Kolkata';
 
 export interface SaluConfig {
   salon_name: string;
@@ -108,7 +109,7 @@ export interface SaluSetupHealth {
 export interface SaluN8nWorkflow {
   name: string;
   active: boolean;
-  role: "core" | "bridge";
+  role: 'core' | 'bridge';
 }
 
 export interface SaluEnvCheck {
@@ -140,32 +141,98 @@ export interface SaluSystemHealth {
   database: SaluDatabaseHealth;
 }
 
+/**
+ * One panel's worth of data, plus whether loading it worked.
+ *
+ * The dashboard is nine independent queries rendered as nine
+ * independent panels. Previously they were fetched with `Promise.all`,
+ * so a single failing query rejected the whole batch and the page
+ * replaced *everything* with a setup-error screen — losing eight
+ * healthy panels to one bad one. During an incident that is exactly
+ * backwards: the operator most needs today's schedule when something
+ * else is broken.
+ *
+ * `data` is always present so callers can render without narrowing;
+ * on failure it holds the empty value for that section and `error`
+ * explains why the panel is blank.
+ */
+export interface SaluSection<T> {
+  data: T;
+  ok: boolean;
+  error: string;
+}
+
 export interface SaluDashboardData {
-  config: SaluConfig | null;
-  metrics: SaluMetrics;
-  todaySchedule: SaluBookingRow[];
-  nextSchedule: SaluBookingRow[];
-  opsQueue: SaluPaymentQueueRow[];
-  handoffQueue: SaluHandoffRow[];
-  recentActivity: SaluActivityRow[];
-  setupHealth: SaluSetupHealth;
-  n8n: SaluN8nHealth;
+  config: SaluSection<SaluConfig | null>;
+  metrics: SaluSection<SaluMetrics>;
+  todaySchedule: SaluSection<SaluBookingRow[]>;
+  nextSchedule: SaluSection<SaluBookingRow[]>;
+  opsQueue: SaluSection<SaluPaymentQueueRow[]>;
+  handoffQueue: SaluSection<SaluHandoffRow[]>;
+  recentActivity: SaluSection<SaluActivityRow[]>;
+  setupHealth: SaluSection<SaluSetupHealth>;
+  n8n: SaluSection<SaluN8nHealth>;
+  /** True when every section loaded. Drives the page-level banner. */
+  ok: boolean;
+  /**
+   * True when *nothing* loaded — almost always a bad connection string
+   * or an unreachable database rather than nine coincidental failures.
+   * The page shows setup guidance for this case.
+   */
+  down: boolean;
+}
+
+const EMPTY_METRICS: SaluMetrics = {
+  today_bookings: 0,
+  upcoming_confirmed: 0,
+  pending_payment_holds: 0,
+  needs_attention: 0,
+  paid_today_paise: 0,
+  customers_seen_7d: 0,
+  messages_today: 0,
+  human_mode_sessions: 0,
+};
+
+const EMPTY_SETUP_HEALTH: SaluSetupHealth = {
+  active_services: 0,
+  active_stylists: 0,
+  stylists_missing_images: 0,
+  active_stylist_services: 0,
+  availability_rules: 0,
+  stylist_availability_rules: 0,
+  stale_pending_holds: 0,
+  failed_payments: 0,
+};
+
+/** Resolve a section, downgrading a rejection to a rendered error. */
+async function section<T>(
+  work: Promise<T>,
+  fallback: T
+): Promise<SaluSection<T>> {
+  try {
+    return { data: await work, ok: true, error: '' };
+  } catch (error) {
+    return { data: fallback, ok: false, error: errorMessage(error) };
+  }
 }
 
 const expectedWorkflows: Array<{
   name: string;
-  role: SaluN8nWorkflow["role"];
+  role: SaluN8nWorkflow['role'];
 }> = [
-  { name: "Salu WhatsApp - Inbound Concierge", role: "core" },
-  { name: "Salu WhatsApp - Payments", role: "core" },
-  { name: "Salu WhatsApp - Reminders + Owner Digest", role: "core" },
-  { name: "Salu WhatsApp - Flow Options Endpoint", role: "core" },
-  { name: "Salu WhatsApp - Flow Data Adapter", role: "core" },
-  { name: "Salu WhatsApp - Error Alerts", role: "core" },
-  { name: "Salu WhatsApp - Dashboard Manual Send", role: "bridge" },
+  { name: 'Salu WhatsApp - Inbound Concierge', role: 'core' },
+  { name: 'Salu WhatsApp - Payments', role: 'core' },
+  { name: 'Salu WhatsApp - Reminders + Owner Digest', role: 'core' },
+  { name: 'Salu WhatsApp - Flow Options Endpoint', role: 'core' },
+  { name: 'Salu WhatsApp - Flow Data Adapter', role: 'core' },
+  { name: 'Salu WhatsApp - Error Alerts', role: 'core' },
+  { name: 'Salu WhatsApp - Dashboard Manual Send', role: 'bridge' },
 ];
 
 export async function loadSaluDashboardData(): Promise<SaluDashboardData> {
+  // Each section settles independently — see `SaluSection`. Still one
+  // round of concurrency, so this is no slower than the Promise.all it
+  // replaced; it just stops one bad query from taking the page down.
   const [
     config,
     metrics,
@@ -177,16 +244,30 @@ export async function loadSaluDashboardData(): Promise<SaluDashboardData> {
     setupHealth,
     n8n,
   ] = await Promise.all([
-    loadConfig(),
-    loadMetrics(),
-    loadTodaySchedule(),
-    loadNextSchedule(),
-    loadOpsQueue(),
-    loadHandoffQueue(),
-    loadRecentActivity(14),
-    loadSetupHealth(),
-    loadN8nHealth(),
+    section(loadConfig(), null as SaluConfig | null),
+    section(loadMetrics(), EMPTY_METRICS),
+    section(loadTodaySchedule(), [] as SaluBookingRow[]),
+    section(loadNextSchedule(), [] as SaluBookingRow[]),
+    section(loadOpsQueue(), [] as SaluPaymentQueueRow[]),
+    section(loadHandoffQueue(), [] as SaluHandoffRow[]),
+    section(loadRecentActivity(14), [] as SaluActivityRow[]),
+    section(loadSetupHealth(), EMPTY_SETUP_HEALTH),
+    // loadN8nHealth already returns its own error state rather than
+    // throwing, so this wrapper is belt-and-braces.
+    section(loadN8nHealth(), unreachableN8nHealth('n8n health unavailable')),
   ]);
+
+  const all = [
+    config,
+    metrics,
+    todaySchedule,
+    nextSchedule,
+    opsQueue,
+    handoffQueue,
+    recentActivity,
+    setupHealth,
+    n8n,
+  ];
 
   return {
     config,
@@ -198,6 +279,8 @@ export async function loadSaluDashboardData(): Promise<SaluDashboardData> {
     recentActivity,
     setupHealth,
     n8n,
+    ok: all.every((s) => s.ok),
+    down: all.every((s) => !s.ok),
   };
 }
 
@@ -208,7 +291,7 @@ export async function loadConfig() {
       from salu.config
       order by updated_at desc
       limit 1
-    `,
+    `
   );
   return rows[0] || null;
 }
@@ -277,7 +360,7 @@ async function loadMetrics() {
           where human_mode
         ) as human_mode_sessions
     `,
-    [TZ],
+    [TZ]
   );
   return rows[0];
 }
@@ -308,7 +391,7 @@ async function loadTodaySchedule() {
       order by appointment_time asc
       limit 24
     `,
-    [TZ],
+    [TZ]
   );
 }
 
@@ -339,7 +422,7 @@ async function loadNextSchedule() {
       order by starts_at asc
       limit 8
     `,
-    [TZ],
+    [TZ]
   );
 }
 
@@ -393,7 +476,7 @@ async function loadOpsQueue() {
         end,
         coalesce(b.hold_expires_at, b.created_at) asc
       limit 12
-    `,
+    `
   );
 }
 
@@ -419,7 +502,7 @@ async function loadHandoffQueue() {
         case when conv.handoff_priority = 'urgent' then 0 else 1 end,
         coalesce(conv.handoff_requested_at, conv.last_message_at, conv.updated_at) desc
       limit 10
-    `,
+    `
   );
 }
 
@@ -440,7 +523,7 @@ async function loadRecentActivity(limit: number) {
       order by created_at desc
       limit $1
     `,
-    [limit],
+    [limit]
   );
 }
 
@@ -492,7 +575,7 @@ export async function loadCustomers(limit = 50) {
       order by cp.last_seen_at desc nulls last, cp.updated_at desc
       limit $1
     `,
-    [limit],
+    [limit]
   );
 }
 
@@ -523,7 +606,7 @@ export async function loadSetupHealth() {
           from salu.payments
           where status in ('verification_failed', 'refund_required')
         ) as failed_payments
-    `,
+    `
   );
   return rows[0];
 }
@@ -577,7 +660,7 @@ export async function loadSaluInbox() {
         left join salu.customer_sessions cs on cs.phone = latest.phone
         order by latest.created_at desc
         limit 40
-      `,
+      `
     ),
     loadRecentActivity(80),
   ]);
@@ -586,31 +669,34 @@ export async function loadSaluInbox() {
 }
 
 export async function loadSaluCustomersPage() {
-  const [customers, metrics] = await Promise.all([loadCustomers(100), loadMetrics()]);
+  const [customers, metrics] = await Promise.all([
+    loadCustomers(100),
+    loadMetrics(),
+  ]);
   return { customers, metrics };
 }
 
 function loadN8nEnvChecks(): SaluEnvCheck[] {
   return [
     {
-      key: "N8N_URL",
-      label: "n8n API URL",
+      key: 'N8N_URL',
+      label: 'n8n API URL',
       configured: Boolean(process.env.N8N_URL),
     },
     {
-      key: "N8N_API_KEY",
-      label: "n8n API key",
+      key: 'N8N_API_KEY',
+      label: 'n8n API key',
       configured: Boolean(process.env.N8N_API_KEY),
     },
     {
-      key: "SALU_DASHBOARD_MODE",
-      label: "n8n-owned send mode",
-      configured: process.env.SALU_DASHBOARD_MODE === "n8n-owned-whatsapp",
+      key: 'SALU_DASHBOARD_MODE',
+      label: 'n8n-owned send mode',
+      configured: process.env.SALU_DASHBOARD_MODE === 'n8n-owned-whatsapp',
     },
     {
-      key: "SALU_N8N_MANUAL_SEND_TOKEN",
-      label: "manual-send webhook secret",
-      configured: (process.env.SALU_N8N_MANUAL_SEND_TOKEN || "").length >= 32,
+      key: 'SALU_N8N_MANUAL_SEND_TOKEN',
+      label: 'manual-send webhook secret',
+      configured: (process.env.SALU_N8N_MANUAL_SEND_TOKEN || '').length >= 32,
     },
   ];
 }
@@ -622,23 +708,44 @@ function inactiveExpectedWorkflows() {
   }));
 }
 
-export async function loadN8nHealth(): Promise<SaluN8nHealth> {
-  const base = process.env.N8N_URL?.replace(/\/$/, "");
-  const apiKey = process.env.N8N_API_KEY;
-  const env = loadN8nEnvChecks();
-  const manualSendReady = env
+function manualSendReadyFrom(env: SaluEnvCheck[]) {
+  return env
     .filter((check) =>
-      ["SALU_DASHBOARD_MODE", "SALU_N8N_MANUAL_SEND_TOKEN"].includes(
-        check.key,
-      ),
+      ['SALU_DASHBOARD_MODE', 'SALU_N8N_MANUAL_SEND_TOKEN'].includes(check.key)
     )
     .every((check) => check.configured);
+}
+
+/**
+ * The "we could not read n8n" shape. Env checks are local so they stay
+ * accurate even when the API is unreachable — the operator still needs
+ * to know whether the bridge secret is set.
+ */
+function unreachableN8nHealth(error: string): SaluN8nHealth {
+  const env = loadN8nEnvChecks();
+  return {
+    configured: Boolean(process.env.N8N_URL && process.env.N8N_API_KEY),
+    ok: false,
+    error,
+    activeCount: 0,
+    expectedCount: expectedWorkflows.length,
+    manualSendReady: manualSendReadyFrom(env),
+    env,
+    workflows: inactiveExpectedWorkflows(),
+  };
+}
+
+export async function loadN8nHealth(): Promise<SaluN8nHealth> {
+  const base = process.env.N8N_URL?.replace(/\/$/, '');
+  const apiKey = process.env.N8N_API_KEY;
+  const env = loadN8nEnvChecks();
+  const manualSendReady = manualSendReadyFrom(env);
 
   if (!base || !apiKey) {
     return {
       configured: false,
       ok: false,
-      error: "N8N_URL or N8N_API_KEY is not configured",
+      error: 'N8N_URL or N8N_API_KEY is not configured',
       activeCount: 0,
       expectedCount: expectedWorkflows.length,
       manualSendReady,
@@ -648,10 +755,17 @@ export async function loadN8nHealth(): Promise<SaluN8nHealth> {
   }
 
   try {
-    const response = await fetch(`${base}/api/v1/workflows?limit=100`, {
-      headers: { "X-N8N-API-KEY": apiKey },
-      cache: "no-store",
-    });
+    // Bounded: this runs during the /dashboard server render, and an
+    // unreachable n8n host does not error — it hangs. Without a
+    // deadline the whole page blocks on a self-hosted box being down.
+    const response = await fetchWithTimeout(
+      `${base}/api/v1/workflows?limit=100`,
+      {
+        headers: { 'X-N8N-API-KEY': apiKey },
+        cache: 'no-store',
+      },
+      TIMEOUT_EXTERNAL_MS
+    );
 
     if (!response.ok) {
       throw new Error(`n8n API returned ${response.status}`);
@@ -674,7 +788,7 @@ export async function loadN8nHealth(): Promise<SaluN8nHealth> {
     return {
       configured: true,
       ok,
-      error: "",
+      error: '',
       activeCount,
       expectedCount: expectedWorkflows.length,
       manualSendReady,
@@ -685,7 +799,7 @@ export async function loadN8nHealth(): Promise<SaluN8nHealth> {
     return {
       configured: true,
       ok: false,
-      error: error instanceof Error ? error.message : "Unable to reach n8n",
+      error: error instanceof Error ? error.message : 'Unable to reach n8n',
       activeCount: 0,
       expectedCount: expectedWorkflows.length,
       manualSendReady,
@@ -706,32 +820,16 @@ export async function loadSaluSystemHealth(): Promise<SaluSystemHealth> {
     loadSetupHealth(),
   ]);
 
-  const env = loadN8nEnvChecks();
   const n8n =
-    n8nResult.status === "fulfilled"
+    n8nResult.status === 'fulfilled'
       ? n8nResult.value
-      : {
-          configured: Boolean(process.env.N8N_URL && process.env.N8N_API_KEY),
-          ok: false,
-          error: errorMessage(n8nResult.reason),
-          activeCount: 0,
-          expectedCount: expectedWorkflows.length,
-          manualSendReady: env
-            .filter((check) =>
-              ["SALU_DASHBOARD_MODE", "SALU_N8N_MANUAL_SEND_TOKEN"].includes(
-                check.key,
-              ),
-            )
-            .every((check) => check.configured),
-          env,
-          workflows: inactiveExpectedWorkflows(),
-        };
+      : unreachableN8nHealth(errorMessage(n8nResult.reason));
 
   const setupHealth =
-    setupResult.status === "fulfilled" ? setupResult.value : null;
+    setupResult.status === 'fulfilled' ? setupResult.value : null;
   const database: SaluDatabaseHealth =
-    setupResult.status === "fulfilled"
-      ? { ok: true, error: "", checkedAt }
+    setupResult.status === 'fulfilled'
+      ? { ok: true, error: '', checkedAt }
       : { ok: false, error: errorMessage(setupResult.reason), checkedAt };
 
   return {
