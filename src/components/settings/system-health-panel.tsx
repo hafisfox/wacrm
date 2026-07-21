@@ -12,6 +12,7 @@ import type {
 } from '@/lib/salu/queries';
 import { cn } from '@/lib/utils';
 import { fetchWithTimeout } from '@/lib/http';
+import { formatOpsAge } from '@/lib/salu/ops';
 
 interface SystemHealthPayload {
   n8n: SaluN8nHealth;
@@ -36,9 +37,18 @@ export function SystemHealthPanel() {
       if (!res.ok) {
         throw new Error(payload?.error || `HTTP ${res.status}`);
       }
-      setData(payload as SystemHealthPayload);
+      const next = payload as SystemHealthPayload;
+      // A 200 with a body we can't read is a failure, not a success.
+      // Without this the panel fell through to `if (!n8n) return null`
+      // below and rendered *nothing* — no error, no retry, no clue.
+      if (!next?.n8n) {
+        throw new Error('Health response was malformed');
+      }
+      setData(next);
     } catch (err) {
-      setData(null);
+      // Keep the last good snapshot on screen. Blanking it meant a
+      // momentary network blip threw away a perfectly useful reading
+      // and left the operator with less information than before.
       setError(err instanceof Error ? err.message : 'Unable to load health');
     } finally {
       setLoading(false);
@@ -65,16 +75,16 @@ export function SystemHealthPanel() {
   if (error && !data) {
     return (
       <div
-        className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 p-5"
+        className="border-destructive/30 bg-destructive/10 mt-4 rounded-xl border p-5"
         role="alert"
       >
         <div className="flex items-start gap-3">
-          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-300" />
+          <AlertTriangle className="text-destructive mt-0.5 h-5 w-5 shrink-0" />
           <div>
             <h2 className="text-foreground text-sm font-semibold">
               System health unavailable
             </h2>
-            <p className="mt-1 text-sm text-red-100">{error}</p>
+            <p className="text-foreground/80 mt-1 text-sm">{error}</p>
             <Button
               type="button"
               variant="outline"
@@ -131,6 +141,22 @@ export function SystemHealthPanel() {
 
   return (
     <div className="mt-4 space-y-4">
+      {/* We now keep the last good reading when a refresh fails, so say
+          so plainly — silently showing stale health is worse than
+          showing none. */}
+      {error ? (
+        <div
+          className="border-warning/30 bg-warning/10 flex items-start gap-3 rounded-xl border p-4"
+          role="alert"
+        >
+          <AlertTriangle className="text-warning mt-0.5 h-4 w-4 shrink-0" />
+          <p className="text-foreground/80 text-sm">
+            Showing the last successful reading — the latest refresh failed:{' '}
+            {error}
+          </p>
+        </div>
+      ) : null}
+
       <section className="ops-surface">
         <div className="border-border flex flex-col gap-3 border-b px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -181,7 +207,7 @@ export function SystemHealthPanel() {
         </div>
 
         {n8n.error ? (
-          <p className="mx-4 mb-4 rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-200">
+          <p className="border-warning/20 bg-warning/10 text-warning mx-4 mb-4 rounded-lg border p-3 text-xs">
             {n8n.error}
           </p>
         ) : null}
@@ -196,6 +222,12 @@ export function SystemHealthPanel() {
               </h2>
               <p className="text-muted-foreground mt-1 text-xs">
                 Supabase/Postgres setup checks.
+                {/* The API has always returned `checkedAt`; nothing
+                    rendered it, so a health page with no timestamp
+                    could be five seconds or five hours old. */}
+                {data.database.checkedAt ? (
+                  <> Last checked {formatOpsAge(data.database.checkedAt)}.</>
+                ) : null}
               </p>
             </div>
             <HealthBadge
@@ -204,7 +236,7 @@ export function SystemHealthPanel() {
             />
           </div>
           {!data.database.ok ? (
-            <p className="m-4 rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-200">
+            <p className="border-warning/20 bg-warning/10 text-warning m-4 rounded-lg border p-3 text-xs">
               {data.database.error || 'Database setup check failed.'}
             </p>
           ) : null}

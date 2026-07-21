@@ -21,20 +21,24 @@ export default async function ContactsPage() {
   }
 
   return (
-    <ContactsClient customers={pageData.customers} metrics={pageData.metrics} />
+    <ContactsClient
+      customers={pageData.customers}
+      metrics={pageData.metrics}
+      total={pageData.total}
+    />
   );
 }
 
 function ContactsSetupError({ error }: { error: unknown }) {
   return (
-    <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-5">
+    <div className="border-destructive/30 bg-destructive/10 rounded-xl border p-5">
       <div className="flex items-start gap-3">
-        <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-300" />
+        <AlertTriangle className="text-destructive mt-0.5 h-5 w-5 shrink-0" />
         <div>
           <h1 className="text-foreground text-lg font-semibold">
             Unable to load customers
           </h1>
-          <p className="mt-2 text-sm text-red-100">
+          <p className="text-foreground/80 mt-2 text-sm">
             {error instanceof Error
               ? error.message
               : 'A database error occurred.'}

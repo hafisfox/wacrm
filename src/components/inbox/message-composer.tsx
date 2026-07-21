@@ -18,7 +18,9 @@ interface ReplyDraft {
 
 interface MessageComposerProps {
   sessionExpired: boolean;
-  onSend: (text: string, replyToId?: string) => void;
+  /** May be async — `handleSend` below awaits it so the in-flight
+   *  guard actually covers the send. */
+  onSend: (text: string, replyToId?: string) => void | Promise<void>;
   onOpenTemplates: () => void;
   replyTo?: ReplyDraft | null;
   onClearReply?: () => void;
@@ -57,12 +59,18 @@ export function MessageComposer({
     if (!trimmed || sending || sessionExpired || !sendingAvailable) return;
 
     setSending(true);
+    // Clear the box up front. The send is optimistic — the bubble is
+    // already in the thread — so holding the text here would just make
+    // it look like nothing happened.
+    setText('');
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
     try {
-      onSend(trimmed, replyTo?.id);
-      setText('');
-      if (textareaRef.current) {
-        textareaRef.current.style.height = 'auto';
-      }
+      // Must be awaited. Without it `setSending(false)` ran on the very
+      // next line, so the in-flight guard was a no-op and a fast
+      // double-Enter sent twice.
+      await onSend(trimmed, replyTo?.id);
     } finally {
       setSending(false);
     }

@@ -27,6 +27,8 @@ import type { SaluCustomerRow, SaluMetrics } from '@/lib/salu/queries';
 interface ContactsClientProps {
   customers: SaluCustomerRow[];
   metrics: SaluMetrics;
+  /** True profile count, which may exceed the rows loaded. */
+  total: number;
 }
 
 const FILTERS: Array<{ value: CustomerOpsFilter; label: string }> = [
@@ -38,7 +40,11 @@ const FILTERS: Array<{ value: CustomerOpsFilter; label: string }> = [
   { value: 'idle', label: 'Idle' },
 ];
 
-export function ContactsClient({ customers, metrics }: ContactsClientProps) {
+export function ContactsClient({
+  customers,
+  metrics,
+  total,
+}: ContactsClientProps) {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<CustomerOpsFilter>('all');
 
@@ -102,6 +108,13 @@ export function ContactsClient({ customers, metrics }: ContactsClientProps) {
         <p className="text-muted-foreground mt-3 text-xs" aria-live="polite">
           {filtered.length.toLocaleString('en-IN')} of{' '}
           {customers.length.toLocaleString('en-IN')} customers
+          {total > customers.length ? (
+            <>
+              {' '}
+              · showing the {customers.length.toLocaleString('en-IN')} most
+              recent of {total.toLocaleString('en-IN')} total
+            </>
+          ) : null}
         </p>
       </section>
 

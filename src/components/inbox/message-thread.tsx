@@ -43,6 +43,23 @@ import { buildReplyPreview } from './reply-quote';
 import { toast } from 'sonner';
 import { fetchWithTimeout } from '@/lib/http';
 
+/**
+ * Client-side id for an optimistic bubble, retired once the real row
+ * arrives over realtime. Previously derived from `Date.now()`, which
+ * collided whenever two sends landed in the same millisecond —
+ * duplicate React keys on sibling rows.
+ */
+function tempMessageId() {
+  return `temp-${crypto.randomUUID()}`;
+}
+
+/**
+ * How much history the thread opens with. Deep enough that scrolling
+ * back is rare, shallow enough that a two-year-old conversation does
+ * not ship thousands of rows on every click.
+ */
+const MESSAGE_PAGE_SIZE = 100;
+
 interface ReplyDraft {
   id: string;
   authorLabel: string;
@@ -327,18 +344,24 @@ export function MessageThread({
     (async () => {
       setLoading(true);
 
+      // Newest-first + limit, then flipped back to chronological for
+      // rendering. Ordering ascending with a limit would have taken the
+      // *oldest* N — the opposite of what the thread should open on.
+      // This was previously unbounded: a long-running customer thread
+      // pulled its entire history on every selection.
       const { data, error } = await supabase
         .from('messages')
         .select('*')
         .eq('conversation_id', conversationId)
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: false })
+        .limit(MESSAGE_PAGE_SIZE);
 
       if (cancelled) return;
 
       if (error) {
         console.error('Failed to fetch messages:', error);
       } else {
-        onMessagesLoadedRef.current(data ?? []);
+        onMessagesLoadedRef.current((data ?? []).slice().reverse());
       }
 
       if (!cancelled) setLoading(false);
@@ -366,10 +389,15 @@ export function MessageThread({
     let cancelled = false;
 
     (async () => {
+      // Bounded like the message fetch above. Reactions only render
+      // against loaded messages, so pulling every reaction a long
+      // thread ever collected was wasted work.
       const { data, error } = await supabase
         .from('message_reactions')
         .select('*')
-        .eq('conversation_id', conversationId);
+        .eq('conversation_id', conversationId)
+        .order('created_at', { ascending: false })
+        .limit(MESSAGE_PAGE_SIZE * 4);
       if (cancelled) return;
       if (error) {
         console.error('Failed to fetch reactions:', error);
@@ -495,7 +523,7 @@ export function MessageThread({
     async (text: string, replyToId?: string) => {
       if (!conversation) return;
 
-      const tempId = `temp-${Date.now()}`;
+      const tempId = tempMessageId();
 
       // Optimistic update — shows the message immediately with "sending" status
       const optimisticMsg: Message = {
@@ -554,10 +582,21 @@ export function MessageThread({
       if (!conversation) return;
 
       const supabase = createClient();
-      await supabase
+      // Check the result before applying it locally — this used to
+      // ignore the response entirely, so a rejected write (RLS, network)
+      // still flipped the badge and the operator believed a
+      // conversation was closed when the row never changed. Mirrors
+      // `handleAssignChange` below.
+      const { error } = await supabase
         .from('conversations')
         .update({ status })
         .eq('id', conversation.id);
+
+      if (error) {
+        console.error('Failed to update status:', error);
+        toast.error('Failed to update status');
+        return;
+      }
 
       onStatusChange(conversation.id, status);
     },
@@ -580,7 +619,7 @@ export function MessageThread({
       if (!conversation) return;
 
       const renderedBody = renderTemplateBody(template.body_text, values.body);
-      const tempId = `temp-${Date.now()}`;
+      const tempId = tempMessageId();
 
       const optimisticMsg: Message = {
         id: tempId,
@@ -715,7 +754,7 @@ export function MessageThread({
         return [
           ...prev,
           {
-            id: `temp-${Date.now()}`,
+            id: tempMessageId(),
             message_id: messageId,
             conversation_id: convId,
             actor_type: 'agent',

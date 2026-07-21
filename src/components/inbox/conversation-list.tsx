@@ -31,6 +31,13 @@ interface ConversationListProps {
   resyncToken?: number;
 }
 
+/**
+ * How many conversations the inbox loads. Ordered newest-activity
+ * first, so the cut falls on threads nobody has touched in a long
+ * while — and search still reaches them via the customers page.
+ */
+const CONVERSATION_PAGE_SIZE = 200;
+
 const STATUS_COLORS: Record<ConversationStatus, string> = {
   open: 'bg-chat-accent',
   pending: 'bg-amber-500',
@@ -84,10 +91,14 @@ export function ConversationList({
     let cancelled = false;
 
     (async () => {
+      // Bounded. This used to fetch every conversation the account had
+      // ever had, capped only by PostgREST's own default — so the
+      // inbox got slower forever as the salon accumulated customers.
       const { data, error } = await supabase
         .from('conversations')
         .select('*, contact:contacts(*)')
-        .order('last_message_at', { ascending: false });
+        .order('last_message_at', { ascending: false })
+        .limit(CONVERSATION_PAGE_SIZE);
 
       if (cancelled) return;
 

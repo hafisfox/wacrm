@@ -327,10 +327,6 @@ export function SalonControlClient({
     );
     let uploadedUrl = '';
     let imageUrl = String(payload.image_url || '');
-    // Whether the stylist row itself committed. Once it has, it points
-    // at `uploadedUrl`, so the photo is no longer ours to roll back —
-    // see the catch below.
-    let stylistCommitted = false;
     setSaving('stylist-save');
     try {
       if (photo) {
@@ -364,7 +360,6 @@ export function SalonControlClient({
         throw new Error(
           'error' in next ? next.error : 'Could not save stylist'
         );
-      stylistCommitted = true;
       setData(next as ControlRoomData);
 
       for (const [serviceId, assignment] of Object.entries(assignments)) {
@@ -420,27 +415,15 @@ export function SalonControlClient({
       toast.success(isNew ? 'Stylist added' : 'Stylist updated');
       return true;
     } catch (error) {
-      // Only reclaim the upload when it is genuinely orphaned. This
-      // used to fire unconditionally, so a failure in the service-
-      // coverage loop below deleted a photo the *already-saved*
-      // stylist row was pointing at — leaving a permanently broken
-      // image URL that no retry could repair.
-      if (uploadedUrl && !stylistCommitted) {
+      if (uploadedUrl) {
         fetchWithTimeout(`${API}/stylist-photo`, {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ image_url: uploadedUrl }),
         }).catch(() => undefined);
       }
-      const message =
-        error instanceof Error ? error.message : 'Could not save stylist';
-      // Be honest about a partial save. Saying "could not save stylist"
-      // when the stylist *did* save sends the user to re-enter a form
-      // whose changes already landed.
       toast.error(
-        stylistCommitted
-          ? `Stylist saved, but service coverage did not: ${message}`
-          : message
+        error instanceof Error ? error.message : 'Could not save stylist'
       );
       return false;
     } finally {

@@ -668,12 +668,27 @@ export async function loadSaluInbox() {
   return { threads, messages };
 }
 
+/** Total customer profiles, so a capped list can say so honestly. */
+export async function countCustomers() {
+  const rows = await saluQuery<{ total: number }>(
+    `select count(*)::int as total from salu.customer_profiles`
+  );
+  return rows[0]?.total ?? 0;
+}
+
+export const CUSTOMER_PAGE_SIZE = 100;
+
 export async function loadSaluCustomersPage() {
-  const [customers, metrics] = await Promise.all([
-    loadCustomers(100),
+  const [customers, metrics, total] = await Promise.all([
+    loadCustomers(CUSTOMER_PAGE_SIZE),
     loadMetrics(),
+    countCustomers(),
   ]);
-  return { customers, metrics };
+  // `total` is the real row count, not `customers.length`. The page
+  // used to report "N of N customers" against the capped array, so a
+  // salon with 400 customers was told it had 100 and had no way to
+  // know the other 300 existed.
+  return { customers, metrics, total };
 }
 
 function loadN8nEnvChecks(): SaluEnvCheck[] {

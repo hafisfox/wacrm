@@ -177,10 +177,17 @@ export function ContactSidebar({
       .select()
       .single();
 
-    if (!error && data) {
-      setNotes((prev) => [data, ...prev]);
-      setNewNote('');
+    // A swallowed failure here looked like success: the textarea kept
+    // the text but the note never appeared and nothing said why.
+    if (error || !data) {
+      console.error('[contact-sidebar] add note failed:', error);
+      toast.error(error?.message || 'Could not save note');
+      setAddingNote(false);
+      return;
     }
+
+    setNotes((prev) => [data, ...prev]);
+    setNewNote('');
     setAddingNote(false);
   }, [contact, newNote, accountId]);
 

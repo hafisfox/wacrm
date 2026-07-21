@@ -62,18 +62,23 @@ function upsertMessage(messages: Message[], next: Message): Message[] {
   if (!normalized) return messages;
 
   const existingIndex = messages.findIndex((m) => m.id === normalized.id);
-  let copy = messages.slice();
+  const copy = messages.slice();
 
   if (existingIndex >= 0) {
     copy[existingIndex] = { ...copy[existingIndex], ...normalized };
   } else {
-    copy = copy.filter((m) => {
-      if (!m.id.startsWith('temp-')) return true;
-      if (m.sender_type !== normalized.sender_type) return true;
-      if ((m.content_text || '') !== (normalized.content_text || ''))
-        return true;
-      return false;
-    });
+    // Retire the optimistic bubble this row confirms. Match on
+    // sender + text, but drop only the FIRST match: a `filter` here
+    // removed *every* matching temp, so sending the same text twice
+    // ("ok", "yes") lost a bubble — the first confirmation swallowed
+    // both optimistic rows and only one real row replaced them.
+    const tempIndex = copy.findIndex(
+      (m) =>
+        m.id.startsWith('temp-') &&
+        m.sender_type === normalized.sender_type &&
+        (m.content_text || '') === (normalized.content_text || '')
+    );
+    if (tempIndex >= 0) copy.splice(tempIndex, 1);
     copy.push(normalized);
   }
 
@@ -314,32 +319,6 @@ export function InboxClient({ n8nOwnedWhatsapp }: InboxClientProps) {
           );
         }
       )
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-        },
-        (payload) => {
-          const message = payload.new as Message;
-          if (message.conversation_id !== activeConversationId) return;
-          setMessages((prev) => upsertMessage(prev, message));
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'messages',
-        },
-        (payload) => {
-          const message = payload.new as Message;
-          if (message.conversation_id !== activeConversationId) return;
-          setMessages((prev) => upsertMessage(prev, message));
-        }
-      )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           setResyncToken((token) => token + 1);
@@ -349,7 +328,52 @@ export function InboxClient({ n8nOwnedWhatsapp }: InboxClientProps) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [accountId, activeConversationId, fetchConversation]);
+    // Deliberately NOT depending on activeConversationId. It used to,
+    // so every conversation click tore down and re-subscribed this
+    // channel, which re-fired SUBSCRIBED, which bumped resyncToken,
+    // which refetched conversations + messages + reactions. One click
+    // cost roughly four extra queries beyond the necessary one.
+  }, [accountId, fetchConversation]);
+
+  // Messages ride their own channel, scoped to the open thread.
+  //
+  // Two wins over folding these into the channel above: the filter is
+  // applied server-side (it previously subscribed to *every* message
+  // row RLS allowed and discarded the rest on the client — wasteful,
+  // and it leaked the timing of other conversations' activity), and
+  // switching threads now only cycles this small channel.
+  useEffect(() => {
+    if (!activeConversationId) return;
+    const supabase = createClient();
+
+    const channel = supabase
+      .channel(`salu-crm-messages:${activeConversationId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${activeConversationId}`,
+        },
+        (payload) => {
+          if (payload.eventType === 'DELETE') {
+            // Previously unhandled, so a retracted message stayed on
+            // screen until a manual refresh.
+            const oldRow = payload.old as Partial<Message>;
+            if (!oldRow.id) return;
+            setMessages((prev) => prev.filter((m) => m.id !== oldRow.id));
+            return;
+          }
+          setMessages((prev) => upsertMessage(prev, payload.new as Message));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [activeConversationId]);
 
   useEffect(() => {
     const onVisibility = () => {
