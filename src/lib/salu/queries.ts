@@ -93,6 +93,7 @@ export interface SaluHandoffRow {
   handoff_reason: string;
   handoff_category: string;
   handoff_requested_at: string;
+  bot_paused: boolean;
 }
 
 export interface SaluSetupHealth {
@@ -493,7 +494,9 @@ async function loadHandoffQueue() {
         coalesce(conv.handoff_state, 'none') as handoff_state,
         coalesce(conv.handoff_reason, '') as handoff_reason,
         coalesce(conv.handoff_category, '') as handoff_category,
-        coalesce(conv.handoff_requested_at::text, '') as handoff_requested_at
+        coalesce(conv.handoff_requested_at::text, '') as handoff_requested_at,
+        -- Drives the take-over / resume control on the dashboard card.
+        coalesce(conv.bot_paused, false) as bot_paused
       from public.conversations conv
       join public.contacts c on c.id = conv.contact_id
       where conv.bot_paused

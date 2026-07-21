@@ -13,6 +13,7 @@ import {
 
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { AutoRefresh } from '@/components/layout/auto-refresh';
 import { compactPhone, formatDateTime } from '@/lib/salu/format';
 import {
   customerIsIdle,
@@ -68,10 +69,13 @@ export function ContactsClient({
             Durable WhatsApp customer memory from the Salu booking concierge.
           </p>
         </div>
-        <div className="grid grid-cols-3 gap-2 text-center">
-          <MiniStat label="7d seen" value={metrics.customers_seen_7d} />
-          <MiniStat label="handoff" value={metrics.human_mode_sessions} />
-          <MiniStat label="holds" value={metrics.pending_payment_holds} />
+        <div className="flex flex-col items-end gap-2">
+          <AutoRefresh />
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <MiniStat label="7d seen" value={metrics.customers_seen_7d} />
+            <MiniStat label="handoff" value={metrics.human_mode_sessions} />
+            <MiniStat label="holds" value={metrics.pending_payment_holds} />
+          </div>
         </div>
       </div>
 

@@ -21,6 +21,7 @@ import {
 } from '@/lib/salu/transcript';
 import { cn } from '@/lib/utils';
 import type {
+  ConnectionState,
   Contact,
   Conversation,
   ConversationStatus,
@@ -106,6 +107,10 @@ export function InboxClient({ n8nOwnedWhatsapp }: InboxClientProps) {
     null
   );
   const [resyncToken, setResyncToken] = useState(0);
+  // Real socket state, reported by the channel's subscribe callback.
+  // Starts pessimistic — we are genuinely not receiving events until
+  // the first SUBSCRIBED lands.
+  const [connection, setConnection] = useState<ConnectionState>('connecting');
   const [saluDetailsToken, setSaluDetailsToken] = useState(0);
   const [detailsOpen, setDetailsOpen] = useState(false);
 
@@ -320,8 +325,21 @@ export function InboxClient({ n8nOwnedWhatsapp }: InboxClientProps) {
         }
       )
       .subscribe((status) => {
+        // Only 'SUBSCRIBED' used to be handled, so a dropped socket was
+        // invisible — the header kept claiming "Live" while no events
+        // were arriving, which is the worst possible failure for an
+        // inbox. Every terminal status now moves the indicator.
         if (status === 'SUBSCRIBED') {
+          setConnection('live');
           setResyncToken((token) => token + 1);
+          return;
+        }
+        if (
+          status === 'CHANNEL_ERROR' ||
+          status === 'TIMED_OUT' ||
+          status === 'CLOSED'
+        ) {
+          setConnection('reconnecting');
         }
       });
 
@@ -443,6 +461,7 @@ export function InboxClient({ n8nOwnedWhatsapp }: InboxClientProps) {
             onConversationsLoaded={handleConversationsLoaded}
             onSelect={handleSelectConversation}
             resyncToken={resyncToken}
+            connection={connection}
           />
         </div>
 

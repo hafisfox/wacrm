@@ -1,4 +1,4 @@
-import type { AccountRole } from "@/lib/auth/roles";
+import type { AccountRole } from '@/lib/auth/roles';
 
 export interface Profile {
   id: string;
@@ -33,7 +33,7 @@ export interface AccountMember {
 export interface AccountInvitation {
   id: string;
   account_id: string;
-  role: Exclude<AccountRole, "owner">;
+  role: Exclude<AccountRole, 'owner'>;
   created_by_user_id: string | null;
   label: string | null;
   created_at: string;
@@ -67,7 +67,14 @@ export interface ContactNote {
   created_at: string;
 }
 
-export type ConversationStatus = "open" | "pending" | "closed";
+export type ConversationStatus = 'open' | 'pending' | 'closed';
+
+/**
+ * State of the inbox's realtime socket, as reported by the Supabase
+ * channel's subscribe callback. Drives the header indicator so an
+ * agent can tell "quiet morning" apart from "not receiving events".
+ */
+export type ConnectionState = 'connecting' | 'live' | 'reconnecting';
 
 export interface Conversation {
   id: string;
@@ -79,8 +86,8 @@ export interface Conversation {
   last_message_text?: string | null;
   last_message_at?: string | null;
   unread_count: number;
-  handoff_state?: "none" | "requested" | "active" | "resolved";
-  handoff_priority?: "normal" | "urgent";
+  handoff_state?: 'none' | 'requested' | 'active' | 'resolved';
+  handoff_priority?: 'normal' | 'urgent';
   handoff_reason?: string | null;
   handoff_category?: string | null;
   handoff_requested_at?: string | null;
@@ -91,17 +98,22 @@ export interface Conversation {
   contact?: Contact;
 }
 
-export type SenderType = "customer" | "agent" | "bot";
+export type SenderType = 'customer' | 'agent' | 'bot';
 export type ContentType =
-  | "text"
-  | "image"
-  | "document"
-  | "audio"
-  | "video"
-  | "location"
-  | "template"
-  | "interactive";
-export type MessageStatus = "sending" | "sent" | "delivered" | "read" | "failed";
+  | 'text'
+  | 'image'
+  | 'document'
+  | 'audio'
+  | 'video'
+  | 'location'
+  | 'template'
+  | 'interactive';
+export type MessageStatus =
+  | 'sending'
+  | 'sent'
+  | 'delivered'
+  | 'read'
+  | 'failed';
 
 export interface Message {
   id: string;
@@ -120,7 +132,7 @@ export interface Message {
   interactive_reply_id?: string | null;
 }
 
-export type ReactionActor = "customer" | "agent";
+export type ReactionActor = 'customer' | 'agent';
 
 export interface MessageReaction {
   id: string;
@@ -140,25 +152,25 @@ export interface WhatsAppConfig {
   waba_id?: string | null;
   access_token: string;
   verify_token?: string | null;
-  status: "connected" | "disconnected";
+  status: 'connected' | 'disconnected';
   connected_at?: string | null;
 }
 
 export type MessageTemplateStatus =
-  | "DRAFT"
-  | "PENDING"
-  | "APPROVED"
-  | "REJECTED"
-  | "PAUSED"
-  | "DISABLED"
-  | "IN_APPEAL"
-  | "PENDING_DELETION";
+  | 'DRAFT'
+  | 'PENDING'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'PAUSED'
+  | 'DISABLED'
+  | 'IN_APPEAL'
+  | 'PENDING_DELETION';
 
 export type TemplateButton =
-  | { type: "QUICK_REPLY"; text: string }
-  | { type: "URL"; text: string; url: string; example?: string }
-  | { type: "PHONE_NUMBER"; text: string; phone_number: string }
-  | { type: "COPY_CODE"; text: string; example: string };
+  | { type: 'QUICK_REPLY'; text: string }
+  | { type: 'URL'; text: string; url: string; example?: string }
+  | { type: 'PHONE_NUMBER'; text: string; phone_number: string }
+  | { type: 'COPY_CODE'; text: string; example: string };
 
 export interface TemplateSampleValues {
   body?: string[];
@@ -170,9 +182,9 @@ export interface MessageTemplate {
   account_id: string;
   user_id: string;
   name: string;
-  category: "Marketing" | "Utility" | "Authentication";
+  category: 'Marketing' | 'Utility' | 'Authentication';
   language?: string;
-  header_type?: "text" | "image" | "video" | "document";
+  header_type?: 'text' | 'image' | 'video' | 'document';
   header_content?: string | null;
   header_handle?: string | null;
   header_media_url?: string | null;
@@ -183,7 +195,7 @@ export interface MessageTemplate {
   status?: MessageTemplateStatus;
   meta_template_id?: string | null;
   rejection_reason?: string | null;
-  quality_score?: "GREEN" | "YELLOW" | "RED" | null;
+  quality_score?: 'GREEN' | 'YELLOW' | 'RED' | null;
   submission_error?: string | null;
   last_submitted_at?: string | null;
   created_at: string;

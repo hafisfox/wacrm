@@ -15,6 +15,9 @@ import {
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { AutoRefresh } from '@/components/layout/auto-refresh';
+import { HandoffActions } from '@/components/dashboard/handoff-actions';
+import { CopyLinkButton } from '@/components/dashboard/copy-link-button';
 import {
   type SaluActivityRow,
   type SaluBookingRow,
@@ -79,7 +82,8 @@ export default async function DashboardPage() {
             appointments.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <AutoRefresh className="mr-1" />
           <Button render={<Link href="/inbox" />}>
             <MessageSquareText className="h-4 w-4" />
             Open inbox
@@ -663,16 +667,23 @@ function HandoffQueue({ rows }: { rows: SaluHandoffRow[] }) {
   return (
     <div className="space-y-3">
       {rows.map((row) => (
-        <Link
+        // The card used to be one big <Link>. It can't be any more:
+        // the take-over control is a button, and nesting interactive
+        // elements is invalid HTML — the click would also bubble
+        // straight into a navigation. The link now wraps the title,
+        // which is the part that actually means "open this thread".
+        <div
           key={row.conversation_id}
-          href={`/inbox?conversation=${row.conversation_id}`}
-          className="hover:border-primary/40 border-border bg-background/50 hover:bg-background block rounded-lg border p-3 transition-colors"
+          className="border-border bg-background/50 rounded-lg border p-3"
         >
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-foreground truncate text-sm font-medium">
+              <Link
+                href={`/inbox?conversation=${row.conversation_id}`}
+                className="ops-focus-ring text-foreground hover:text-primary block truncate rounded text-sm font-medium transition-colors"
+              >
                 {row.customer_name || compactPhone(row.phone)}
-              </p>
+              </Link>
               <p className="text-muted-foreground mt-1 line-clamp-2 text-xs">
                 {row.last_message_text ||
                   row.handoff_reason ||
@@ -693,7 +704,20 @@ function HandoffQueue({ rows }: { rows: SaluHandoffRow[] }) {
               <span>{formatDateTime(row.handoff_requested_at)}</span>
             ) : null}
           </div>
-        </Link>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <HandoffActions phone={row.phone} paused={row.bot_paused} />
+            <Button
+              size="sm"
+              variant="ghost"
+              render={
+                <Link href={`/inbox?conversation=${row.conversation_id}`} />
+              }
+            >
+              <MessageSquareText className="h-3.5 w-3.5" />
+              Open chat
+            </Button>
+          </div>
+        </div>
       ))}
     </div>
   );
@@ -757,16 +781,26 @@ function PaymentQueue({ rows }: { rows: SaluPaymentQueueRow[] }) {
               </Button>
             ) : null}
             {row.payment_link ? (
-              <Button
-                size="sm"
-                variant="outline"
-                render={
-                  <a href={row.payment_link} target="_blank" rel="noreferrer" />
-                }
-              >
-                <ExternalLink className="h-3.5 w-3.5" />
-                Payment link
-              </Button>
+              <>
+                <CopyLinkButton
+                  value={row.payment_link}
+                  label="Copy payment link"
+                />
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  render={
+                    <a
+                      href={row.payment_link}
+                      target="_blank"
+                      rel="noreferrer"
+                    />
+                  }
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  Open
+                </Button>
+              </>
             ) : null}
           </div>
         </div>

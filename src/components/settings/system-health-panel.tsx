@@ -14,6 +14,13 @@ import { cn } from '@/lib/utils';
 import { fetchWithTimeout } from '@/lib/http';
 import { formatOpsAge } from '@/lib/salu/ops';
 
+/**
+ * Health poll cadence. Slower than the ops dashboard's — this reads
+ * the n8n API and runs setup queries, and workflow status does not
+ * change minute to minute.
+ */
+const HEALTH_POLL_MS = 120_000;
+
 interface SystemHealthPayload {
   n8n: SaluN8nHealth;
   setupHealth: SaluSetupHealth | null;
@@ -57,6 +64,22 @@ export function SystemHealthPanel() {
 
   useEffect(() => {
     void load();
+  }, [load]);
+
+  // A health page that never re-checks is a screenshot. Poll on a slow
+  // cadence, and catch up immediately when the tab regains focus —
+  // background tabs get their timers throttled, so the interval alone
+  // can't be trusted after a spell away.
+  useEffect(() => {
+    const timer = window.setInterval(() => void load(), HEALTH_POLL_MS);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void load();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [load]);
 
   if (loading && !data) {

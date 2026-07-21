@@ -13,6 +13,7 @@ import {
   LayoutTemplate,
   ImageOff,
   CornerDownLeft,
+  RotateCw,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ReplyQuote } from './reply-quote';
@@ -25,6 +26,8 @@ interface MessageBubbleProps {
   reactions?: MessageReaction[];
   currentUserId?: string;
   onToggleReaction?: (emoji: string) => void;
+  /** Re-send a failed message. Only rendered for failed agent sends. */
+  onRetry?: () => void;
 }
 
 function StatusIcon({ status }: { status: Message['status'] }) {
@@ -248,6 +251,7 @@ export function MessageBubble({
   reactions,
   currentUserId,
   onToggleReaction,
+  onRetry,
 }: MessageBubbleProps) {
   const isAgent =
     message.sender_type === 'agent' || message.sender_type === 'bot';
@@ -277,6 +281,18 @@ export function MessageBubble({
         >
           <span className="text-chat-ink-3 text-[10px]">{time}</span>
           {isAgent && <StatusIcon status={message.status} />}
+          {/* A failed send used to be a dead end — a red X, and the
+              only recovery was retyping the whole message. */}
+          {isAgent && message.status === 'failed' && onRetry ? (
+            <button
+              type="button"
+              onClick={onRetry}
+              className="ops-focus-ring text-chat-ink-3 hover:text-chat-ink ml-1 inline-flex items-center gap-0.5 rounded text-[10px] font-semibold underline underline-offset-2"
+            >
+              <RotateCw className="h-2.5 w-2.5" />
+              Retry
+            </button>
+          ) : null}
         </div>
       </div>
       {reactions && reactions.length > 0 && onToggleReaction && (

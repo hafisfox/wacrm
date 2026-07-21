@@ -4,7 +4,11 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
-import type { Conversation, ConversationStatus } from '@/types';
+import type {
+  ConnectionState,
+  Conversation,
+  ConversationStatus,
+} from '@/types';
 import { Search, ChevronDown } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Input } from '@/components/ui/input';
@@ -29,6 +33,53 @@ interface ConversationListProps {
    * or the tab was throttled. Optional so existing callers keep working.
    */
   resyncToken?: number;
+  /** Live socket state, so the header can stop claiming "Live"
+   *  unconditionally. */
+  connection?: ConnectionState;
+}
+
+/**
+ * Header indicator for the realtime socket.
+ *
+ * This was a hardcoded "Live" chip that never changed — so during an
+ * outage the inbox looked healthy while silently receiving nothing,
+ * which is the one failure an agent most needs to see.
+ */
+function ConnectionPill({ state = 'connecting' }: { state?: ConnectionState }) {
+  const meta = {
+    live: {
+      label: 'Live',
+      className: 'bg-chat-accent/15 text-chat-accent-soft',
+    },
+    connecting: {
+      label: 'Connecting',
+      className: 'bg-chat-surface-strong text-chat-ink-3',
+    },
+    reconnecting: {
+      label: 'Reconnecting',
+      className: 'bg-warning/15 text-warning',
+    },
+  }[state];
+
+  return (
+    <span
+      role="status"
+      aria-live="polite"
+      className={cn(
+        'flex items-center gap-1.5 rounded-full px-2 py-1 text-[10px] font-semibold',
+        meta.className
+      )}
+    >
+      <span
+        aria-hidden
+        className={cn(
+          'size-1.5 rounded-full bg-current',
+          state !== 'live' && 'animate-pulse'
+        )}
+      />
+      {meta.label}
+    </span>
+  );
 }
 
 /**
@@ -62,6 +113,7 @@ export function ConversationList({
   conversations,
   onConversationsLoaded,
   resyncToken = 0,
+  connection = 'connecting',
 }: ConversationListProps) {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<
@@ -181,9 +233,7 @@ export function ConversationList({
           </p>
           <h2 className="text-chat-ink text-lg font-semibold">WhatsApp</h2>
         </div>
-        <span className="bg-chat-accent/15 text-chat-accent-soft rounded-full px-2 py-1 text-[10px] font-semibold">
-          Live
-        </span>
+        <ConnectionPill state={connection} />
       </div>
       {/* Search + Filter */}
       <div className="border-chat-line shrink-0 space-y-3 border-b p-3">

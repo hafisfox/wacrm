@@ -41,7 +41,7 @@ import { MessageComposer } from './message-composer';
 import { TemplatePicker } from './template-picker';
 import { buildReplyPreview } from './reply-quote';
 import { toast } from 'sonner';
-import { fetchWithTimeout } from '@/lib/http';
+import { fetchWithTimeout, safeJson } from '@/lib/http';
 
 /**
  * Client-side id for an optimistic bubble, retired once the real row
@@ -184,6 +184,9 @@ export function MessageThread({
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  // Starts true: a freshly-opened thread renders scrolled to the end.
+  const atBottomRef = useRef(true);
+  const [hasNewBelow, setHasNewBelow] = useState(false);
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [reactions, setReactions] = useState<MessageReaction[]>([]);
@@ -511,13 +514,97 @@ export function MessageThread({
       });
   }, [conversationId, hasUnread]);
 
-  // Auto-scroll to bottom on new messages
+  // Auto-scroll to the newest message — but only when the user is
+  // already at the bottom.
+  //
+  // This used to jump unconditionally on every `messages` change, so
+  // scrolling up to read earlier history got yanked back down the
+  // instant anything arrived. Reading a thread during a busy period
+  // was close to impossible. Now a user who has scrolled away keeps
+  // their position and gets the "new messages" pill below instead.
   useEffect(() => {
-    if (scrollRef.current) {
-      const el = scrollRef.current;
+    const el = scrollRef.current;
+    if (!el) return;
+    if (atBottomRef.current) {
       el.scrollTop = el.scrollHeight;
+    } else {
+      setHasNewBelow(true);
     }
   }, [messages]);
+
+  // Track whether the viewport is pinned to the bottom. Lives in a ref
+  // because the scroll handler fires constantly and the auto-scroll
+  // effect above only ever reads it — re-rendering per scroll event
+  // would be pure waste.
+  const handleScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    // A slack of a few pixels: sub-pixel rounding and the sticky date
+    // separators mean an exact equality check reads as "not at bottom"
+    // even when it visually is.
+    const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
+    const atBottom = distance < 80;
+    atBottomRef.current = atBottom;
+    if (atBottom) setHasNewBelow(false);
+  }, []);
+
+  const scrollToBottom = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+    atBottomRef.current = true;
+    setHasNewBelow(false);
+  }, []);
+
+  /**
+   * POSTs the text and drives the given bubble's status.
+   *
+   * Shared by the first attempt and by retry, so a retried message
+   * reuses its existing bubble instead of stacking a second one under
+   * the failed original.
+   */
+  const deliverText = useCallback(
+    async (bubbleId: string, text: string, replyToId?: string) => {
+      if (!conversation) return;
+
+      try {
+        const res = await fetchWithTimeout('/api/whatsapp/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            conversation_id: conversation.id,
+            message_type: 'text',
+            content_text: text,
+            reply_to_message_id: replyToId,
+          }),
+        });
+
+        const payload = await safeJson<{ error?: string }>(res);
+
+        if (!res.ok) {
+          const reason = payload?.error || `HTTP ${res.status}`;
+          console.error('Failed to send message:', reason);
+          toast.error(`Failed to send: ${reason}`);
+          // Leave the bubble visible and marked failed so the text
+          // isn't lost and the retry affordance has something to act on.
+          onUpdateMessage(bubbleId, { status: 'failed' });
+          return;
+        }
+
+        // Success — the realtime INSERT event will replace the temp bubble
+        // with the real DB row. If realtime hasn't arrived yet, at least
+        // flip status to 'sent' so the UI stops showing "sending".
+        onUpdateMessage(bubbleId, { status: 'sent' });
+        onMessageSent?.();
+      } catch (err) {
+        console.error('Failed to send message:', err);
+        const reason = err instanceof Error ? err.message : 'network error';
+        toast.error(`Failed to send: ${reason}`);
+        onUpdateMessage(bubbleId, { status: 'failed' });
+      }
+    },
+    [conversation, onMessageSent, onUpdateMessage]
+  );
 
   const handleSend = useCallback(
     async (text: string, replyToId?: string) => {
@@ -539,42 +626,29 @@ export function MessageThread({
       onNewMessage(optimisticMsg);
       setReplyTo(null);
 
-      try {
-        const res = await fetchWithTimeout('/api/whatsapp/send', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            conversation_id: conversation.id,
-            message_type: 'text',
-            content_text: text,
-            reply_to_message_id: replyToId,
-          }),
-        });
-
-        const payload = await res.json().catch(() => ({}));
-
-        if (!res.ok) {
-          const reason = payload?.error || `HTTP ${res.status}`;
-          console.error('Failed to send message:', reason);
-          toast.error(`Failed to send: ${reason}`);
-          // Mark the optimistic bubble as failed so the user sees what happened
-          onUpdateMessage(tempId, { status: 'failed' });
-          return;
-        }
-
-        // Success — the realtime INSERT event will replace the temp bubble
-        // with the real DB row. If realtime hasn't arrived yet, at least
-        // flip status to 'sent' so the UI stops showing "sending".
-        onUpdateMessage(tempId, { status: 'sent' });
-        onMessageSent?.();
-      } catch (err) {
-        console.error('Failed to send message:', err);
-        const reason = err instanceof Error ? err.message : 'network error';
-        toast.error(`Failed to send: ${reason}`);
-        onUpdateMessage(tempId, { status: 'failed' });
-      }
+      await deliverText(tempId, text, replyToId);
     },
-    [conversation, onMessageSent, onNewMessage, onUpdateMessage]
+    [conversation, deliverText, onNewMessage]
+  );
+
+  /**
+   * Re-send a failed message in place.
+   *
+   * Previously a failed bubble was a dead end: a red X, and the only
+   * way to recover was retyping the message from scratch.
+   */
+  const handleRetry = useCallback(
+    (failed: Message) => {
+      const text = failed.content_text?.trim();
+      if (!text) return;
+      onUpdateMessage(failed.id, { status: 'sending' });
+      void deliverText(
+        failed.id,
+        text,
+        failed.reply_to_message_id ?? undefined
+      );
+    },
+    [deliverText, onUpdateMessage]
   );
 
   const handleStatusChange = useCallback(
@@ -1047,7 +1121,14 @@ export function MessageThread({
       {/* Messages Area */}
       <div
         ref={scrollRef}
-        className="min-h-0 flex-1 overflow-y-auto px-3 py-4 sm:px-4"
+        onScroll={handleScroll}
+        // `log` + polite live region: incoming messages were previously
+        // silent to screen readers, so an agent using one had no way to
+        // know a customer had replied.
+        role="log"
+        aria-live="polite"
+        aria-label="Conversation messages"
+        className="relative min-h-0 flex-1 overflow-y-auto px-3 py-4 sm:px-4"
       >
         {loading ? (
           <div className="flex items-center justify-center py-12">
@@ -1108,6 +1189,7 @@ export function MessageThread({
                           reactions={msgReactions}
                           currentUserId={user?.id}
                           onToggleReaction={handlePillToggle}
+                          onRetry={() => handleRetry(msg)}
                         />
                       </MessageActions>
                     );
@@ -1118,6 +1200,22 @@ export function MessageThread({
           </div>
         )}
       </div>
+
+      {/* Jump-to-latest. Only appears when a message arrived while the
+          user was reading further up — the case that used to yank the
+          viewport out from under them. */}
+      {hasNewBelow ? (
+        <div className="pointer-events-none relative">
+          <button
+            type="button"
+            onClick={scrollToBottom}
+            className="ops-focus-ring bg-chat-accent text-chat-panel pointer-events-auto absolute -top-12 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold shadow-lg"
+          >
+            <ChevronDown className="h-3.5 w-3.5" />
+            New messages
+          </button>
+        </div>
+      ) : null}
 
       {/* Composer */}
       <MessageComposer

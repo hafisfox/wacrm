@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
+import { useTotalUnread } from '@/hooks/use-total-unread';
 import {
   CalendarCheck,
   Crown,
@@ -98,6 +99,7 @@ interface SidebarProps {
 export function Sidebar({ open = false, onClose }: SidebarProps) {
   const pathname = usePathname();
   const { profile, profileLoading, account, accountRole } = useAuth();
+  const totalUnread = useTotalUnread();
   const drawerRef = useRef<HTMLElement>(null);
   // Only surface the account-name strip when it actually carries
   // information. A solo user's personal account is named after them
@@ -245,6 +247,16 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
                   >
                     <item.icon className="h-4 w-4" />
                     <span className="flex-1">{item.label}</span>
+                    {item.href === '/inbox' && totalUnread > 0 ? (
+                      <span
+                        className="bg-primary text-primary-foreground inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-semibold tabular-nums"
+                        // The bare number is meaningless to a screen
+                        // reader, so name what it counts.
+                        aria-label={`${totalUnread} conversation${totalUnread === 1 ? '' : 's'} with unread messages`}
+                      >
+                        {totalUnread > 99 ? '99+' : totalUnread}
+                      </span>
+                    ) : null}
                     {item.beta && (
                       <span
                         aria-label="Beta feature"
