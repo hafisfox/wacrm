@@ -368,7 +368,7 @@ export function InboxClient({ n8nOwnedWhatsapp }: InboxClientProps) {
 
     if (n8nOwnedWhatsapp) {
       return (
-        <div className="flex shrink-0 items-center gap-2 border-b border-[#233138] bg-sky-950/70 px-4 py-2 text-xs text-sky-200">
+        <div className="border-chat-line flex shrink-0 items-center gap-2 border-b bg-sky-950/70 px-4 py-2 text-xs text-sky-200">
           <Workflow className="h-4 w-4 shrink-0" />
           <span className="min-w-0 flex-1">
             Connected through n8n for live text replies. Meta setup is only
@@ -376,7 +376,7 @@ export function InboxClient({ n8nOwnedWhatsapp }: InboxClientProps) {
           </span>
           <Link
             href="/settings?tab=whatsapp"
-            className="inline-flex shrink-0 items-center gap-1 font-medium text-sky-100 hover:text-white"
+            className="hover:text-chat-ink inline-flex shrink-0 items-center gap-1 font-medium text-sky-100"
           >
             Set up Meta
             <ExternalLink className="h-3 w-3" />
@@ -386,7 +386,7 @@ export function InboxClient({ n8nOwnedWhatsapp }: InboxClientProps) {
     }
 
     return (
-      <div className="flex shrink-0 items-center gap-2 border-b border-[#233138] bg-amber-950/70 px-4 py-2 text-xs text-amber-200">
+      <div className="border-chat-line flex shrink-0 items-center gap-2 border-b bg-amber-950/70 px-4 py-2 text-xs text-amber-200">
         <WifiOff className="h-4 w-4 shrink-0" />
         <span className="min-w-0 flex-1">
           WhatsApp is not connected. Synced history is available, but sending is
@@ -394,7 +394,7 @@ export function InboxClient({ n8nOwnedWhatsapp }: InboxClientProps) {
         </span>
         <Link
           href="/settings?tab=whatsapp"
-          className="inline-flex shrink-0 items-center gap-1 font-medium text-amber-100 hover:text-white"
+          className="hover:text-chat-ink inline-flex shrink-0 items-center gap-1 font-medium text-amber-100"
         >
           Connect WhatsApp
           <ExternalLink className="h-3 w-3" />
@@ -404,7 +404,7 @@ export function InboxClient({ n8nOwnedWhatsapp }: InboxClientProps) {
   }, [n8nOwnedWhatsapp, whatsappConnected]);
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[#0b141a] text-slate-100">
+    <div className="bg-chat-canvas text-chat-ink flex h-full min-h-0 flex-col overflow-hidden">
       {connectionBanner}
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <div
@@ -465,11 +465,12 @@ export function InboxClient({ n8nOwnedWhatsapp }: InboxClientProps) {
       <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
         <SheetContent
           side="right"
-          className="w-80 max-w-[92vw] gap-0 border-[#233138] bg-[#111b21] p-0 2xl:hidden"
+          className="border-chat-line bg-chat-panel w-80 max-w-[92vw] gap-0 p-0 2xl:hidden"
         >
           <SheetTitle className="sr-only">Customer details</SheetTitle>
           <SheetDescription className="sr-only">
-            Salu booking, payment, memory, and bot takeover controls for the selected conversation.
+            Salu booking, payment, memory, and bot takeover controls for the
+            selected conversation.
           </SheetDescription>
           <ContactSidebar
             contact={activeContact}

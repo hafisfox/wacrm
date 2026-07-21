@@ -11,8 +11,8 @@ export default function InboxPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex h-full items-center justify-center bg-[#0b141a]">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#00a884] border-t-transparent" />
+        <div className="bg-chat-canvas flex h-full items-center justify-center">
+          <div className="border-chat-accent h-6 w-6 animate-spin rounded-full border-2 border-t-transparent" />
         </div>
       }
     >

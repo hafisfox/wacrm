@@ -49,23 +49,19 @@ export function SessionsCard() {
 
   return (
     <>
-      <Card className="bg-slate-900/40 border-slate-800">
+      <Card className="bg-card/40">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-white">
-            <LogOut className="size-4 text-primary" />
+          <CardTitle className="text-foreground flex items-center gap-2">
+            <LogOut className="text-primary size-4" />
             Active sessions
           </CardTitle>
-          <CardDescription className="text-slate-400">
+          <CardDescription className="text-muted-foreground">
             Sign out of every device where you&apos;re logged in — including
             this one. Useful if you lost a laptop or shared your password.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setOpen(true)}
-          >
+          <Button type="button" variant="outline" onClick={() => setOpen(true)}>
             <LogOut className="size-4" />
             Sign out of all devices
           </Button>
@@ -77,9 +73,8 @@ export function SessionsCard() {
           <DialogHeader>
             <DialogTitle>Sign out everywhere?</DialogTitle>
             <DialogDescription>
-              Every device logged into this account will be signed out and
-              will need to log in again. You will be redirected to the login
-              page.
+              Every device logged into this account will be signed out and will
+              need to log in again. You will be redirected to the login page.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

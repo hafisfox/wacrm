@@ -36,7 +36,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
           aria-live="polite"
         >
           <div className="border-primary h-8 w-8 animate-spin rounded-full border-2 border-t-transparent" />
-          <p className="text-sm text-slate-400">Loading...</p>
+          <p className="text-muted-foreground text-sm">Loading...</p>
         </div>
       </div>
     );

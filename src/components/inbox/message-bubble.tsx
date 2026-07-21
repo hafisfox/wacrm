@@ -30,11 +30,11 @@ interface MessageBubbleProps {
 function StatusIcon({ status }: { status: Message['status'] }) {
   switch (status) {
     case 'sending':
-      return <Clock className="h-3 w-3 text-slate-400" />;
+      return <Clock className="text-chat-ink-3 h-3 w-3" />;
     case 'sent':
-      return <Check className="h-3 w-3 text-slate-400" />;
+      return <Check className="text-chat-ink-3 h-3 w-3" />;
     case 'delivered':
-      return <CheckCheck className="h-3 w-3 text-slate-400" />;
+      return <CheckCheck className="text-chat-ink-3 h-3 w-3" />;
     case 'read':
       return <CheckCheck className="h-3 w-3 text-blue-400" />;
     case 'failed':
@@ -46,8 +46,8 @@ function StatusIcon({ status }: { status: Message['status'] }) {
 
 function MediaUnavailable({ label }: { label: string }) {
   return (
-    <div className="flex items-center gap-2 rounded-lg bg-black/15 px-3 py-2 text-xs text-[#d1d7db]">
-      <ImageOff className="h-4 w-4 shrink-0 text-[#8696a0]" />
+    <div className="text-chat-ink-2 flex items-center gap-2 rounded-lg bg-black/15 px-3 py-2 text-xs">
+      <ImageOff className="text-chat-muted h-4 w-4 shrink-0" />
       <span>{label} unavailable</span>
     </div>
   );
@@ -93,7 +93,7 @@ function MediaImage({ url, alt }: { url: string; alt: string }) {
   if (error) {
     return (
       <div className="flex h-40 w-60 items-center justify-center rounded-lg bg-black/15">
-        <ImageOff className="h-8 w-8 text-[#8696a0]" />
+        <ImageOff className="text-chat-muted h-8 w-8" />
       </div>
     );
   }
@@ -101,7 +101,7 @@ function MediaImage({ url, alt }: { url: string; alt: string }) {
   if (loading) {
     return (
       <div className="flex h-40 w-60 items-center justify-center rounded-lg bg-black/15">
-        <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#00a884] border-t-transparent" />
+        <div className="border-chat-accent h-5 w-5 animate-spin rounded-full border-2 border-t-transparent" />
       </div>
     );
   }
@@ -186,7 +186,7 @@ function MessageContent({ message }: { message: Message }) {
           rel="noopener noreferrer"
           className="flex items-center gap-2 rounded-lg bg-black/15 px-3 py-2 text-sm hover:bg-black/25"
         >
-          <FileText className="h-5 w-5 shrink-0 text-[#aebac1]" />
+          <FileText className="text-chat-ink-3 h-5 w-5 shrink-0" />
           <span className="truncate">{message.content_text || 'Document'}</span>
         </a>
       );
@@ -194,7 +194,7 @@ function MessageContent({ message }: { message: Message }) {
     case 'template':
       return (
         <div>
-          <span className="mb-1 inline-flex items-center gap-1 rounded bg-[#00a884]/20 px-1.5 py-0.5 text-[10px] font-medium text-[#00a884]">
+          <span className="bg-chat-accent/20 text-chat-accent mb-1 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium">
             <LayoutTemplate className="h-3 w-3" />
             Template
           </span>
@@ -209,7 +209,7 @@ function MessageContent({ message }: { message: Message }) {
     case 'location':
       return (
         <div className="flex items-center gap-2 text-sm">
-          <MapPin className="h-4 w-4 shrink-0 text-[#aebac1]" />
+          <MapPin className="text-chat-ink-3 h-4 w-4 shrink-0" />
           <span>{message.content_text || 'Location shared'}</span>
         </div>
       );
@@ -222,7 +222,7 @@ function MessageContent({ message }: { message: Message }) {
       // tap rather than the customer typing the same words.
       return (
         <div className="flex flex-col gap-0.5">
-          <span className="inline-flex items-center gap-1 text-[10px] font-medium tracking-wide text-[#aebac1] uppercase">
+          <span className="text-chat-ink-3 inline-flex items-center gap-1 text-[10px] font-medium tracking-wide uppercase">
             <CornerDownLeft className="h-3 w-3" />
             Customer response
           </span>
@@ -261,8 +261,8 @@ export function MessageBubble({
         className={cn(
           'relative max-w-[min(78vw,640px)] rounded-lg px-3 py-2 shadow-sm',
           isAgent
-            ? 'rounded-br-sm bg-[#005c4b] text-[#e9edef]'
-            : 'rounded-bl-sm bg-[#202c33] text-[#e9edef]'
+            ? 'bg-chat-bubble-out text-chat-ink rounded-br-sm'
+            : 'bg-chat-surface text-chat-ink rounded-bl-sm'
         )}
       >
         {reply && (
@@ -275,7 +275,7 @@ export function MessageBubble({
             isAgent ? 'justify-end' : 'justify-start'
           )}
         >
-          <span className="text-[10px] text-[#aebac1]">{time}</span>
+          <span className="text-chat-ink-3 text-[10px]">{time}</span>
           {isAgent && <StatusIcon status={message.status} />}
         </div>
       </div>

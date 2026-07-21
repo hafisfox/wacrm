@@ -39,6 +39,24 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  /* Chat palette — see the `--chat-*` block below. Deliberately does
+   * not rotate with the theme; the WhatsApp look is intentional. */
+  --color-chat-canvas: var(--chat-canvas);
+  --color-chat-panel: var(--chat-panel);
+  --color-chat-panel-raised: var(--chat-panel-raised);
+  --color-chat-surface: var(--chat-surface);
+  --color-chat-surface-strong: var(--chat-surface-strong);
+  --color-chat-line: var(--chat-line);
+  --color-chat-line-strong: var(--chat-line-strong);
+  --color-chat-ink: var(--chat-ink);
+  --color-chat-ink-2: var(--chat-ink-2);
+  --color-chat-ink-3: var(--chat-ink-3);
+  --color-chat-muted: var(--chat-muted);
+  --color-chat-dim: var(--chat-dim);
+  --color-chat-accent: var(--chat-accent);
+  --color-chat-accent-hover: var(--chat-accent-hover);
+  --color-chat-accent-soft: var(--chat-accent-soft);
+  --color-chat-bubble-out: var(--chat-bubble-out);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -258,6 +276,38 @@ html[data-theme='rose'] {
   --sidebar-ring: oklch(0.645 0.22 16);
 }
 
+/* ============================================================
+ * CHAT PALETTE
+ *
+ * The inbox deliberately mimics WhatsApp so agents can move
+ * between the two without re-learning the surface. These values
+ * were previously ~40 hex literals scattered across the inbox
+ * components; they are one named set now.
+ *
+ * Unlike every other token above, these do NOT rotate with the
+ * theme — the WhatsApp look is the point. Only the accent-tinted
+ * *actions* inside the thread use `--primary`.
+ * ============================================================ */
+
+:root {
+  --chat-canvas: #0b141a;
+  --chat-panel: #111b21;
+  --chat-panel-raised: #182229;
+  --chat-surface: #202c33;
+  --chat-surface-strong: #2a3942;
+  --chat-line: #233138;
+  --chat-line-strong: #2a3942;
+  --chat-ink: #e9edef;
+  --chat-ink-2: #d1d7db;
+  --chat-ink-3: #aebac1;
+  --chat-muted: #8696a0;
+  --chat-dim: #667781;
+  --chat-accent: #00a884;
+  --chat-accent-hover: #06cf9c;
+  --chat-accent-soft: #67d8b5;
+  --chat-bubble-out: #005c4b;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -281,19 +331,26 @@ html[data-theme='rose'] {
   }
 
   .ops-surface {
-    @apply rounded-xl border border-slate-800 bg-slate-900 shadow-sm shadow-black/10;
+    @apply border-border bg-card rounded-xl border shadow-sm shadow-black/10;
   }
 
   .ops-section-title {
-    @apply text-sm font-semibold tracking-tight text-white;
+    @apply text-foreground text-sm font-semibold tracking-tight;
   }
 
   .ops-eyebrow {
-    @apply text-xs font-semibold tracking-[0.14em] text-slate-500 uppercase;
+    @apply text-muted-foreground text-xs font-semibold tracking-[0.14em] uppercase;
   }
 
   .ops-help {
-    @apply text-sm leading-6 text-slate-400;
+    @apply text-muted-foreground text-sm leading-6;
+  }
+
+  /* Panel-inset surface: the recessed rows and tiles that sit *inside*
+   * an .ops-surface (queue rows, metric strips, check lists). Slightly
+   * darker than the card so nesting reads without a second border. */
+  .ops-inset {
+    @apply border-border bg-background/60 rounded-lg border;
   }
 
   .ops-focus-ring {

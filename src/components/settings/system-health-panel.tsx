@@ -51,7 +51,7 @@ export function SystemHealthPanel() {
   if (loading && !data) {
     return (
       <div
-        className="ops-surface mt-4 flex items-center gap-2 p-5 text-sm text-slate-400"
+        className="ops-surface text-muted-foreground mt-4 flex items-center gap-2 p-5 text-sm"
         role="status"
         aria-live="polite"
       >
@@ -70,7 +70,7 @@ export function SystemHealthPanel() {
         <div className="flex items-start gap-3">
           <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-300" />
           <div>
-            <h2 className="text-sm font-semibold text-white">
+            <h2 className="text-foreground text-sm font-semibold">
               System health unavailable
             </h2>
             <p className="mt-1 text-sm text-red-100">{error}</p>
@@ -131,12 +131,12 @@ export function SystemHealthPanel() {
   return (
     <div className="mt-4 space-y-4">
       <section className="ops-surface">
-        <div className="flex flex-col gap-3 border-b border-slate-800 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="border-border flex flex-col gap-3 border-b px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-sm font-semibold text-white">
+            <h2 className="text-foreground text-sm font-semibold">
               n8n Production Workflows
             </h2>
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="text-muted-foreground mt-1 text-xs">
               {n8n.activeCount} of {n8n.expectedCount} active
             </p>
           </div>
@@ -159,14 +159,14 @@ export function SystemHealthPanel() {
           {n8n.workflows.map((workflow) => (
             <div
               key={workflow.name}
-              className="flex items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950/50 px-3 py-2"
+              className="border-border bg-background/50 flex items-center justify-between gap-3 rounded-lg border px-3 py-2"
             >
               <div className="min-w-0">
-                <p className="truncate text-sm text-slate-300">
+                <p className="text-foreground/80 truncate text-sm">
                   {workflow.name}
                 </p>
                 {workflow.role === 'bridge' ? (
-                  <p className="mt-0.5 text-xs text-slate-500">
+                  <p className="text-muted-foreground mt-0.5 text-xs">
                     Dashboard manual-send bridge
                   </p>
                 ) : null}
@@ -188,12 +188,12 @@ export function SystemHealthPanel() {
 
       {data.database ? (
         <section className="ops-surface">
-          <div className="flex flex-col gap-3 border-b border-slate-800 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="border-border flex flex-col gap-3 border-b px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-sm font-semibold text-white">
+              <h2 className="text-foreground text-sm font-semibold">
                 Database Connectivity
               </h2>
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="text-muted-foreground mt-1 text-xs">
                 Supabase/Postgres setup checks.
               </p>
             </div>
@@ -212,12 +212,12 @@ export function SystemHealthPanel() {
 
       {setupHealth ? (
         <section className="ops-surface">
-          <div className="flex items-center justify-between gap-3 border-b border-slate-800 px-4 py-3">
+          <div className="border-border flex items-center justify-between gap-3 border-b px-4 py-3">
             <div>
-              <h2 className="text-sm font-semibold text-white">
+              <h2 className="text-foreground text-sm font-semibold">
                 Salon Setup Readiness
               </h2>
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="text-muted-foreground mt-1 text-xs">
                 Read-only view of Supabase-backed salon setup.
               </p>
             </div>
@@ -230,9 +230,9 @@ export function SystemHealthPanel() {
             {setupItems.map((item) => (
               <div
                 key={item.label}
-                className="flex items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950/50 px-3 py-2"
+                className="border-border bg-background/50 flex items-center justify-between gap-3 rounded-lg border px-3 py-2"
               >
-                <span className="text-sm text-slate-300">{item.label}</span>
+                <span className="text-foreground/80 text-sm">{item.label}</span>
                 <HealthBadge
                   ok={item.ok}
                   label={item.value.toLocaleString('en-IN')}
@@ -244,12 +244,12 @@ export function SystemHealthPanel() {
       ) : null}
 
       <section className="ops-surface">
-        <div className="flex items-center justify-between gap-3 border-b border-slate-800 px-4 py-3">
+        <div className="border-border flex items-center justify-between gap-3 border-b px-4 py-3">
           <div>
-            <h2 className="text-sm font-semibold text-white">
+            <h2 className="text-foreground text-sm font-semibold">
               Dashboard Bridge Readiness
             </h2>
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="text-muted-foreground mt-1 text-xs">
               Manual replies stay routed through the n8n send webhook.
             </p>
           </div>
@@ -262,11 +262,13 @@ export function SystemHealthPanel() {
           {n8n.env.map((check) => (
             <div
               key={check.key}
-              className="flex items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950/50 px-3 py-2"
+              className="border-border bg-background/50 flex items-center justify-between gap-3 rounded-lg border px-3 py-2"
             >
               <div className="min-w-0">
-                <p className="truncate text-sm text-slate-300">{check.label}</p>
-                <p className="mt-0.5 truncate text-xs text-slate-500">
+                <p className="text-foreground/80 truncate text-sm">
+                  {check.label}
+                </p>
+                <p className="text-muted-foreground mt-0.5 truncate text-xs">
                   {check.key}
                 </p>
               </div>

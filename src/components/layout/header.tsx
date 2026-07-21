@@ -31,22 +31,22 @@ export function Header({ onOpenSidebar }: HeaderProps) {
     'U';
 
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-slate-800 bg-slate-950/95 px-4 backdrop-blur lg:px-6">
+    <header className="border-border bg-background/95 flex h-14 shrink-0 items-center justify-between gap-3 border-b px-4 backdrop-blur lg:px-6">
       <div className="flex min-w-0 items-center gap-2">
         {/* Hamburger — mobile only. 44×44 hit target per Apple HIG. */}
         <button
           type="button"
           onClick={onOpenSidebar}
           aria-label="Open menu"
-          className="ops-focus-ring flex h-11 w-11 items-center justify-center rounded-md text-slate-300 transition-colors hover:bg-slate-800 hover:text-white lg:hidden"
+          className="ops-focus-ring text-foreground/80 hover:bg-muted hover:text-foreground flex h-11 w-11 items-center justify-center rounded-md transition-colors lg:hidden"
         >
           <Menu className="h-5 w-5" />
         </button>
         <div className="min-w-0">
-          <p className="hidden text-[10px] font-semibold tracking-[0.14em] text-slate-500 uppercase sm:block">
+          <p className="text-muted-foreground hidden text-[10px] font-semibold tracking-[0.14em] uppercase sm:block">
             Salu Operations
           </p>
-          <h1 className="truncate text-base font-semibold text-white sm:text-lg">
+          <h1 className="text-foreground truncate text-base font-semibold sm:text-lg">
             {title}
           </h1>
         </div>
@@ -54,7 +54,7 @@ export function Header({ onOpenSidebar }: HeaderProps) {
 
       <DropdownMenu>
         <DropdownMenuTrigger
-          className="ops-focus-ring flex items-center gap-2 rounded-md px-1 py-1 transition-colors hover:bg-slate-800/70 data-popup-open:bg-slate-800/70 sm:gap-3 sm:pr-3 sm:pl-1"
+          className="ops-focus-ring hover:bg-muted/70 data-popup-open:bg-muted/70 flex items-center gap-2 rounded-md px-1 py-1 transition-colors sm:gap-3 sm:pr-3 sm:pl-1"
           aria-label="Open account menu"
         >
           <Avatar className="size-8">
@@ -68,29 +68,29 @@ export function Header({ onOpenSidebar }: HeaderProps) {
               {initial}
             </AvatarFallback>
           </Avatar>
-          <span className="hidden text-sm font-medium text-white sm:inline">
+          <span className="text-foreground hidden text-sm font-medium sm:inline">
             {profile?.full_name ?? 'User'}
           </span>
         </DropdownMenuTrigger>
         <DropdownMenuContent
           align="end"
           sideOffset={6}
-          className="min-w-56 bg-slate-900 text-slate-100 ring-slate-700"
+          className="bg-card text-foreground ring-border min-w-56"
         >
           <div className="px-2 py-1.5">
-            <p className="truncate text-sm font-medium text-white">
+            <p className="text-foreground truncate text-sm font-medium">
               {profile?.full_name ?? 'User'}
             </p>
-            <p className="truncate text-xs text-slate-400">
+            <p className="text-muted-foreground truncate text-xs">
               {profile?.email ?? ''}
             </p>
           </div>
-          <DropdownMenuSeparator className="bg-slate-800" />
+          <DropdownMenuSeparator className="bg-muted" />
           <DropdownMenuItem
             render={
               <Link
                 href="/settings?tab=profile"
-                className="text-slate-200 focus:bg-slate-800 focus:text-white"
+                className="text-foreground focus:bg-muted focus:text-foreground"
               />
             }
           >
@@ -101,17 +101,17 @@ export function Header({ onOpenSidebar }: HeaderProps) {
             render={
               <Link
                 href="/settings?tab=whatsapp"
-                className="text-slate-200 focus:bg-slate-800 focus:text-white"
+                className="text-foreground focus:bg-muted focus:text-foreground"
               />
             }
           >
             <SettingsIcon className="size-4" />
             Settings
           </DropdownMenuItem>
-          <DropdownMenuSeparator className="bg-slate-800" />
+          <DropdownMenuSeparator className="bg-muted" />
           <DropdownMenuItem
             onClick={signOut}
-            className="text-slate-200 focus:bg-slate-800 focus:text-white"
+            className="text-foreground focus:bg-muted focus:text-foreground"
           >
             <LogOut className="size-4" />
             Sign out

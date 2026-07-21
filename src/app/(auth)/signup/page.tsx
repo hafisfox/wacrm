@@ -104,8 +104,8 @@ function SignupPageInner() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4">
-      <Card className="w-full max-w-md border-slate-800 bg-slate-900">
+    <div className="bg-background flex min-h-screen items-center justify-center px-4">
+      <Card className="w-full max-w-md">
         <CardHeader className="items-center text-center">
           <div className="bg-primary/10 mb-2 flex h-12 w-12 items-center justify-center rounded-xl">
             {inviteToken ? (
@@ -114,10 +114,10 @@ function SignupPageInner() {
               <MessageSquare className="text-primary h-6 w-6" />
             )}
           </div>
-          <CardTitle className="text-xl text-white">
+          <CardTitle className="text-foreground text-xl">
             {inviteToken ? 'Create account & join' : 'Create account'}
           </CardTitle>
-          <CardDescription className="text-slate-400">
+          <CardDescription className="text-muted-foreground">
             {inviteToken
               ? 'Create your account, then accept the invitation to join your team.'
               : 'Create the operations workspace for your salon team.'}
@@ -132,7 +132,7 @@ function SignupPageInner() {
             )}
 
             <div className="flex flex-col gap-2">
-              <Label htmlFor="fullName" className="text-slate-300">
+              <Label htmlFor="fullName" className="text-foreground/80">
                 Full name
               </Label>
               <Input
@@ -142,12 +142,12 @@ function SignupPageInner() {
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 required
-                className="focus-visible:border-primary focus-visible:ring-primary/20 border-slate-700 bg-slate-800 text-white placeholder:text-slate-500"
+                className="focus-visible:border-primary focus-visible:ring-primary/20 border-border bg-muted text-foreground placeholder:text-muted-foreground"
               />
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label htmlFor="email" className="text-slate-300">
+              <Label htmlFor="email" className="text-foreground/80">
                 Email
               </Label>
               <Input
@@ -157,12 +157,12 @@ function SignupPageInner() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="focus-visible:border-primary focus-visible:ring-primary/20 border-slate-700 bg-slate-800 text-white placeholder:text-slate-500"
+                className="focus-visible:border-primary focus-visible:ring-primary/20 border-border bg-muted text-foreground placeholder:text-muted-foreground"
               />
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label htmlFor="password" className="text-slate-300">
+              <Label htmlFor="password" className="text-foreground/80">
                 Password
               </Label>
               <Input
@@ -172,12 +172,12 @@ function SignupPageInner() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="focus-visible:border-primary focus-visible:ring-primary/20 border-slate-700 bg-slate-800 text-white placeholder:text-slate-500"
+                className="focus-visible:border-primary focus-visible:ring-primary/20 border-border bg-muted text-foreground placeholder:text-muted-foreground"
               />
             </div>
 
             <div className="flex flex-col gap-2">
-              <Label htmlFor="confirmPassword" className="text-slate-300">
+              <Label htmlFor="confirmPassword" className="text-foreground/80">
                 Confirm password
               </Label>
               <Input
@@ -187,7 +187,7 @@ function SignupPageInner() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
-                className="focus-visible:border-primary focus-visible:ring-primary/20 border-slate-700 bg-slate-800 text-white placeholder:text-slate-500"
+                className="focus-visible:border-primary focus-visible:ring-primary/20 border-border bg-muted text-foreground placeholder:text-muted-foreground"
               />
             </div>
 
@@ -200,7 +200,7 @@ function SignupPageInner() {
             </Button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-slate-400">
+          <p className="text-muted-foreground mt-6 text-center text-sm">
             Already have an account?{' '}
             <Link
               href={

@@ -51,8 +51,8 @@ export default function SettingsPage() {
   return (
     <div className="ops-page">
       <div>
-        <h1 className="text-2xl font-bold text-white">Settings</h1>
-        <p className="mt-1 text-sm text-slate-400">
+        <h1 className="text-foreground text-2xl font-bold">Settings</h1>
+        <p className="text-muted-foreground mt-1 text-sm">
           Manage operator access, WhatsApp maintenance, and n8n health.
         </p>
       </div>
@@ -64,7 +64,7 @@ export default function SettingsPage() {
           </div>
           <div>
             <p className="ops-section-title">WhatsApp stays n8n-managed</p>
-            <p className="mt-1 text-sm text-slate-400">
+            <p className="text-muted-foreground mt-1 text-sm">
               Daily replies and booking automation continue through n8n. Meta
               credentials are only needed for template maintenance.
             </p>
@@ -76,38 +76,38 @@ export default function SettingsPage() {
       </section>
 
       <Tabs value={tab} onValueChange={(v) => onChange(v as TabValue)}>
-        <TabsList className="flex w-full [scrollbar-width:none] justify-start gap-1 overflow-x-auto border border-slate-700 bg-slate-900 p-1 [&::-webkit-scrollbar]:hidden">
+        <TabsList className="border-border bg-card flex w-full [scrollbar-width:none] justify-start gap-1 overflow-x-auto border p-1 [&::-webkit-scrollbar]:hidden">
           <TabsTrigger
             value="profile"
-            className="data-active:text-primary min-w-24 shrink-0 text-slate-400 data-active:bg-slate-800"
+            className="data-active:text-primary text-muted-foreground data-active:bg-muted min-w-24 shrink-0"
           >
             <User className="size-4" />
             Profile
           </TabsTrigger>
           <TabsTrigger
             value="whatsapp"
-            className="data-active:text-primary min-w-36 shrink-0 text-slate-400 data-active:bg-slate-800"
+            className="data-active:text-primary text-muted-foreground data-active:bg-muted min-w-36 shrink-0"
           >
             <Settings className="size-4" />
             WhatsApp Config
           </TabsTrigger>
           <TabsTrigger
             value="templates"
-            className="data-active:text-primary min-w-28 shrink-0 text-slate-400 data-active:bg-slate-800"
+            className="data-active:text-primary text-muted-foreground data-active:bg-muted min-w-28 shrink-0"
           >
             <MessageSquare className="size-4" />
             Templates
           </TabsTrigger>
           <TabsTrigger
             value="members"
-            className="data-active:text-primary min-w-28 shrink-0 text-slate-400 data-active:bg-slate-800"
+            className="data-active:text-primary text-muted-foreground data-active:bg-muted min-w-28 shrink-0"
           >
             <UsersRound className="size-4" />
             Members
           </TabsTrigger>
           <TabsTrigger
             value="system"
-            className="data-active:text-primary min-w-24 shrink-0 text-slate-400 data-active:bg-slate-800"
+            className="data-active:text-primary text-muted-foreground data-active:bg-muted min-w-24 shrink-0"
           >
             <Workflow className="size-4" />
             System

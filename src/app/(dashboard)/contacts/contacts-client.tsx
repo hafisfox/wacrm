@@ -57,8 +57,8 @@ export function ContactsClient({ customers, metrics }: ContactsClientProps) {
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="ops-eyebrow">Customer memory</p>
-          <h1 className="text-2xl font-bold text-white">Customers</h1>
-          <p className="mt-1 text-sm text-slate-400">
+          <h1 className="text-foreground text-2xl font-bold">Customers</h1>
+          <p className="text-muted-foreground mt-1 text-sm">
             Durable WhatsApp customer memory from the Salu booking concierge.
           </p>
         </div>
@@ -72,12 +72,12 @@ export function ContactsClient({ customers, metrics }: ContactsClientProps) {
       <section className="ops-surface p-3" aria-label="Customer filters">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="relative max-w-xl flex-1">
-            <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-500" />
+            <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
             <Input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search name, phone, preference, or last message"
-              className="border-slate-800 bg-slate-950 pl-9 text-slate-100"
+              className="border-border bg-background text-foreground pl-9"
             />
           </div>
           <div className="flex [scrollbar-width:none] gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden">
@@ -91,7 +91,7 @@ export function ContactsClient({ customers, metrics }: ContactsClientProps) {
                   'ops-focus-ring h-10 shrink-0 rounded-md border px-3 text-sm transition-colors',
                   filter === item.value
                     ? 'border-primary/60 bg-primary/10 text-primary'
-                    : 'border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700 hover:text-white'
+                    : 'border-border bg-background text-muted-foreground hover:border-border hover:text-foreground'
                 )}
               >
                 {item.label}
@@ -99,29 +99,29 @@ export function ContactsClient({ customers, metrics }: ContactsClientProps) {
             ))}
           </div>
         </div>
-        <p className="mt-3 text-xs text-slate-500" aria-live="polite">
+        <p className="text-muted-foreground mt-3 text-xs" aria-live="polite">
           {filtered.length.toLocaleString('en-IN')} of{' '}
           {customers.length.toLocaleString('en-IN')} customers
         </p>
       </section>
 
       <section className="ops-surface overflow-hidden">
-        <div className="grid grid-cols-[1.2fr_1fr_1fr_150px] gap-3 border-b border-slate-800 px-4 py-3 text-xs font-medium tracking-wide text-slate-500 uppercase max-lg:hidden">
+        <div className="border-border text-muted-foreground grid grid-cols-[1.2fr_1fr_1fr_150px] gap-3 border-b px-4 py-3 text-xs font-medium tracking-wide uppercase max-lg:hidden">
           <span>Customer</span>
           <span>Preference</span>
           <span>Current State</span>
           <span>Last Seen</span>
         </div>
-        <div className="divide-y divide-slate-800">
+        <div className="divide-border divide-y">
           {filtered.map((customer) => (
             <CustomerRow key={customer.phone} customer={customer} />
           ))}
           {!filtered.length ? (
             <div className="px-4 py-10 text-center">
-              <p className="text-sm font-medium text-slate-300">
+              <p className="text-foreground/80 text-sm font-medium">
                 No customers match this view
               </p>
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="text-muted-foreground mt-1 text-xs">
                 Try clearing the search or choosing another queue.
               </p>
             </div>
@@ -142,12 +142,12 @@ function CustomerRow({ customer }: { customer: SaluCustomerRow }) {
         {customer.conversation_id ? (
           <Link
             href={`/inbox?conversation=${customer.conversation_id}`}
-            className="ops-focus-ring hover:text-primary block truncate rounded-sm text-sm font-medium text-white"
+            className="ops-focus-ring hover:text-primary text-foreground block truncate rounded-sm text-sm font-medium"
           >
             {displayName}
           </Link>
         ) : (
-          <p className="truncate text-sm font-medium text-white">
+          <p className="text-foreground truncate text-sm font-medium">
             {displayName}
           </p>
         )}
@@ -155,18 +155,18 @@ function CustomerRow({ customer }: { customer: SaluCustomerRow }) {
           href={`https://wa.me/${customer.phone.replace(/\D/g, '')}`}
           target="_blank"
           rel="noreferrer"
-          className="ops-focus-ring hover:text-primary mt-1 inline-flex items-center gap-1 rounded-sm text-xs text-slate-500"
+          className="ops-focus-ring hover:text-primary text-muted-foreground mt-1 inline-flex items-center gap-1 rounded-sm text-xs"
         >
           <Phone className="h-3 w-3" />
           {compactPhone(customer.phone)}
         </a>
       </div>
 
-      <div className="min-w-0 text-sm text-slate-400">
+      <div className="text-muted-foreground min-w-0 text-sm">
         <p className="truncate">
           {customer.preferred_services_summary || 'No service preference'}
         </p>
-        <p className="mt-1 truncate text-xs text-slate-500">
+        <p className="text-muted-foreground mt-1 truncate text-xs">
           {customer.preferred_stylist_name || 'No stylist preference'}
         </p>
       </div>
@@ -190,7 +190,7 @@ function CustomerRow({ customer }: { customer: SaluCustomerRow }) {
         {customer.last_intent ? (
           <Badge
             variant="outline"
-            className="max-w-full truncate border-slate-700 bg-slate-800 text-slate-300"
+            className="border-border bg-muted text-foreground/80 max-w-full truncate"
           >
             {customer.last_intent}
           </Badge>
@@ -198,19 +198,21 @@ function CustomerRow({ customer }: { customer: SaluCustomerRow }) {
         {customer.conversation_id ? (
           <Link
             href={`/inbox?conversation=${customer.conversation_id}`}
-            className="ops-focus-ring hover:border-primary/50 inline-flex min-h-8 items-center gap-1 rounded-md border border-slate-700 bg-slate-800 px-2 py-0.5 text-xs text-slate-300 hover:text-white"
+            className="ops-focus-ring hover:border-primary/50 border-border bg-muted text-foreground/80 hover:text-foreground inline-flex min-h-8 items-center gap-1 rounded-md border px-2 py-0.5 text-xs"
           >
             <MessageSquareText className="h-3 w-3" />
             open chat
           </Link>
         ) : null}
-        {idle ? <span className="text-sm text-slate-500">Idle</span> : null}
+        {idle ? (
+          <span className="text-muted-foreground text-sm">Idle</span>
+        ) : null}
       </div>
 
-      <div className="text-sm text-slate-500">
+      <div className="text-muted-foreground text-sm">
         {customer.last_seen_at ? (
           <>
-            <span className="block text-slate-400">
+            <span className="text-muted-foreground block">
               {formatOpsAge(customer.last_seen_at)}
             </span>
             <span>{formatDateTime(customer.last_seen_at)}</span>
@@ -222,8 +224,8 @@ function CustomerRow({ customer }: { customer: SaluCustomerRow }) {
 
       {customer.last_customer_message || customer.profile_summary ? (
         <div className="min-w-0 lg:col-span-4">
-          <div className="flex items-start gap-2 rounded-lg border border-slate-800 bg-slate-950/50 p-3 text-xs text-slate-400">
-            <MessageSquareText className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-500" />
+          <div className="border-border bg-background/50 text-muted-foreground flex items-start gap-2 rounded-lg border p-3 text-xs">
+            <MessageSquareText className="text-muted-foreground mt-0.5 h-3.5 w-3.5 shrink-0" />
             <p className="line-clamp-2">
               {customer.last_customer_message || customer.profile_summary}
             </p>
@@ -262,11 +264,11 @@ function StateBadge({
 
 function MiniStat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-lg border border-slate-800 bg-slate-900 px-3 py-2">
-      <p className="text-lg font-semibold text-white tabular-nums">
+    <div className="border-border bg-card rounded-lg border px-3 py-2">
+      <p className="text-foreground text-lg font-semibold tabular-nums">
         {value.toLocaleString('en-IN')}
       </p>
-      <p className="text-xs text-slate-500">{label}</p>
+      <p className="text-muted-foreground text-xs">{label}</p>
     </div>
   );
 }

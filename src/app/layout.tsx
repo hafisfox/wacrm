@@ -63,7 +63,13 @@ export default function RootLayout({
     <html
       lang="en"
       data-theme={DEFAULT_THEME}
-      className="h-full antialiased"
+      // `dark` is static, not a toggle: all five themes are dark, and
+      // `viewport.colorScheme` below declares the same. It activates the
+      // `dark:` refinements inside components/ui/* (input fills, avatar
+      // blend mode, destructive tints) which were previously inert —
+      // globals.css maps the variant to `&:is(.dark *)`, and nothing
+      // used to add the class.
+      className="dark h-full antialiased"
       // The `theme-boot` script below rewrites `data-theme` on <html>
       // from localStorage before React hydrates, so for any non-default
       // theme the client DOM intentionally differs from the server-
@@ -86,10 +92,12 @@ export default function RootLayout({
             theme="dark"
             position="top-right"
             toastOptions={{
+              // Token-driven so toasts follow the picked theme instead
+              // of sitting on a fixed slate surface.
               style: {
-                background: 'rgb(30 41 59)',
-                border: '1px solid rgb(51 65 85)',
-                color: 'white',
+                background: 'var(--popover)',
+                border: '1px solid var(--border)',
+                color: 'var(--popover-foreground)',
               },
             }}
           />

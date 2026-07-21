@@ -43,26 +43,26 @@ export default function ForgotPasswordPage() {
 
   if (success) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4">
-        <Card className="w-full max-w-md border-slate-800 bg-slate-900">
+      <div className="bg-background flex min-h-screen items-center justify-center px-4">
+        <Card className="w-full max-w-md">
           <CardHeader className="items-center text-center">
             <div className="bg-primary/10 mb-2 flex h-12 w-12 items-center justify-center rounded-xl">
               <CheckCircle className="text-primary h-6 w-6" />
             </div>
-            <CardTitle className="text-xl text-white">
+            <CardTitle className="text-foreground text-xl">
               Check your email
             </CardTitle>
-            <CardDescription className="text-slate-400">
+            <CardDescription className="text-muted-foreground">
               We&apos;ve sent a password reset link to{' '}
-              <span className="text-white">{email}</span>. Please check your
-              inbox.
+              <span className="text-foreground">{email}</span>. Please check
+              your inbox.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Link href="/login">
               <Button
                 variant="outline"
-                className="w-full border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white"
+                className="border-border text-foreground/80 hover:bg-muted hover:text-foreground w-full"
               >
                 Back to sign in
               </Button>
@@ -74,14 +74,16 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4">
-      <Card className="w-full max-w-md border-slate-800 bg-slate-900">
+    <div className="bg-background flex min-h-screen items-center justify-center px-4">
+      <Card className="w-full max-w-md">
         <CardHeader className="items-center text-center">
           <div className="bg-primary/10 mb-2 flex h-12 w-12 items-center justify-center rounded-xl">
             <MessageSquare className="text-primary h-6 w-6" />
           </div>
-          <CardTitle className="text-xl text-white">Reset password</CardTitle>
-          <CardDescription className="text-slate-400">
+          <CardTitle className="text-foreground text-xl">
+            Reset password
+          </CardTitle>
+          <CardDescription className="text-muted-foreground">
             Enter the email you use for Salu Operations and we&apos;ll send you
             a reset link.
           </CardDescription>
@@ -95,7 +97,7 @@ export default function ForgotPasswordPage() {
             )}
 
             <div className="flex flex-col gap-2">
-              <Label htmlFor="email" className="text-slate-300">
+              <Label htmlFor="email" className="text-foreground/80">
                 Email
               </Label>
               <Input
@@ -105,7 +107,7 @@ export default function ForgotPasswordPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="focus-visible:border-primary focus-visible:ring-primary/20 border-slate-700 bg-slate-800 text-white placeholder:text-slate-500"
+                className="focus-visible:border-primary focus-visible:ring-primary/20 border-border bg-muted text-foreground placeholder:text-muted-foreground"
               />
             </div>
 
@@ -120,7 +122,7 @@ export default function ForgotPasswordPage() {
 
           <Link
             href="/login"
-            className="mt-6 flex items-center justify-center gap-2 text-sm text-slate-400 hover:text-slate-300"
+            className="text-muted-foreground hover:text-foreground/80 mt-6 flex items-center justify-center gap-2 text-sm"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to sign in

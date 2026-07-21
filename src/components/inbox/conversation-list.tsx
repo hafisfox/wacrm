@@ -32,9 +32,9 @@ interface ConversationListProps {
 }
 
 const STATUS_COLORS: Record<ConversationStatus, string> = {
-  open: 'bg-[#00a884]',
+  open: 'bg-chat-accent',
   pending: 'bg-amber-500',
-  closed: 'bg-[#8696a0]',
+  closed: 'bg-chat-muted',
 };
 
 const FILTER_OPTIONS: {
@@ -162,39 +162,39 @@ export function ConversationList({
   const activeFilter = FILTER_OPTIONS.find((o) => o.value === filter);
 
   return (
-    <div className="flex h-full w-full flex-col border-r border-[#233138] bg-[#111b21] lg:w-[360px]">
-      <div className="flex h-[61px] shrink-0 items-center justify-between border-b border-[#233138] px-4">
+    <div className="border-chat-line bg-chat-panel flex h-full w-full flex-col border-r lg:w-[360px]">
+      <div className="border-chat-line flex h-[61px] shrink-0 items-center justify-between border-b px-4">
         <div>
-          <p className="text-[10px] font-semibold tracking-[0.14em] text-[#8696a0] uppercase">
+          <p className="text-chat-muted text-[10px] font-semibold tracking-[0.14em] uppercase">
             Live inbox
           </p>
-          <h2 className="text-lg font-semibold text-[#e9edef]">WhatsApp</h2>
+          <h2 className="text-chat-ink text-lg font-semibold">WhatsApp</h2>
         </div>
-        <span className="rounded-full bg-[#00a884]/15 px-2 py-1 text-[10px] font-semibold text-[#67d8b5]">
+        <span className="bg-chat-accent/15 text-chat-accent-soft rounded-full px-2 py-1 text-[10px] font-semibold">
           Live
         </span>
       </div>
       {/* Search + Filter */}
-      <div className="shrink-0 space-y-3 border-b border-[#233138] p-3">
+      <div className="border-chat-line shrink-0 space-y-3 border-b p-3">
         <div className="relative">
-          <Search className="absolute top-1/2 left-4 h-4 w-4 -translate-y-1/2 text-[#8696a0]" />
+          <Search className="text-chat-muted absolute top-1/2 left-4 h-4 w-4 -translate-y-1/2" />
           <Input
             value={search}
             onChange={handleSearchChange}
             aria-label="Search conversations"
             placeholder="Search conversations"
-            className="h-10 rounded-full border-transparent bg-[#202c33] pl-11 text-sm text-[#e9edef] placeholder-[#8696a0] focus:border-transparent focus:ring-0"
+            className="bg-chat-surface text-chat-ink placeholder-chat-muted h-10 rounded-full border-transparent pl-11 text-sm focus:border-transparent focus:ring-0"
           />
         </div>
 
         <DropdownMenu>
-          <DropdownMenuTrigger className="inline-flex h-9 items-center justify-center gap-1 rounded-full border border-[#2a3942] px-3 text-xs font-medium text-[#aebac1] hover:bg-[#202c33] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#00a884]">
+          <DropdownMenuTrigger className="border-chat-surface-strong text-chat-ink-3 hover:bg-chat-surface hover:text-chat-ink focus-visible:outline-chat-accent inline-flex h-9 items-center justify-center gap-1 rounded-full border px-3 text-xs font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">
             {activeFilter?.label ?? 'All'}
             <ChevronDown className="h-3 w-3" />
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="start"
-            className="border-[#233138] bg-[#202c33]"
+            className="border-chat-line bg-chat-surface"
           >
             {FILTER_OPTIONS.map((opt) => (
               <DropdownMenuItem
@@ -202,7 +202,7 @@ export function ConversationList({
                 onClick={() => setFilter(opt.value)}
                 className={cn(
                   'text-sm',
-                  filter === opt.value ? 'text-[#00a884]' : 'text-[#d1d7db]'
+                  filter === opt.value ? 'text-chat-accent' : 'text-chat-ink-2'
                 )}
               >
                 {opt.label}
@@ -225,7 +225,7 @@ export function ConversationList({
           </div>
         ) : filtered.length === 0 ? (
           <div className="px-4 py-12 text-center">
-            <p className="text-sm text-[#8696a0]">No conversations found</p>
+            <p className="text-chat-muted text-sm">No conversations found</p>
           </div>
         ) : (
           <div className="flex flex-col">
@@ -275,12 +275,12 @@ function ConversationItem({
       onClick={handleClick}
       aria-current={isActive ? 'true' : undefined}
       className={cn(
-        'flex w-full items-start gap-3 px-3 py-3 text-left transition-colors hover:bg-[#202c33] focus-visible:relative focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#00a884]',
-        isActive && 'bg-[#2a3942]'
+        'hover:bg-chat-surface focus-visible:outline-chat-accent flex w-full items-start gap-3 px-3 py-3 text-left transition-colors focus-visible:relative focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px]',
+        isActive && 'bg-chat-surface-strong'
       )}
     >
       {/* Avatar */}
-      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#2a3942] text-sm font-medium text-[#e9edef]">
+      <div className="bg-chat-surface-strong text-chat-ink flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-sm font-medium">
         {contact?.avatar_url ? (
           <Image
             src={contact.avatar_url}
@@ -299,7 +299,7 @@ function ConversationItem({
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
-            <span className="truncate text-[15px] font-medium text-[#e9edef]">
+            <span className="text-chat-ink truncate text-[15px] font-medium">
               {displayName}
             </span>
             {(conversation.bot_paused ||
@@ -310,15 +310,17 @@ function ConversationItem({
               </span>
             )}
           </div>
-          <span className="shrink-0 text-[11px] text-[#8696a0]">{timeAgo}</span>
+          <span className="text-chat-muted shrink-0 text-[11px]">
+            {timeAgo}
+          </span>
         </div>
         <div className="mt-0.5 flex items-center justify-between gap-2">
-          <p className="truncate text-sm text-[#8696a0]">
+          <p className="text-chat-muted truncate text-sm">
             {preview || 'No messages yet'}
           </p>
           <div className="flex shrink-0 items-center gap-1.5">
             {conversation.unread_count > 0 && (
-              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[#00a884] px-1 text-[11px] font-bold text-[#111b21]">
+              <span className="bg-chat-accent text-chat-panel flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-bold">
                 {conversation.unread_count}
               </span>
             )}

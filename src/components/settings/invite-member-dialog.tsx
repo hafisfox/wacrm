@@ -185,33 +185,36 @@ export function InviteMemberDialog({
         onOpenChange(next);
       }}
     >
-      <DialogContent className="bg-slate-900 border-slate-700 sm:max-w-md">
+      <DialogContent className="bg-card border-border sm:max-w-md">
         {result ? (
           <>
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-white">
-                <Sparkles className="size-4 text-primary" />
+              <DialogTitle className="text-foreground flex items-center gap-2">
+                <Sparkles className="text-primary size-4" />
                 Invite created
               </DialogTitle>
-              <DialogDescription className="text-slate-400">
-                Share this link with your new teammate. They&apos;ll be able
-                to sign up (or sign in) and join the account as{' '}
-                <span className="font-medium text-slate-300">{result.role}</span>
+              <DialogDescription className="text-muted-foreground">
+                Share this link with your new teammate. They&apos;ll be able to
+                sign up (or sign in) and join the account as{' '}
+                <span className="text-foreground/80 font-medium">
+                  {result.role}
+                </span>
                 . The link is valid for{' '}
-                <span className="font-medium text-slate-300">
-                  {result.expiresInDays} day{result.expiresInDays === 1 ? '' : 's'}
+                <span className="text-foreground/80 font-medium">
+                  {result.expiresInDays} day
+                  {result.expiresInDays === 1 ? '' : 's'}
                 </span>
                 .
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-3 py-2">
-              <Label className="text-slate-300">Invite link</Label>
+              <Label className="text-foreground/80">Invite link</Label>
               <div className="flex gap-2">
                 <Input
                   readOnly
                   value={result.url}
-                  className="bg-slate-800 border-slate-700 text-white font-mono text-xs"
+                  className="bg-muted border-border text-foreground font-mono text-xs"
                   onFocus={(e) => e.currentTarget.select()}
                 />
                 <Button
@@ -225,7 +228,7 @@ export function InviteMemberDialog({
               </div>
 
               {/* Higher-contrast amber than the original 10% / amber-200.
-                  Reviewed against slate-900 to meet WCAG AAA for body
+                  Reviewed against the `--card` surface to meet WCAG AAA for body
                   text (target ratio 7:1). Border bumped to /50, bg to
                   /15, foreground promoted to amber-100 for the strong
                   intro, amber-200 for the body. */}
@@ -233,9 +236,9 @@ export function InviteMemberDialog({
                 <strong className="font-semibold text-amber-100">
                   Save this link now.
                 </strong>{' '}
-                We never store the plaintext — once you close this dialog
-                the URL is gone. To re-share, revoke this invite and create
-                a new one.
+                We never store the plaintext — once you close this dialog the
+                URL is gone. To re-share, revoke this invite and create a new
+                one.
               </div>
 
               {/* Anchor styled with `buttonVariants` rather than wrapping
@@ -250,7 +253,7 @@ export function InviteMemberDialog({
                 className={buttonVariants({
                   variant: 'outline',
                   className:
-                    'w-full border-slate-700 text-slate-300 hover:bg-slate-800',
+                    'border-border text-foreground/80 hover:bg-muted w-full',
                 })}
               >
                 <MessageCircle className="size-4" />
@@ -258,7 +261,7 @@ export function InviteMemberDialog({
               </a>
             </div>
 
-            <DialogFooter className="bg-slate-900 border-slate-700">
+            <DialogFooter className="bg-card border-border">
               <Button
                 onClick={() => onOpenChange(false)}
                 className="bg-primary hover:bg-primary/90 text-primary-foreground"
@@ -270,21 +273,23 @@ export function InviteMemberDialog({
         ) : (
           <>
             <DialogHeader>
-              <DialogTitle className="text-white">Invite a teammate</DialogTitle>
-              <DialogDescription className="text-slate-400">
-                Generate a one-time invite link. Share it via WhatsApp,
-                Slack, or any channel you like — no email service required.
+              <DialogTitle className="text-foreground">
+                Invite a teammate
+              </DialogTitle>
+              <DialogDescription className="text-muted-foreground">
+                Generate a one-time invite link. Share it via WhatsApp, Slack,
+                or any channel you like — no email service required.
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4 py-2">
               <div className="space-y-2">
-                <Label className="text-slate-300">Role</Label>
+                <Label className="text-foreground/80">Role</Label>
                 <Select
                   value={role}
                   onValueChange={(v) => v && setRole(v as InviteRole)}
                 >
-                  <SelectTrigger className="w-full bg-slate-800 border-slate-700 text-white">
+                  <SelectTrigger className="bg-muted border-border text-foreground w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -293,18 +298,15 @@ export function InviteMemberDialog({
                     <SelectItem value="viewer">Viewer</SelectItem>
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-slate-500">
+                <p className="text-muted-foreground text-xs">
                   {ROLE_DESCRIPTIONS[role]}
                 </p>
               </div>
 
               <div className="space-y-2">
-                <Label className="text-slate-300">Link valid for</Label>
-                <Select
-                  value={expiry}
-                  onValueChange={(v) => v && setExpiry(v)}
-                >
-                  <SelectTrigger className="w-full bg-slate-800 border-slate-700 text-white">
+                <Label className="text-foreground/80">Link valid for</Label>
+                <Select value={expiry} onValueChange={(v) => v && setExpiry(v)}>
+                  <SelectTrigger className="bg-muted border-border text-foreground w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -318,29 +320,31 @@ export function InviteMemberDialog({
               </div>
 
               <div className="space-y-2">
-                <Label className="text-slate-300">
+                <Label className="text-foreground/80">
                   Label{' '}
-                  <span className="text-xs text-slate-500">(optional)</span>
+                  <span className="text-muted-foreground text-xs">
+                    (optional)
+                  </span>
                 </Label>
                 <Input
                   placeholder="e.g. Sara — support team"
                   value={label}
                   onChange={(e) => setLabel(e.target.value)}
                   maxLength={MAX_LABEL_LEN}
-                  className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
+                  className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
                 />
-                <p className="text-xs text-slate-500">
+                <p className="text-muted-foreground text-xs">
                   Helps you remember who you sent the link to in the pending
                   list below.
                 </p>
               </div>
             </div>
 
-            <DialogFooter className="bg-slate-900 border-slate-700">
+            <DialogFooter className="bg-card border-border">
               <Button
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                className="border-slate-700 text-slate-300 hover:bg-slate-800"
+                className="border-border text-foreground/80 hover:bg-muted"
               >
                 Cancel
               </Button>

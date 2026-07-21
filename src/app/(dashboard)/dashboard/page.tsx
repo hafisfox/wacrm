@@ -57,7 +57,7 @@ export default async function DashboardPage() {
         <div>
           <p className="ops-eyebrow">Today&apos;s control room</p>
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
+            <h1 className="text-foreground text-2xl font-bold tracking-tight sm:text-3xl">
               {salonName}
             </h1>
             <StatusBadge tone={data.n8n.ok ? 'good' : 'warn'}>
@@ -68,7 +68,7 @@ export default async function DashboardPage() {
                   : 'n8n not configured'}
             </StatusBadge>
           </div>
-          <p className="mt-2 text-sm text-slate-400">
+          <p className="text-muted-foreground mt-2 text-sm">
             Prioritise customer handoffs, booking exceptions, and today&apos;s
             appointments.
           </p>
@@ -196,9 +196,9 @@ export default async function DashboardPage() {
             {data.n8n.workflows.map((workflow) => (
               <div
                 key={workflow.name}
-                className="flex items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950/50 px-3 py-2"
+                className="border-border bg-background/50 flex items-center justify-between gap-3 rounded-lg border px-3 py-2"
               >
-                <span className="min-w-0 truncate text-sm text-slate-300">
+                <span className="text-foreground/80 min-w-0 truncate text-sm">
                   {workflow.name}
                 </span>
                 <div className="flex shrink-0 items-center gap-2">
@@ -211,9 +211,9 @@ export default async function DashboardPage() {
                 </div>
               </div>
             ))}
-            <div className="border-t border-slate-800 pt-3">
+            <div className="border-border border-t pt-3">
               <div className="mb-2 flex items-center justify-between gap-3">
-                <p className="text-xs font-medium tracking-wide text-slate-500 uppercase">
+                <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
                   Dashboard Bridge
                 </p>
                 <StatusBadge
@@ -228,7 +228,7 @@ export default async function DashboardPage() {
                     key={check.key}
                     className="flex items-center justify-between gap-3 text-xs"
                   >
-                    <span className="truncate text-slate-400">
+                    <span className="text-muted-foreground truncate">
                       {check.label}
                     </span>
                     <StatusBadge tone={check.configured ? 'good' : 'danger'}>
@@ -269,19 +269,19 @@ function MetricTile({
         'ops-surface p-5',
         tone === 'warn' && 'border-amber-500/30',
         tone === 'danger' && 'border-red-500/30',
-        tone === 'normal' && 'border-slate-800'
+        tone === 'normal' && 'border-border'
       )}
     >
       <div className="flex items-start justify-between">
-        <p className="text-sm font-medium text-slate-400">{label}</p>
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-800 text-slate-500">
+        <p className="text-muted-foreground text-sm font-medium">{label}</p>
+        <div className="bg-muted text-muted-foreground flex h-8 w-8 items-center justify-center rounded-lg">
           <Icon className="h-4 w-4" />
         </div>
       </div>
-      <p className="mt-3 text-[28px] leading-none font-bold text-white tabular-nums">
+      <p className="text-foreground mt-3 text-[28px] leading-none font-bold tabular-nums">
         {value}
       </p>
-      <p className="mt-2 text-sm text-slate-500">{detail}</p>
+      <p className="text-muted-foreground mt-2 text-sm">{detail}</p>
     </div>
   );
 }
@@ -348,11 +348,11 @@ function PriorityStrip({ data }: { data: SaluDashboardData }) {
           <h2 id="priority-title" className="ops-section-title">
             Act next
           </h2>
-          <p className="mt-0.5 text-xs text-slate-500">
+          <p className="text-muted-foreground mt-0.5 text-xs">
             The queues that can affect a customer&apos;s experience today.
           </p>
         </div>
-        <span className="text-xs font-medium text-slate-500">
+        <span className="text-muted-foreground text-xs font-medium">
           Live operational view
         </span>
       </div>
@@ -362,7 +362,7 @@ function PriorityStrip({ data }: { data: SaluDashboardData }) {
             key={item.label}
             href={item.href}
             className={cn(
-              'ops-focus-ring group hover:border-primary/50 rounded-xl border bg-slate-950/50 p-4 transition-colors hover:bg-slate-900/80',
+              'ops-focus-ring group hover:border-primary/50 bg-background/50 hover:bg-card/80 rounded-xl border p-4 transition-colors',
               item.tone === 'good' && 'border-emerald-500/25',
               item.tone === 'warn' && 'border-amber-500/30',
               item.tone === 'danger' && 'border-red-500/30'
@@ -370,17 +370,17 @@ function PriorityStrip({ data }: { data: SaluDashboardData }) {
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-xs font-medium tracking-wide text-slate-500 uppercase">
+                <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
                   {item.label}
                 </p>
-                <p className="mt-2 text-2xl font-bold text-white tabular-nums">
+                <p className="text-foreground mt-2 text-2xl font-bold tabular-nums">
                   {item.value.toLocaleString('en-IN')}
                 </p>
-                <p className="mt-1 truncate text-sm text-slate-400">
+                <p className="text-muted-foreground mt-1 truncate text-sm">
                   {item.detail}
                 </p>
               </div>
-              <ArrowRight className="group-hover:text-primary mt-1 h-4 w-4 shrink-0 text-slate-600 transition-colors" />
+              <ArrowRight className="group-hover:text-primary text-muted-foreground/70 mt-1 h-4 w-4 shrink-0 transition-colors" />
             </div>
           </Link>
         ))}
@@ -402,8 +402,8 @@ function Panel({
 }) {
   return (
     <section className={cn('ops-surface', className)}>
-      <div className="flex items-center justify-between gap-3 border-b border-slate-800 px-4 py-3">
-        <h2 className="text-sm font-semibold text-white">{title}</h2>
+      <div className="border-border flex items-center justify-between gap-3 border-b px-4 py-3">
+        <h2 className="text-foreground text-sm font-semibold">{title}</h2>
         {action}
       </div>
       <div className="p-4">{children}</div>
@@ -423,19 +423,19 @@ function BookingList({
   if (!bookings.length) return <EmptyLine text={emptyText} />;
 
   return (
-    <div className="divide-y divide-slate-800">
+    <div className="divide-border divide-y">
       {bookings.map((booking) => (
         <div
           key={booking.booking_id}
           className="grid gap-3 py-3 sm:grid-cols-[108px_1fr_auto]"
         >
-          <div className="flex items-center gap-2 text-sm font-semibold text-white">
-            <Clock3 className="h-4 w-4 text-slate-500" />
+          <div className="text-foreground flex items-center gap-2 text-sm font-semibold">
+            <Clock3 className="text-muted-foreground h-4 w-4" />
             <span>
               {showDate ? (
                 <>
                   {formatDate(booking.appointment_date)}
-                  <span className="block text-xs font-normal text-slate-500">
+                  <span className="text-muted-foreground block text-xs font-normal">
                     {formatTime(booking.appointment_time)}
                   </span>
                 </>
@@ -445,10 +445,10 @@ function BookingList({
             </span>
           </div>
           <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-white">
+            <p className="text-foreground truncate text-sm font-medium">
               {booking.customer_name || compactPhone(booking.phone)}
             </p>
-            <p className="mt-1 truncate text-xs text-slate-500">
+            <p className="text-muted-foreground mt-1 truncate text-xs">
               {booking.service_assignments_summary ||
                 [
                   booking.service_labels || booking.service_label || 'Service',
@@ -490,14 +490,14 @@ function HandoffQueue({ rows }: { rows: SaluHandoffRow[] }) {
         <Link
           key={row.conversation_id}
           href={`/inbox?conversation=${row.conversation_id}`}
-          className="hover:border-primary/40 block rounded-lg border border-slate-800 bg-slate-950/50 p-3 transition-colors hover:bg-slate-950"
+          className="hover:border-primary/40 border-border bg-background/50 hover:bg-background block rounded-lg border p-3 transition-colors"
         >
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-white">
+              <p className="text-foreground truncate text-sm font-medium">
                 {row.customer_name || compactPhone(row.phone)}
               </p>
-              <p className="mt-1 line-clamp-2 text-xs text-slate-500">
+              <p className="text-muted-foreground mt-1 line-clamp-2 text-xs">
                 {row.last_message_text ||
                   row.handoff_reason ||
                   'Needs human help'}
@@ -509,7 +509,7 @@ function HandoffQueue({ rows }: { rows: SaluHandoffRow[] }) {
                 : formatOpsAge(row.handoff_requested_at || row.last_message_at)}
             </StatusBadge>
           </div>
-          <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
+          <div className="text-muted-foreground mt-3 flex flex-wrap gap-2 text-xs">
             <span>{compactPhone(row.phone)}</span>
             <span>{row.handoff_category || 'handoff'}</span>
             {row.handoff_reason ? <span>{row.handoff_reason}</span> : null}
@@ -532,14 +532,14 @@ function PaymentQueue({ rows }: { rows: SaluPaymentQueueRow[] }) {
       {rows.map((row) => (
         <div
           key={`${row.booking_id}-${row.reference_id}`}
-          className="rounded-lg border border-slate-800 bg-slate-950/50 p-3"
+          className="border-border bg-background/50 rounded-lg border p-3"
         >
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-white">
+              <p className="text-foreground truncate text-sm font-medium">
                 {row.customer_name || compactPhone(row.phone)}
               </p>
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="text-muted-foreground mt-1 text-xs">
                 {formatDate(row.appointment_date)} at{' '}
                 {formatTime(row.appointment_time)} ·{' '}
                 {row.service_assignments_summary ||
@@ -557,7 +557,7 @@ function PaymentQueue({ rows }: { rows: SaluPaymentQueueRow[] }) {
               </StatusBadge>
             </div>
           </div>
-          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+          <div className="text-muted-foreground mt-3 flex flex-wrap items-center gap-2 text-xs">
             <span>{formatPaise(row.amount_paise)} deposit</span>
             {row.expires_at || row.hold_expires_at ? (
               <span>
@@ -604,23 +604,23 @@ function ActivityList({ rows }: { rows: SaluActivityRow[] }) {
     return <EmptyLine text="No WhatsApp events recorded yet." />;
 
   return (
-    <div className="divide-y divide-slate-800">
+    <div className="divide-border divide-y">
       {rows.map((row) => (
         <div
           key={row.event_id}
           className="grid gap-3 py-3 sm:grid-cols-[160px_1fr_auto]"
         >
-          <div className="text-xs text-slate-500">
-            <span className="block text-slate-400">
+          <div className="text-muted-foreground text-xs">
+            <span className="text-muted-foreground block">
               {formatOpsAge(row.created_at)}
             </span>
             <span>{formatDateTime(row.created_at)}</span>
           </div>
           <div className="min-w-0">
-            <p className="truncate text-sm text-white">
+            <p className="text-foreground truncate text-sm">
               {row.raw_text || row.summary || row.intent || row.event_type}
             </p>
-            <p className="mt-1 truncate text-xs text-slate-500">
+            <p className="text-muted-foreground mt-1 truncate text-xs">
               {compactPhone(row.phone)} · {row.route || 'route'} ·{' '}
               {row.intent || 'intent'}
             </p>
@@ -690,9 +690,9 @@ function SetupHealth({ data }: { data: SaluDashboardData }) {
         {items.map((item) => (
           <div
             key={item.label}
-            className="flex items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950/50 px-3 py-2"
+            className="border-border bg-background/50 flex items-center justify-between gap-3 rounded-lg border px-3 py-2"
           >
-            <span className="text-sm text-slate-400">{item.label}</span>
+            <span className="text-muted-foreground text-sm">{item.label}</span>
             <StatusBadge tone={item.tone}>
               {item.value.toLocaleString('en-IN')}
             </StatusBadge>
@@ -700,12 +700,12 @@ function SetupHealth({ data }: { data: SaluDashboardData }) {
         ))}
       </div>
 
-      <div className="rounded-lg border border-slate-800 bg-slate-950/50 p-3">
-        <div className="mb-2 flex items-center gap-2 text-sm font-medium text-white">
-          <Scissors className="h-4 w-4 text-slate-500" />
+      <div className="border-border bg-background/50 rounded-lg border p-3">
+        <div className="text-foreground mb-2 flex items-center gap-2 text-sm font-medium">
+          <Scissors className="text-muted-foreground h-4 w-4" />
           Salon Control
         </div>
-        <p className="text-sm text-slate-400">
+        <p className="text-muted-foreground text-sm">
           Services, stylists, staff mappings, salon hours, and availability are
           managed in Supabase from the control room.
         </p>
@@ -729,7 +729,7 @@ function SetupError({ error }: { error: unknown }) {
       <div className="flex items-start gap-3">
         <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-300" />
         <div>
-          <h1 className="text-lg font-semibold text-white">
+          <h1 className="text-foreground text-lg font-semibold">
             Dashboard setup needs attention
           </h1>
           <p className="mt-2 text-sm text-red-100">
@@ -737,13 +737,13 @@ function SetupError({ error }: { error: unknown }) {
               ? error.message
               : 'Unable to load Salu dashboard data.'}
           </p>
-          <p className="mt-3 text-sm text-slate-300">
+          <p className="text-foreground/80 mt-3 text-sm">
             Run{' '}
-            <code className="rounded bg-slate-950 px-1.5 py-0.5">
+            <code className="bg-background rounded px-1.5 py-0.5">
               npm run setup:salu-env
             </code>
             , then{' '}
-            <code className="rounded bg-slate-950 px-1.5 py-0.5">
+            <code className="bg-background rounded px-1.5 py-0.5">
               npm run check:salu-setup
             </code>
             .
@@ -770,7 +770,7 @@ function StatusBadge({
           'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
         tone === 'warn' && 'border-amber-500/30 bg-amber-500/10 text-amber-300',
         tone === 'danger' && 'border-red-500/30 bg-red-500/10 text-red-300',
-        tone === 'neutral' && 'border-slate-700 bg-slate-800 text-slate-300'
+        tone === 'neutral' && 'border-border bg-muted text-foreground/80'
       )}
     >
       {tone === 'good' ? <CheckCircle2 className="h-3 w-3" /> : null}
@@ -780,7 +780,7 @@ function StatusBadge({
 }
 
 function EmptyLine({ text }: { text: string }) {
-  return <p className="py-4 text-sm text-slate-500">{text}</p>;
+  return <p className="text-muted-foreground py-4 text-sm">{text}</p>;
 }
 
 function todayKey() {

@@ -56,7 +56,7 @@ import { cn } from '@/lib/utils';
 
 const API = '/api/salu/control-room';
 const INPUT =
-  'h-9 w-full rounded-lg border border-slate-700 bg-slate-950/50 px-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60';
+  'h-9 w-full rounded-lg border border-border bg-background/50 px-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60';
 const TEXTAREA = `${INPUT} h-auto py-2`;
 const WEEKDAY_SET = new Set<string>(WEEKDAYS);
 
@@ -90,11 +90,13 @@ function Field({
   hint?: string;
 }) {
   return (
-    <label className="grid gap-1.5 text-sm font-medium text-slate-200">
+    <label className="text-foreground grid gap-1.5 text-sm font-medium">
       <span>{label}</span>
       {children}
       {hint ? (
-        <span className="text-xs font-normal text-slate-500">{hint}</span>
+        <span className="text-muted-foreground text-xs font-normal">
+          {hint}
+        </span>
       ) : null}
     </label>
   );
@@ -112,7 +114,7 @@ function StatusToggle({
   disabled?: boolean;
 }) {
   return (
-    <label className="inline-flex h-8 items-center gap-2 rounded-lg border border-slate-700 bg-slate-950/40 px-2.5 text-xs text-slate-200">
+    <label className="border-border bg-background/40 text-foreground inline-flex h-8 items-center gap-2 rounded-lg border px-2.5 text-xs">
       <input
         type="checkbox"
         checked={checked}
@@ -441,20 +443,20 @@ export function SalonControlClient({
   ].filter(Boolean);
 
   return (
-    <div className="ops-page text-slate-100">
+    <div className="ops-page text-foreground">
       <div className="mx-auto flex max-w-7xl flex-col gap-5">
-        <header className="flex flex-col gap-3 border-b border-slate-800 pb-5 lg:flex-row lg:items-center lg:justify-between">
+        <header className="border-border flex flex-col gap-3 border-b pb-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <Scissors className="text-primary size-5" />
-              <h1 className="text-2xl font-semibold text-white">
+              <h1 className="text-foreground text-2xl font-semibold">
                 Salon Control
               </h1>
               <Badge variant={data.readiness.ready ? 'default' : 'destructive'}>
                 {data.readiness.ready ? 'Booking ready' : 'Setup needed'}
               </Badge>
             </div>
-            <p className="mt-1 text-sm text-slate-400">
+            <p className="text-muted-foreground mt-1 text-sm">
               Manage the customer-facing services, team, and booking schedule in
               one place.
             </p>
@@ -514,7 +516,7 @@ export function SalonControlClient({
         ) : null}
 
         <Tabs defaultValue="overview">
-          <TabsList className="flex w-full justify-start gap-1 overflow-x-auto border border-slate-800 bg-slate-900 p-1">
+          <TabsList className="border-border bg-card flex w-full justify-start gap-1 overflow-x-auto border p-1">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="services">Services</TabsTrigger>
             <TabsTrigger value="team">Team & expertise</TabsTrigger>
@@ -680,13 +682,13 @@ function Metric({
   value: number;
 }) {
   return (
-    <Card className="border-slate-800 bg-slate-900/60">
+    <Card className="bg-card/60">
       <CardContent className="p-4">
-        <div className="flex items-center justify-between text-sm text-slate-400">
+        <div className="text-muted-foreground flex items-center justify-between text-sm">
           <span>{label}</span>
           <Icon className="text-primary size-4" />
         </div>
-        <strong className="mt-2 block text-2xl text-white">{value}</strong>
+        <strong className="text-foreground mt-2 block text-2xl">{value}</strong>
       </CardContent>
     </Card>
   );
@@ -708,9 +710,9 @@ function SectionHeader({
       <div>
         <div className="flex items-center gap-2">
           <Icon className="text-primary size-5" />
-          <h2 className="text-lg font-semibold text-white">{title}</h2>
+          <h2 className="text-foreground text-lg font-semibold">{title}</h2>
         </div>
-        <p className="mt-1 text-sm text-slate-400">{description}</p>
+        <p className="text-muted-foreground mt-1 text-sm">{description}</p>
       </div>
       {action}
     </div>
@@ -738,7 +740,7 @@ function SalonDetails({
     if (await onSave({ ...form })) toast.success('Salon details updated');
   }
   return (
-    <Card className="border-slate-800 bg-slate-900/60">
+    <Card className="bg-card/60">
       <CardHeader>
         <CardTitle>Salon details</CardTitle>
       </CardHeader>
@@ -794,21 +796,21 @@ function SalonDetails({
               />
             </Field>
           </div>
-          <div className="rounded-lg border border-slate-800 bg-slate-950/40 p-3 lg:col-span-2">
-            <p className="text-sm font-medium text-slate-200">
+          <div className="border-border bg-background/40 rounded-lg border p-3 lg:col-span-2">
+            <p className="text-foreground text-sm font-medium">
               Customer-facing booking hours
             </p>
-            <p className="mt-1 text-sm text-slate-400">
+            <p className="text-muted-foreground mt-1 text-sm">
               These are generated from the main weekly schedule so WhatsApp and
               booking slots stay aligned.
             </p>
-            <p className="mt-2 text-sm text-white">
+            <p className="text-foreground mt-2 text-sm">
               {config.hours ||
                 'Set your weekly schedule to generate customer hours.'}
             </p>
           </div>
-          <details className="rounded-lg border border-slate-800 p-3 lg:col-span-2">
-            <summary className="cursor-pointer text-sm font-medium text-slate-200">
+          <details className="border-border rounded-lg border p-3 lg:col-span-2">
+            <summary className="text-foreground cursor-pointer text-sm font-medium">
               Advanced bot policy
             </summary>
             <div className="mt-3">
@@ -855,16 +857,13 @@ function ServiceCard({
   onDeactivate: () => void;
 }) {
   return (
-    <Card
-      className={cn(
-        'border-slate-800 bg-slate-900/60',
-        !service.active && 'opacity-60'
-      )}
-    >
+    <Card className={cn('bg-card/60', !service.active && 'opacity-60')}>
       <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="font-semibold text-white">{service.service_name}</h3>
+            <h3 className="text-foreground font-semibold">
+              {service.service_name}
+            </h3>
             <Badge variant={service.active ? 'default' : 'outline'}>
               {service.active ? 'Active' : 'Inactive'}
             </Badge>
@@ -876,7 +875,7 @@ function ServiceCard({
               <Badge variant="outline">No deposit</Badge>
             )}
           </div>
-          <p className="mt-1 text-sm text-slate-400">
+          <p className="text-muted-foreground mt-1 text-sm">
             {service.duration_minutes} min ·{' '}
             {service.price_display || money(service.price_paise)}
           </p>
@@ -1051,8 +1050,8 @@ function ServiceEditor({
               disabled={disabled}
             />
           </div>
-          <details className="rounded-lg border border-slate-800 p-3">
-            <summary className="cursor-pointer text-sm font-medium text-slate-200">
+          <details className="border-border rounded-lg border p-3">
+            <summary className="text-foreground cursor-pointer text-sm font-medium">
               Advanced settings
             </summary>
             <div className="mt-3 grid gap-3">
@@ -1122,7 +1121,7 @@ function StylistCard({
   return (
     <Card
       className={cn(
-        'overflow-hidden border-slate-800 bg-slate-900/60',
+        'bg-card/60 overflow-hidden',
         !stylist.active && 'opacity-60'
       )}
     >
@@ -1135,14 +1134,14 @@ function StylistCard({
           />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h3 className="font-semibold text-white">
+              <h3 className="text-foreground font-semibold">
                 {stylist.stylist_name}
               </h3>
               <Badge variant={stylist.active ? 'default' : 'outline'}>
                 {stylist.active ? 'Active' : 'Inactive'}
               </Badge>
             </div>
-            <p className="mt-1 text-sm text-slate-300">
+            <p className="text-foreground/80 mt-1 text-sm">
               {stylist.specialty || 'No primary specialty yet'}
             </p>
             <div className="mt-2 flex flex-wrap gap-1">
@@ -1154,17 +1153,17 @@ function StylistCard({
             </div>
           </div>
         </div>
-        <div className="border-t border-slate-800 px-4 py-3">
-          <p className="text-xs font-medium tracking-wide text-slate-500 uppercase">
+        <div className="border-border border-t px-4 py-3">
+          <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
             Bookable services
           </p>
-          <p className="mt-1 text-sm text-slate-300">
+          <p className="text-foreground/80 mt-1 text-sm">
             {serviceNames.length
               ? serviceNames.join(' · ')
               : 'No services assigned'}
           </p>
         </div>
-        <div className="flex flex-wrap justify-end gap-2 border-t border-slate-800 bg-slate-950/20 p-3">
+        <div className="border-border bg-background/20 flex flex-wrap justify-end gap-2 border-t p-3">
           <Button
             variant="outline"
             size="icon-sm"
@@ -1228,7 +1227,7 @@ function PhotoPreview({
       src={src}
       alt={alt}
       onError={() => setBroken(true)}
-      className="size-16 shrink-0 rounded-xl object-cover ring-1 ring-slate-700"
+      className="ring-border size-16 shrink-0 rounded-xl object-cover ring-1"
     />
   );
 }
@@ -1400,7 +1399,7 @@ function StylistEditor({
                 }
               />
               <label htmlFor="stylist-photo">
-                <span className="inline-flex h-8 cursor-pointer items-center gap-1 rounded-lg border border-slate-700 px-2.5 text-xs text-slate-200 hover:bg-slate-800">
+                <span className="border-border text-foreground hover:bg-muted inline-flex h-8 cursor-pointer items-center gap-1 rounded-lg border px-2.5 text-xs">
                   <ImagePlus className="size-3.5" />
                   {imageUrl || preview ? 'Change photo' : 'Upload photo'}
                 </span>
@@ -1445,7 +1444,7 @@ function StylistEditor({
             label="Expertise tags"
             hint="Press Enter or Add after each expertise area."
           >
-            <div className="rounded-lg border border-slate-700 bg-slate-950/50 p-2">
+            <div className="border-border bg-background/50 rounded-lg border p-2">
               <div className="flex flex-wrap gap-1">
                 {skills.map((skill) => (
                   <Badge key={skill} variant="outline">
@@ -1506,10 +1505,12 @@ function StylistEditor({
             onChange={setActive}
             disabled={disabled}
           />
-          <section className="rounded-xl border border-slate-800 p-4">
+          <section className="border-border rounded-xl border p-4">
             <div>
-              <h3 className="font-medium text-white">Services and expertise</h3>
-              <p className="mt-1 text-sm text-slate-400">
+              <h3 className="text-foreground font-medium">
+                Services and expertise
+              </h3>
+              <p className="text-muted-foreground mt-1 text-sm">
                 Select the services this stylist can book. Price and duration
                 inherit from the service unless you customise them.
               </p>
@@ -1520,10 +1521,10 @@ function StylistEditor({
                 return (
                   <div
                     key={service.service_id}
-                    className="rounded-lg border border-slate-800 bg-slate-950/30 p-3"
+                    className="border-border bg-background/30 rounded-lg border p-3"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                      <label className="flex items-center gap-2 font-medium text-slate-200">
+                      <label className="text-foreground flex items-center gap-2 font-medium">
                         <input
                           type="checkbox"
                           className="accent-primary size-4"
@@ -1536,14 +1537,14 @@ function StylistEditor({
                           }
                         />
                         {service.service_name}
-                        <span className="text-sm font-normal text-slate-500">
+                        <span className="text-muted-foreground text-sm font-normal">
                           {service.duration_minutes} min ·{' '}
                           {money(service.price_paise)}
                         </span>
                       </label>
                       {assignment?.enabled ? (
                         <select
-                          className="h-8 rounded-lg border border-slate-700 bg-slate-950 px-2 text-sm text-slate-100"
+                          className="border-border bg-background text-foreground h-8 rounded-lg border px-2 text-sm"
                           value={
                             SKILL_LEVELS.includes(
                               assignment.skill_level as (typeof SKILL_LEVELS)[number]
@@ -1578,7 +1579,7 @@ function StylistEditor({
                     </div>
                     {assignment?.enabled ? (
                       <details className="mt-3">
-                        <summary className="cursor-pointer text-xs font-medium text-slate-400">
+                        <summary className="text-muted-foreground cursor-pointer text-xs font-medium">
                           Customise this service for this stylist
                         </summary>
                         <div className="mt-3 grid gap-3 sm:grid-cols-3">
@@ -1650,8 +1651,8 @@ function StylistEditor({
               })}
             </div>
           </section>
-          <details className="rounded-lg border border-slate-800 p-3">
-            <summary className="cursor-pointer text-sm font-medium text-slate-200">
+          <details className="border-border rounded-lg border p-3">
+            <summary className="text-foreground cursor-pointer text-sm font-medium">
               Advanced profile settings
             </summary>
             <div className="mt-3 grid gap-3">
@@ -1799,7 +1800,7 @@ function SchedulePanel({
           )
         }
       />
-      <Card className="border-slate-800 bg-slate-900/60">
+      <Card className="bg-card/60">
         <CardHeader>
           <CardTitle>Stylist schedule</CardTitle>
         </CardHeader>
@@ -1818,12 +1819,12 @@ function SchedulePanel({
               ))}
             </select>
           </Field>
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-950/30 p-3">
+          <div className="border-border bg-background/30 flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
             <div>
-              <p className="font-medium text-slate-200">
+              <p className="text-foreground font-medium">
                 {custom ? 'Custom weekly hours' : 'Following salon hours'}
               </p>
-              <p className="mt-1 text-sm text-slate-400">
+              <p className="text-muted-foreground mt-1 text-sm">
                 {custom
                   ? 'Days without a custom range are closed for this stylist.'
                   : 'The salon hours above are used until a custom schedule is saved.'}
@@ -1886,7 +1887,7 @@ function SchedulePanel({
           ) : null}
         </CardContent>
       </Card>
-      <Card className="border-slate-800 bg-slate-900/60">
+      <Card className="bg-card/60">
         <CardHeader>
           <CardTitle>Temporary closures</CardTitle>
         </CardHeader>
@@ -1948,28 +1949,28 @@ function SchedulePanel({
                       ? row.availability_id
                       : row.stylist_availability_id
                   }
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-800 px-3 py-2 text-sm"
+                  className="border-border flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm"
                 >
-                  <span className="font-medium text-slate-200">
+                  <span className="text-foreground font-medium">
                     {row.blackout_date}
                   </span>
-                  <span className="text-slate-400">
+                  <span className="text-muted-foreground">
                     {row.scope}
                     {row.notes ? ` · ${row.notes}` : ''}
                   </span>
                 </div>
               ))
             ) : (
-              <p className="text-sm text-slate-500">
+              <p className="text-muted-foreground text-sm">
                 No temporary closures scheduled.
               </p>
             )}
           </div>
-          <details className="mt-4 rounded-lg border border-slate-800 p-3">
-            <summary className="cursor-pointer text-sm font-medium text-slate-200">
+          <details className="border-border mt-4 rounded-lg border p-3">
+            <summary className="text-foreground cursor-pointer text-sm font-medium">
               Advanced scheduling notes
             </summary>
-            <p className="mt-2 text-sm text-slate-400">
+            <p className="text-muted-foreground mt-2 text-sm">
               Existing service-specific rules and effective date windows are
               retained. The weekly grids edit normal hours only, keeping
               temporary booking rules safe.
@@ -2047,12 +2048,12 @@ function ScheduleGrid({
     if (await onSave(rules, deactivateIds)) toast.success(`${title} saved`);
   }
   return (
-    <Card className="border-slate-800 bg-slate-900/60">
+    <Card className="bg-card/60">
       <CardHeader>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <CardTitle>{title}</CardTitle>
-            <p className="mt-1 text-sm text-slate-400">{description}</p>
+            <p className="text-muted-foreground mt-1 text-sm">{description}</p>
           </div>
           <div className="flex gap-2">
             <Button
@@ -2093,10 +2094,10 @@ function ScheduleGrid({
           return (
             <div
               key={day}
-              className="grid gap-3 rounded-lg border border-slate-800 bg-slate-950/30 p-3 md:grid-cols-[120px_1fr_auto]"
+              className="border-border bg-background/30 grid gap-3 rounded-lg border p-3 md:grid-cols-[120px_1fr_auto]"
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="font-medium text-slate-200">{day}</span>
+                <span className="text-foreground font-medium">{day}</span>
                 <StatusToggle
                   checked={Boolean(rules.length)}
                   label={rules.length ? 'Open' : 'Closed'}

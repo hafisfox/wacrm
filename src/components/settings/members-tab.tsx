@@ -99,8 +99,7 @@ const ROLE_CHIP: Record<
   owner: {
     icon: Crown,
     label: 'Owner',
-    className:
-      'border-amber-500/40 bg-amber-500/10 text-amber-300',
+    className: 'border-amber-500/40 bg-amber-500/10 text-amber-300',
   },
   admin: {
     icon: Shield,
@@ -110,12 +109,12 @@ const ROLE_CHIP: Record<
   agent: {
     icon: UserCog,
     label: 'Agent',
-    className: 'border-slate-700 bg-slate-800 text-slate-300',
+    className: 'border-border bg-muted text-foreground/80',
   },
   viewer: {
     icon: UserIcon,
     label: 'Viewer',
-    className: 'border-slate-800 bg-slate-900 text-slate-500',
+    className: 'border-border bg-card text-muted-foreground',
   },
 };
 
@@ -148,7 +147,7 @@ export function MembersTab() {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [removingMember, setRemovingMember] = useState<Member | null>(null);
   const [pendingMemberAction, setPendingMemberAction] = useState<string | null>(
-    null,
+    null
   );
 
   const loadEverything = useCallback(async () => {
@@ -200,8 +199,8 @@ export function MembersTab() {
     setPendingMemberAction(member.user_id);
     setMembers((prev) =>
       prev.map((m) =>
-        m.user_id === member.user_id ? { ...m, role: nextRole } : m,
-      ),
+        m.user_id === member.user_id ? { ...m, role: nextRole } : m
+      )
     );
     try {
       const res = await fetch(`/api/account/members/${member.user_id}`, {
@@ -217,8 +216,8 @@ export function MembersTab() {
         // `member.role === nextRole` guard at the top).
         setMembers((prev) =>
           prev.map((m) =>
-            m.user_id === member.user_id ? { ...m, role: previousRole } : m,
-          ),
+            m.user_id === member.user_id ? { ...m, role: previousRole } : m
+          )
         );
         const payload = await res.json().catch(() => ({}));
         toast.error(payload.error || 'Failed to update role');
@@ -229,8 +228,8 @@ export function MembersTab() {
       // Same revert on network failure.
       setMembers((prev) =>
         prev.map((m) =>
-          m.user_id === member.user_id ? { ...m, role: previousRole } : m,
-        ),
+          m.user_id === member.user_id ? { ...m, role: previousRole } : m
+        )
       );
       console.error('[MembersTab] role change error:', err);
       toast.error('Could not reach the server');
@@ -245,7 +244,7 @@ export function MembersTab() {
     try {
       const res = await fetch(
         `/api/account/members/${removingMember.user_id}`,
-        { method: 'DELETE' },
+        { method: 'DELETE' }
       );
       if (!res.ok) {
         const payload = await res.json().catch(() => ({}));
@@ -254,7 +253,7 @@ export function MembersTab() {
       }
       toast.success(`Removed ${removingMember.full_name || 'member'}`);
       setMembers((prev) =>
-        prev.filter((m) => m.user_id !== removingMember.user_id),
+        prev.filter((m) => m.user_id !== removingMember.user_id)
       );
       setRemovingMember(null);
     } catch (err) {
@@ -286,20 +285,22 @@ export function MembersTab() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="size-6 animate-spin text-primary" />
+        <Loader2 className="text-primary size-6 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 mt-4">
+    <div className="mt-4 space-y-6">
       {/* Header + invite button */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-white">Account members</h2>
-          <p className="text-sm text-slate-400">
-            People with access to this account. Roles control what each
-            teammate can do.
+          <h2 className="text-foreground text-lg font-semibold">
+            Account members
+          </h2>
+          <p className="text-muted-foreground text-sm">
+            People with access to this account. Roles control what each teammate
+            can do.
           </p>
         </div>
         <RequireRole min="admin">
@@ -314,9 +315,9 @@ export function MembersTab() {
       </div>
 
       {/* Roster */}
-      <Card className="bg-slate-900 border-slate-700 ring-0 ring-transparent">
+      <Card className="ring-0 ring-transparent">
         <CardContent className="p-0">
-          <ul className="divide-y divide-slate-800">
+          <ul className="divide-border divide-y">
             {members.map((member) => {
               const roleMeta = ROLE_CHIP[member.role];
               const RoleIcon = roleMeta.icon;
@@ -342,7 +343,7 @@ export function MembersTab() {
                           alt={member.full_name || 'Member'}
                         />
                       ) : null}
-                      <AvatarFallback className="bg-primary/10 text-sm font-medium text-primary">
+                      <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">
                         {(member.full_name || member.email || 'U')
                           .charAt(0)
                           .toUpperCase()}
@@ -351,17 +352,17 @@ export function MembersTab() {
 
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="truncate text-sm font-medium text-white">
+                        <span className="text-foreground truncate text-sm font-medium">
                           {member.full_name || 'Unnamed'}
                         </span>
                         {isSelf && (
-                          <Badge className="bg-slate-800 text-slate-300 border-slate-700 text-[10px] uppercase tracking-wide">
+                          <Badge className="bg-muted text-foreground/80 border-border text-[10px] tracking-wide uppercase">
                             You
                           </Badge>
                         )}
                       </div>
                       {member.email && (
-                        <p className="truncate text-xs text-slate-500">
+                        <p className="text-muted-foreground truncate text-xs">
                           {member.email}
                         </p>
                       )}
@@ -370,7 +371,7 @@ export function MembersTab() {
 
                   {/* Joined date stays desktop-only. The mobile row's
                       vertical density makes the joined date noise. */}
-                  <div className="hidden sm:block text-right text-xs text-slate-500">
+                  <div className="text-muted-foreground hidden text-right text-xs sm:block">
                     Joined {fmtDate(member.joined_at)}
                   </div>
 
@@ -394,7 +395,7 @@ export function MembersTab() {
                         }
                       >
                         <SelectTrigger
-                          className="w-32 bg-slate-800 border-slate-700 text-slate-200"
+                          className="bg-muted border-border text-foreground w-32"
                           disabled={isBusy}
                         >
                           <SelectValue />
@@ -429,7 +430,7 @@ export function MembersTab() {
                         size="sm"
                         onClick={() => setRemovingMember(member)}
                         disabled={isBusy}
-                        className="border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20 hover:border-red-500/60 hover:text-red-200"
+                        className="border-red-500/40 bg-red-500/10 text-red-300 hover:border-red-500/60 hover:bg-red-500/20 hover:text-red-200"
                       >
                         <Trash2 className="size-4" />
                       </Button>
@@ -446,11 +447,11 @@ export function MembersTab() {
       <RequireRole min="admin">
         <div>
           <div className="mb-2 flex items-center gap-2">
-            <UsersRound className="size-4 text-slate-400" />
-            <h3 className="text-sm font-semibold text-white">
+            <UsersRound className="text-muted-foreground size-4" />
+            <h3 className="text-foreground text-sm font-semibold">
               Pending invitations
             </h3>
-            <Badge className="bg-slate-800 text-slate-400 border-slate-700">
+            <Badge className="bg-muted text-muted-foreground border-border">
               {invitations.length}
             </Badge>
           </div>
@@ -460,69 +461,71 @@ export function MembersTab() {
               front (rather than letting the user discover it by
               looking for a button) keeps it from feeling like a bug. */}
           {invitations.length > 0 ? (
-            <p className="mb-3 text-xs text-slate-500">
-              The plaintext invite URL is only shown once at creation
-              for security — to re-share, revoke the invite below and
-              create a new one.
+            <p className="text-muted-foreground mb-3 text-xs">
+              The plaintext invite URL is only shown once at creation for
+              security — to re-share, revoke the invite below and create a new
+              one.
             </p>
           ) : null}
 
           {invitations.length === 0 ? (
-            <Card className="bg-slate-900 border-slate-700 ring-0 ring-transparent">
+            <Card className="ring-0 ring-transparent">
               <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-                <Mail className="size-6 text-slate-600" />
-                <p className="mt-2 text-sm text-slate-400">
+                <Mail className="text-muted-foreground/70 size-6" />
+                <p className="text-muted-foreground mt-2 text-sm">
                   No pending invitations.
                 </p>
-                <p className="mt-1 text-xs text-slate-500">
-                  Click <span className="text-slate-300">Invite member</span>{' '}
+                <p className="text-muted-foreground mt-1 text-xs">
+                  Click{' '}
+                  <span className="text-foreground/80">Invite member</span>{' '}
                   above to generate a shareable link.
                 </p>
               </CardContent>
             </Card>
           ) : (
-            <Card className="bg-slate-900 border-slate-700 ring-0 ring-transparent">
+            <Card className="ring-0 ring-transparent">
               <CardContent className="p-0">
-                <ul className="divide-y divide-slate-800">
+                <ul className="divide-border divide-y">
                   {invitations.map((inv) => {
                     const inviteRoleMeta = ROLE_CHIP[inv.role];
                     const InviteRoleIcon = inviteRoleMeta.icon;
                     return (
-                    <li
-                      key={inv.id}
-                      className="flex items-center gap-4 px-4 py-3"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-white">
-                            {inv.label || 'Untitled invite'}
-                          </span>
-                          <span
-                            className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium ${inviteRoleMeta.className}`}
-                          >
-                            <InviteRoleIcon className="size-3" />
-                            {inviteRoleMeta.label}
-                          </span>
+                      <li
+                        key={inv.id}
+                        className="flex items-center gap-4 px-4 py-3"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-foreground text-sm font-medium">
+                              {inv.label || 'Untitled invite'}
+                            </span>
+                            <span
+                              className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium ${inviteRoleMeta.className}`}
+                            >
+                              <InviteRoleIcon className="size-3" />
+                              {inviteRoleMeta.label}
+                            </span>
+                          </div>
+                          <p className="text-muted-foreground mt-0.5 text-xs">
+                            Created {fmtDate(inv.created_at)} ·{' '}
+                            {fmtExpiresIn(inv.expires_at)}
+                          </p>
                         </div>
-                        <p className="mt-0.5 text-xs text-slate-500">
-                          Created {fmtDate(inv.created_at)} · {fmtExpiresIn(inv.expires_at)}
-                        </p>
-                      </div>
 
-                      {/* Revoke: red default state, mirrors the
+                        {/* Revoke: red default state, mirrors the
                           members-tab Remove button. Pre-polish version
                           read as a neutral secondary button until
                           hover. */}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleRevoke(inv)}
-                        className="border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20 hover:border-red-500/60 hover:text-red-200"
-                      >
-                        <MailX className="size-4" />
-                        Revoke
-                      </Button>
-                    </li>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleRevoke(inv)}
+                          className="border-red-500/40 bg-red-500/10 text-red-300 hover:border-red-500/60 hover:bg-red-500/20 hover:text-red-200"
+                        >
+                          <MailX className="size-4" />
+                          Revoke
+                        </Button>
+                      </li>
                     );
                   })}
                 </ul>
@@ -544,34 +547,34 @@ export function MembersTab() {
           if (!open) setRemovingMember(null);
         }}
       >
-        <DialogContent className="bg-slate-900 border-slate-700 sm:max-w-sm">
+        <DialogContent className="bg-card border-border sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-white">
+            <DialogTitle className="text-foreground flex items-center gap-2">
               <AlertTriangle className="size-4 text-amber-400" />
               Remove member
             </DialogTitle>
-            <DialogDescription className="text-slate-400">
+            <DialogDescription className="text-muted-foreground">
               Remove{' '}
-              <span className="font-medium text-slate-300">
+              <span className="text-foreground/80 font-medium">
                 {removingMember?.full_name || 'this teammate'}
               </span>{' '}
-              from the account? They&apos;ll be signed out of this account
-              and given a fresh personal account on their next sign-in. Their
-              login isn&apos;t deleted.
+              from the account? They&apos;ll be signed out of this account and
+              given a fresh personal account on their next sign-in. Their login
+              isn&apos;t deleted.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="bg-slate-900 border-slate-700">
+          <DialogFooter className="bg-card border-border">
             <Button
               variant="outline"
               onClick={() => setRemovingMember(null)}
-              className="border-slate-700 text-slate-300 hover:bg-slate-800"
+              className="border-border text-foreground/80 hover:bg-muted"
             >
               Cancel
             </Button>
             <Button
               onClick={handleRemove}
               disabled={!!pendingMemberAction}
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="text-foreground bg-red-600 hover:bg-red-700"
             >
               {pendingMemberAction ? (
                 <>

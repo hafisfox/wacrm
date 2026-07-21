@@ -10,8 +10,8 @@
 // visitors through its login redirect. A dedicated layout
 // avoids both.
 //
-// Styling matches the login / signup pages — centered card on a
-// slate-950 background — so the join experience feels like a
+// Styling matches the login / signup pages — centered card on the
+// themed `--background` surface — so the join experience feels like a
 // natural step in the auth funnel rather than a foreign page.
 //
 // Referrer-Policy: no-referrer
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
 
 export default function JoinLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4">
+    <div className="bg-background flex min-h-screen items-center justify-center px-4">
       {children}
     </div>
   );

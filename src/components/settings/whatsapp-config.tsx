@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { useCallback, useEffect, useState } from "react";
-import { toast } from "sonner";
+import { useCallback, useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -11,27 +11,27 @@ import {
   Loader2,
   RefreshCw,
   RotateCcw,
-} from "lucide-react";
+} from 'lucide-react';
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { createClient } from "@/lib/supabase/client";
-import { useAuth } from "@/hooks/use-auth";
-import type { WhatsAppConfig as WhatsAppConfigType } from "@/types";
+} from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/hooks/use-auth';
+import type { WhatsAppConfig as WhatsAppConfigType } from '@/types';
 
-const MASKED_TOKEN = "••••••••••••••••";
+const MASKED_TOKEN = '••••••••••••••••';
 
-type ConnectionStatus = "connected" | "disconnected" | "unknown";
-type ResetReason = "token_corrupted" | "meta_api_error" | null;
+type ConnectionStatus = 'connected' | 'disconnected' | 'unknown';
+type ResetReason = 'token_corrupted' | 'meta_api_error' | null;
 
 export function WhatsAppConfig() {
   const { user, accountId, loading: authLoading, profileLoading } = useAuth();
@@ -43,39 +43,39 @@ export function WhatsAppConfig() {
   const [showToken, setShowToken] = useState(false);
   const [config, setConfig] = useState<WhatsAppConfigType | null>(null);
   const [connectionStatus, setConnectionStatus] =
-    useState<ConnectionStatus>("unknown");
+    useState<ConnectionStatus>('unknown');
   const [resetReason, setResetReason] = useState<ResetReason>(null);
-  const [statusMessage, setStatusMessage] = useState("");
+  const [statusMessage, setStatusMessage] = useState('');
 
-  const [phoneNumberId, setPhoneNumberId] = useState("");
-  const [wabaId, setWabaId] = useState("");
-  const [accessToken, setAccessToken] = useState("");
+  const [phoneNumberId, setPhoneNumberId] = useState('');
+  const [wabaId, setWabaId] = useState('');
+  const [accessToken, setAccessToken] = useState('');
   const [tokenEdited, setTokenEdited] = useState(false);
 
   const loadHealth = useCallback(async () => {
-    const res = await fetch("/api/whatsapp/config", { method: "GET" });
+    const res = await fetch('/api/whatsapp/config', { method: 'GET' });
     const payload = await res.json().catch(() => ({}));
 
     if (payload.connected) {
-      setConnectionStatus("connected");
+      setConnectionStatus('connected');
       setResetReason(null);
       setStatusMessage(
         payload.phone_info?.verified_name
           ? `Verified with Meta as ${payload.phone_info.verified_name}.`
-          : "Credentials verified with Meta.",
+          : 'Credentials verified with Meta.'
       );
       return true;
     }
 
-    setConnectionStatus("disconnected");
+    setConnectionStatus('disconnected');
     setResetReason(
       payload.needs_reset
-        ? "token_corrupted"
-        : payload.reason === "meta_api_error"
-          ? "meta_api_error"
-          : null,
+        ? 'token_corrupted'
+        : payload.reason === 'meta_api_error'
+          ? 'meta_api_error'
+          : null
     );
-    setStatusMessage(payload.message || "Meta credentials are not connected.");
+    setStatusMessage(payload.message || 'Meta credentials are not connected.');
     return false;
   }, []);
 
@@ -85,9 +85,9 @@ export function WhatsAppConfig() {
       try {
         const supabase = createClient();
         const { data, error } = await supabase
-          .from("whatsapp_config")
-          .select("*")
-          .eq("account_id", acctId)
+          .from('whatsapp_config')
+          .select('*')
+          .eq('account_id', acctId)
           .maybeSingle();
 
         if (error) {
@@ -96,30 +96,30 @@ export function WhatsAppConfig() {
 
         if (data) {
           setConfig(data);
-          setPhoneNumberId(data.phone_number_id || "");
-          setWabaId(data.waba_id || "");
+          setPhoneNumberId(data.phone_number_id || '');
+          setWabaId(data.waba_id || '');
           setAccessToken(MASKED_TOKEN);
           setTokenEdited(false);
           await loadHealth();
         } else {
           setConfig(null);
-          setPhoneNumberId("");
-          setWabaId("");
-          setAccessToken("");
+          setPhoneNumberId('');
+          setWabaId('');
+          setAccessToken('');
           setTokenEdited(false);
-          setConnectionStatus("disconnected");
+          setConnectionStatus('disconnected');
           setResetReason(null);
-          setStatusMessage("No Meta maintenance credentials are saved yet.");
+          setStatusMessage('No Meta maintenance credentials are saved yet.');
         }
       } catch (err) {
-        console.error("Failed to load WhatsApp maintenance config:", err);
-        toast.error("Failed to load Meta maintenance settings");
-        setConnectionStatus("disconnected");
+        console.error('Failed to load WhatsApp maintenance config:', err);
+        toast.error('Failed to load Meta maintenance settings');
+        setConnectionStatus('disconnected');
       } finally {
         setLoading(false);
       }
     },
-    [loadHealth],
+    [loadHealth]
   );
 
   useEffect(() => {
@@ -133,19 +133,19 @@ export function WhatsAppConfig() {
 
   async function handleSave() {
     if (!phoneNumberId.trim()) {
-      toast.error("Phone Number ID is required");
+      toast.error('Phone Number ID is required');
       return;
     }
     if (!accessToken.trim() || accessToken === MASKED_TOKEN || !tokenEdited) {
-      toast.error("Re-enter the Meta access token before saving");
+      toast.error('Re-enter the Meta access token before saving');
       return;
     }
 
     try {
       setSaving(true);
-      const res = await fetch("/api/whatsapp/config", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch('/api/whatsapp/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           phone_number_id: phoneNumberId.trim(),
           waba_id: wabaId.trim() || null,
@@ -161,11 +161,11 @@ export function WhatsAppConfig() {
       toast.success(
         data.phone_info?.verified_name
           ? `Meta credentials saved for ${data.phone_info.verified_name}`
-          : "Meta maintenance credentials saved",
+          : 'Meta maintenance credentials saved'
       );
       if (accountId) await fetchConfig(accountId);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Save failed";
+      const message = err instanceof Error ? err.message : 'Save failed';
       toast.error(message);
     } finally {
       setSaving(false);
@@ -176,13 +176,13 @@ export function WhatsAppConfig() {
     try {
       setTesting(true);
       const ok = await loadHealth();
-      toast[ok ? "success" : "error"](
-        ok ? "Meta credentials are valid" : "Meta credentials need review",
+      toast[ok ? 'success' : 'error'](
+        ok ? 'Meta credentials are valid' : 'Meta credentials need review'
       );
     } catch (err) {
-      console.error("Meta maintenance check failed:", err);
-      setConnectionStatus("disconnected");
-      toast.error("Connection test failed");
+      console.error('Meta maintenance check failed:', err);
+      setConnectionStatus('disconnected');
+      toast.error('Connection test failed');
     } finally {
       setTesting(false);
     }
@@ -191,7 +191,7 @@ export function WhatsAppConfig() {
   async function handleReset() {
     if (
       !confirm(
-        "This clears the saved Meta maintenance credentials for the dashboard. n8n production workflows are not changed. Continue?",
+        'This clears the saved Meta maintenance credentials for the dashboard. n8n production workflows are not changed. Continue?'
       )
     ) {
       return;
@@ -199,23 +199,23 @@ export function WhatsAppConfig() {
 
     try {
       setResetting(true);
-      const res = await fetch("/api/whatsapp/config", { method: "DELETE" });
+      const res = await fetch('/api/whatsapp/config', { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         throw new Error(data?.error || `HTTP ${res.status}`);
       }
 
-      toast.success("Meta maintenance credentials cleared");
+      toast.success('Meta maintenance credentials cleared');
       setConfig(null);
-      setPhoneNumberId("");
-      setWabaId("");
-      setAccessToken("");
+      setPhoneNumberId('');
+      setWabaId('');
+      setAccessToken('');
       setTokenEdited(false);
-      setConnectionStatus("disconnected");
+      setConnectionStatus('disconnected');
       setResetReason(null);
-      setStatusMessage("No Meta maintenance credentials are saved yet.");
+      setStatusMessage('No Meta maintenance credentials are saved yet.');
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Reset failed";
+      const message = err instanceof Error ? err.message : 'Reset failed';
       toast.error(message);
     } finally {
       setResetting(false);
@@ -225,13 +225,13 @@ export function WhatsAppConfig() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="size-6 animate-spin text-primary" />
+        <Loader2 className="text-primary size-6 animate-spin" />
       </div>
     );
   }
 
-  const connected = connectionStatus === "connected";
-  const showResetBanner = resetReason === "token_corrupted";
+  const connected = connectionStatus === 'connected';
+  const showResetBanner = resetReason === 'token_corrupted';
 
   return (
     <div className="mt-4 grid gap-6 lg:grid-cols-[1fr_360px]">
@@ -243,8 +243,8 @@ export function WhatsAppConfig() {
           </AlertTitle>
           <AlertDescription className="text-sky-100/80">
             Keep Meta inbound webhooks, WhatsApp Flow data exchange, payments,
-            reminders, Supabase setup reads, and bot routing pointed at the live n8n
-            workflows. These credentials are only for dashboard template
+            reminders, Supabase setup reads, and bot routing pointed at the live
+            n8n workflows. These credentials are only for dashboard template
             maintenance and approved template sends.
           </AlertDescription>
         </Alert>
@@ -262,7 +262,7 @@ export function WhatsAppConfig() {
               onClick={handleReset}
               disabled={resetting}
               size="sm"
-              className="mt-3 bg-amber-600 text-white hover:bg-amber-700"
+              className="text-foreground mt-3 bg-amber-600 hover:bg-amber-700"
             >
               {resetting ? (
                 <Loader2 className="size-4 animate-spin" />
@@ -274,32 +274,34 @@ export function WhatsAppConfig() {
           </Alert>
         ) : null}
 
-        <Alert className="border-slate-700 bg-slate-900">
+        <Alert className="border-border bg-card">
           {connected ? (
-            <CheckCircle2 className="size-4 text-primary" />
+            <CheckCircle2 className="text-primary size-4" />
           ) : (
             <AlertTriangle className="size-4 text-amber-400" />
           )}
-          <AlertTitle className="text-white">
-            {connected ? "Meta maintenance ready" : "Meta maintenance not ready"}
+          <AlertTitle className="text-foreground">
+            {connected
+              ? 'Meta maintenance ready'
+              : 'Meta maintenance not ready'}
           </AlertTitle>
-          <AlertDescription className="text-slate-400">
+          <AlertDescription className="text-muted-foreground">
             {statusMessage ||
-              "Save a valid Phone Number ID and access token to use template maintenance."}
+              'Save a valid Phone Number ID and access token to use template maintenance.'}
           </AlertDescription>
         </Alert>
 
-        <Card className="border-slate-700 bg-slate-900">
+        <Card>
           <CardHeader>
-            <CardTitle className="text-white">Meta Credentials</CardTitle>
-            <CardDescription className="text-slate-400">
+            <CardTitle className="text-foreground">Meta Credentials</CardTitle>
+            <CardDescription className="text-muted-foreground">
               Used by Settings / Templates and out-of-window template sends.
               Text replies continue through n8n-owned mode.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="phone-number-id" className="text-slate-300">
+              <Label htmlFor="phone-number-id" className="text-foreground/80">
                 Phone Number ID
               </Label>
               <Input
@@ -307,12 +309,12 @@ export function WhatsAppConfig() {
                 value={phoneNumberId}
                 onChange={(event) => setPhoneNumberId(event.target.value)}
                 placeholder="1175796395607450"
-                className="border-slate-700 bg-slate-800 text-white"
+                className="border-border bg-muted text-foreground"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="waba-id" className="text-slate-300">
+              <Label htmlFor="waba-id" className="text-foreground/80">
                 WhatsApp Business Account ID
               </Label>
               <Input
@@ -320,31 +322,33 @@ export function WhatsAppConfig() {
                 value={wabaId}
                 onChange={(event) => setWabaId(event.target.value)}
                 placeholder="WABA ID used for template sync"
-                className="border-slate-700 bg-slate-800 text-white"
+                className="border-border bg-muted text-foreground"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="access-token" className="text-slate-300">
+              <Label htmlFor="access-token" className="text-foreground/80">
                 Meta Access Token
               </Label>
               <div className="relative">
                 <Input
                   id="access-token"
-                  type={showToken ? "text" : "password"}
+                  type={showToken ? 'text' : 'password'}
                   value={accessToken}
                   onChange={(event) => {
                     setAccessToken(event.target.value);
                     setTokenEdited(true);
                   }}
                   placeholder="EAAG..."
-                  className="border-slate-700 bg-slate-800 pr-10 text-white"
+                  className="border-border bg-muted text-foreground pr-10"
                 />
                 <button
                   type="button"
                   onClick={() => setShowToken((value) => !value)}
-                  className="absolute top-1/2 right-3 -translate-y-1/2 text-slate-400 hover:text-white"
-                  aria-label={showToken ? "Hide access token" : "Show access token"}
+                  className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2"
+                  aria-label={
+                    showToken ? 'Hide access token' : 'Show access token'
+                  }
                 >
                   {showToken ? (
                     <EyeOff className="size-4" />
@@ -354,7 +358,7 @@ export function WhatsAppConfig() {
                 </button>
               </div>
               {config ? (
-                <p className="text-xs text-slate-500">
+                <p className="text-muted-foreground text-xs">
                   Re-enter the token before saving changes. Tokens are encrypted
                   server-side.
                 </p>
@@ -378,9 +382,11 @@ export function WhatsAppConfig() {
                 variant="outline"
                 onClick={handleTestConnection}
                 disabled={testing || !config}
-                className="border-slate-700 bg-transparent text-slate-300 hover:bg-slate-800"
+                className="border-border text-foreground/80 hover:bg-muted bg-transparent"
               >
-                <RefreshCw className={testing ? "size-4 animate-spin" : "size-4"} />
+                <RefreshCw
+                  className={testing ? 'size-4 animate-spin' : 'size-4'}
+                />
                 Test
               </Button>
               {config ? (
@@ -403,24 +409,25 @@ export function WhatsAppConfig() {
         </Card>
       </div>
 
-      <Card className="h-fit border-slate-700 bg-slate-900">
+      <Card className="h-fit">
         <CardHeader>
-          <CardTitle className="text-white">What Belongs Here</CardTitle>
-          <CardDescription className="text-slate-400">
+          <CardTitle className="text-foreground">What Belongs Here</CardTitle>
+          <CardDescription className="text-muted-foreground">
             The production WhatsApp concierge lives in n8n. This panel is only
             the dashboard&apos;s Meta maintenance keyring.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4 text-sm text-slate-400">
+        <CardContent className="text-muted-foreground space-y-4 text-sm">
           <div>
-            <p className="font-medium text-slate-200">Keep in n8n</p>
+            <p className="text-foreground font-medium">Keep in n8n</p>
             <p className="mt-1">
               Inbound webhook, Flow data endpoint, booking/payment routing,
-              reminders, owner digest, Calendar, Gmail, and Supabase setup reads.
+              reminders, owner digest, Calendar, Gmail, and Supabase setup
+              reads.
             </p>
           </div>
           <div>
-            <p className="font-medium text-slate-200">Use here</p>
+            <p className="text-foreground font-medium">Use here</p>
             <p className="mt-1">
               Template sync, template approval maintenance, and approved
               template sends when the 24-hour WhatsApp session has expired.
@@ -430,7 +437,7 @@ export function WhatsAppConfig() {
             href="https://business.facebook.com/wa/manage/message-templates/"
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-2 text-primary hover:text-primary/80"
+            className="text-primary hover:text-primary/80 inline-flex items-center gap-2"
           >
             Open Meta templates
             <ExternalLink className="size-4" />
