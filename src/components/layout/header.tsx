@@ -1,18 +1,20 @@
 'use client';
 
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { getDashboardPageTitle } from '@/lib/navigation';
-import { LogOut, Menu, Settings as SettingsIcon, User } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  AccountMenuItems,
+  ACCOUNT_MENU_CONTENT_CLASS,
+} from '@/components/layout/account-menu';
 
 interface HeaderProps {
   /** Wired to the shell's drawer state. Used only on mobile — the
@@ -22,7 +24,7 @@ interface HeaderProps {
 
 export function Header({ onOpenSidebar }: HeaderProps) {
   const pathname = usePathname();
-  const { profile, signOut } = useAuth();
+  const { profile } = useAuth();
   const title = getDashboardPageTitle(pathname);
 
   const initial =
@@ -75,7 +77,7 @@ export function Header({ onOpenSidebar }: HeaderProps) {
         <DropdownMenuContent
           align="end"
           sideOffset={6}
-          className="bg-card text-foreground ring-border min-w-56"
+          className={ACCOUNT_MENU_CONTENT_CLASS}
         >
           <div className="px-2 py-1.5">
             <p className="text-foreground truncate text-sm font-medium">
@@ -86,36 +88,7 @@ export function Header({ onOpenSidebar }: HeaderProps) {
             </p>
           </div>
           <DropdownMenuSeparator className="bg-muted" />
-          <DropdownMenuItem
-            render={
-              <Link
-                href="/settings?tab=profile"
-                className="text-foreground focus:bg-muted focus:text-foreground"
-              />
-            }
-          >
-            <User className="size-4" />
-            Profile
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            render={
-              <Link
-                href="/settings?tab=whatsapp"
-                className="text-foreground focus:bg-muted focus:text-foreground"
-              />
-            }
-          >
-            <SettingsIcon className="size-4" />
-            Settings
-          </DropdownMenuItem>
-          <DropdownMenuSeparator className="bg-muted" />
-          <DropdownMenuItem
-            onClick={signOut}
-            className="text-foreground focus:bg-muted focus:text-foreground"
-          >
-            <LogOut className="size-4" />
-            Sign out
-          </DropdownMenuItem>
+          <AccountMenuItems />
         </DropdownMenuContent>
       </DropdownMenu>
     </header>

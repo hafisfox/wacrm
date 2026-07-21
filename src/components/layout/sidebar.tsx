@@ -9,7 +9,6 @@ import {
   CalendarCheck,
   Crown,
   LayoutDashboard,
-  LogOut,
   MessageSquare,
   Scissors,
   Settings,
@@ -60,10 +59,12 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  AccountMenuItems,
+  ACCOUNT_MENU_CONTENT_CLASS,
+} from '@/components/layout/account-menu';
 
 interface NavItem {
   href: string;
@@ -96,7 +97,7 @@ interface SidebarProps {
 
 export function Sidebar({ open = false, onClose }: SidebarProps) {
   const pathname = usePathname();
-  const { profile, profileLoading, account, accountRole, signOut } = useAuth();
+  const { profile, profileLoading, account, accountRole } = useAuth();
   const drawerRef = useRef<HTMLElement>(null);
   // Only surface the account-name strip when it actually carries
   // information. A solo user's personal account is named after them
@@ -349,40 +350,9 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
               align="end"
               side="top"
               sideOffset={6}
-              className="bg-card text-foreground ring-border min-w-56"
+              className={ACCOUNT_MENU_CONTENT_CLASS}
             >
-              <DropdownMenuItem
-                render={
-                  <Link
-                    href="/settings?tab=profile"
-                    onClick={onClose}
-                    className="text-foreground focus:bg-muted focus:text-foreground"
-                  />
-                }
-              >
-                <User className="size-4" />
-                Profile
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                render={
-                  <Link
-                    href="/settings?tab=whatsapp"
-                    onClick={onClose}
-                    className="text-foreground focus:bg-muted focus:text-foreground"
-                  />
-                }
-              >
-                <Settings className="size-4" />
-                Settings
-              </DropdownMenuItem>
-              <DropdownMenuSeparator className="bg-muted" />
-              <DropdownMenuItem
-                onClick={signOut}
-                className="text-foreground focus:bg-muted focus:text-foreground"
-              >
-                <LogOut className="size-4" />
-                Sign out
-              </DropdownMenuItem>
+              <AccountMenuItems onNavigate={onClose} />
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

@@ -27,6 +27,10 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -35,6 +39,12 @@
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
+  /* Tinted-primary surfaces: hovered primary buttons, active pills,
+   * selected cards. Declared per-theme since Violet's block but never
+   * registered as Tailwind colours, so nothing could reach them. */
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-soft-2: var(--primary-soft-2);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
@@ -274,6 +284,26 @@ html[data-theme='rose'] {
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(0.28 0.012 15);
   --sidebar-ring: oklch(0.645 0.22 16);
+}
+
+/* ============================================================
+ * STATUS PALETTE
+ *
+ * good / warning / serious, matching the existing `--destructive`
+ * convention. Like `--destructive` these are identical in every theme
+ * and deliberately so: green-means-healthy is not a branding choice,
+ * and a status colour that rotated with the accent would collide with
+ * `--primary` in the emerald and amber themes.
+ *
+ * Reserved. Never reuse these for a chart series or a generic accent —
+ * and always ship them with an icon or a label, never colour alone.
+ * ============================================================ */
+
+:root {
+  --success: oklch(0.7 0.15 162);
+  --success-foreground: oklch(0.16 0.02 162);
+  --warning: oklch(0.78 0.14 75);
+  --warning-foreground: oklch(0.2 0.03 75);
 }
 
 /* ============================================================

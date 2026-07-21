@@ -8,6 +8,7 @@ import {
   User,
   UsersRound,
   Workflow,
+  Palette,
 } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { WhatsAppConfig } from '@/components/settings/whatsapp-config';
@@ -17,12 +18,14 @@ import { PasswordForm } from '@/components/settings/password-form';
 import { SessionsCard } from '@/components/settings/sessions-card';
 import { MembersTab } from '@/components/settings/members-tab';
 import { SystemHealthPanel } from '@/components/settings/system-health-panel';
+import { AppearanceTab } from '@/components/settings/appearance-tab';
 
 const TAB_VALUES = [
   'profile',
   'whatsapp',
   'templates',
   'members',
+  'appearance',
   'system',
 ] as const;
 type TabValue = (typeof TAB_VALUES)[number];
@@ -106,6 +109,13 @@ export default function SettingsPage() {
             Members
           </TabsTrigger>
           <TabsTrigger
+            value="appearance"
+            className="data-active:text-primary text-muted-foreground data-active:bg-muted min-w-28 shrink-0"
+          >
+            <Palette className="size-4" />
+            Appearance
+          </TabsTrigger>
+          <TabsTrigger
             value="system"
             className="data-active:text-primary text-muted-foreground data-active:bg-muted min-w-24 shrink-0"
           >
@@ -130,6 +140,10 @@ export default function SettingsPage() {
 
         <TabsContent value="members">
           <MembersTab />
+        </TabsContent>
+
+        <TabsContent value="appearance">
+          <AppearanceTab />
         </TabsContent>
 
         <TabsContent value="system">
