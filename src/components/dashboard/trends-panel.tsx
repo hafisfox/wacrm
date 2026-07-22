@@ -278,7 +278,10 @@ export function TrendsPanel({ trends }: { trends: SaluDashboardTrends }) {
             />
           }
         >
-          {stylists.length ? (
+          {/* A roster with no upcoming work would plot five labels
+              against a zero-width domain — bars you can't see and an
+              axis that reads 0 to 0. Say it in words instead. */}
+          {stylists.some((row) => row.value > 0) ? (
             <ResponsiveContainer
               width="100%"
               height={Math.max(140, stylists.length * 28)}
@@ -329,7 +332,13 @@ export function TrendsPanel({ trends }: { trends: SaluDashboardTrends }) {
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <ChartEmpty text="No active stylists to chart." />
+            <ChartEmpty
+              text={
+                stylists.length
+                  ? `No booked hours in the next 14 days across ${stylists.length} active ${stylists.length === 1 ? 'stylist' : 'stylists'}.`
+                  : 'No active stylists to chart.'
+              }
+            />
           )}
         </ChartFigure>
       </div>
