@@ -862,6 +862,10 @@ function ActivityList({ rows }: { rows: SaluActivityRow[] }) {
             <span>{formatDateTime(row.created_at)}</span>
           </div>
           <div className="min-w-0">
+            {/* `raw_text` arrives already redacted from loadRecentActivity —
+                identifiers are stripped server-side, not here. Don't swap in
+                an unredacted field; the inbox thread is where a message is
+                read in full. */}
             <p className="text-foreground truncate text-sm">
               {row.raw_text || row.summary || row.intent || row.event_type}
             </p>

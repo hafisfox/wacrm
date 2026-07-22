@@ -1,5 +1,6 @@
 import { fetchWithTimeout, TIMEOUT_EXTERNAL_MS } from '@/lib/http';
 import { saluQuery } from './db';
+import { redactCustomerText } from './redact';
 
 const TZ = 'Asia/Kolkata';
 
@@ -526,7 +527,7 @@ async function loadHandoffQueue() {
 }
 
 async function loadRecentActivity(limit: number) {
-  return saluQuery<SaluActivityRow>(
+  const rows = await saluQuery<SaluActivityRow>(
     `
       select
         event_id,
@@ -544,6 +545,16 @@ async function loadRecentActivity(limit: number) {
     `,
     [limit]
   );
+
+  // Verbatim customer text is redacted here rather than at the point of
+  // render: these rows are serialised into the RSC payload, so masking
+  // in the component would still ship the original to the browser.
+  // Reading a message in full is the inbox thread's job — see
+  // redact.ts for why the feed is not that surface.
+  return rows.map((row) => ({
+    ...row,
+    raw_text: redactCustomerText(row.raw_text),
+  }));
 }
 
 export async function loadCustomers(limit = 50) {
