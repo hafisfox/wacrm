@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   CircleCheck,
@@ -7,7 +8,6 @@ import {
   MessageSquare,
   User,
   UsersRound,
-  Workflow,
   Palette,
 } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -17,7 +17,6 @@ import { ProfileForm } from '@/components/settings/profile-form';
 import { PasswordForm } from '@/components/settings/password-form';
 import { SessionsCard } from '@/components/settings/sessions-card';
 import { MembersTab } from '@/components/settings/members-tab';
-import { SystemHealthPanel } from '@/components/settings/system-health-panel';
 import { AppearanceTab } from '@/components/settings/appearance-tab';
 
 const TAB_VALUES = [
@@ -26,7 +25,6 @@ const TAB_VALUES = [
   'templates',
   'members',
   'appearance',
-  'system',
 ] as const;
 type TabValue = (typeof TAB_VALUES)[number];
 
@@ -44,6 +42,20 @@ export default function SettingsPage() {
   // set-state-in-effect rule and was also redundant.
   const queryTab = searchParams.get('tab');
   const tab: TabValue = isTabValue(queryTab) ? queryTab : 'profile';
+
+  // System health was duplicated here as a `system` tab and at
+  // /system-health. /system-health won — it is what the sidebar and the
+  // dashboard quick-link point at. Old ?tab=system bookmarks forward
+  // there instead of silently landing on Profile, which is why the tab
+  // was retired with a redirect rather than just deleted.
+  const isRetiredSystemTab = queryTab === 'system';
+  useEffect(() => {
+    if (isRetiredSystemTab) router.replace('/system-health');
+  }, [isRetiredSystemTab, router]);
+
+  // Skip the frame that would otherwise flash the Profile tab before
+  // the redirect above lands.
+  if (isRetiredSystemTab) return null;
 
   const onChange = (next: TabValue) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -115,13 +127,6 @@ export default function SettingsPage() {
             <Palette className="size-4" />
             Appearance
           </TabsTrigger>
-          <TabsTrigger
-            value="system"
-            className="data-active:text-primary text-muted-foreground data-active:bg-muted min-w-24 shrink-0"
-          >
-            <Workflow className="size-4" />
-            System
-          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="profile" className="space-y-6">
@@ -144,10 +149,6 @@ export default function SettingsPage() {
 
         <TabsContent value="appearance">
           <AppearanceTab />
-        </TabsContent>
-
-        <TabsContent value="system">
-          <SystemHealthPanel />
         </TabsContent>
       </Tabs>
     </div>
