@@ -18,11 +18,14 @@
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
+  /* Categorical chart ramp — see the CHART PALETTE block below.
+   * Shared across all themes on purpose; validated as a set. */
   --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-grid: var(--chart-grid);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -122,11 +125,6 @@ html[data-theme='violet'] {
   --border: oklch(0.28 0.01 260);
   --input: oklch(0.28 0.01 260);
   --ring: oklch(0.526 0.247 293);
-  --chart-1: oklch(0.526 0.247 293);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
   --radius: 0.625rem;
   --sidebar: oklch(0.16 0.01 260);
   --sidebar-foreground: oklch(0.985 0 0);
@@ -160,11 +158,6 @@ html[data-theme='emerald'] {
   --border: oklch(0.285 0.01 200);
   --input: oklch(0.285 0.01 200);
   --ring: oklch(0.62 0.16 162);
-  --chart-1: oklch(0.62 0.16 162);
-  --chart-2: oklch(0.7 0.14 195);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
   --sidebar: oklch(0.165 0.01 200);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.62 0.16 162);
@@ -197,11 +190,6 @@ html[data-theme='cobalt'] {
   --border: oklch(0.28 0.015 252);
   --input: oklch(0.28 0.015 252);
   --ring: oklch(0.585 0.2 254);
-  --chart-1: oklch(0.585 0.2 254);
-  --chart-2: oklch(0.7 0.15 220);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
   --sidebar: oklch(0.16 0.015 252);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.585 0.2 254);
@@ -234,11 +222,6 @@ html[data-theme='amber'] {
   --border: oklch(0.285 0.012 60);
   --input: oklch(0.285 0.012 60);
   --ring: oklch(0.745 0.16 65);
-  --chart-1: oklch(0.745 0.16 65);
-  --chart-2: oklch(0.7 0.15 35);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
   --sidebar: oklch(0.165 0.012 60);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.745 0.16 65);
@@ -271,11 +254,6 @@ html[data-theme='rose'] {
   --border: oklch(0.28 0.012 15);
   --input: oklch(0.28 0.012 15);
   --ring: oklch(0.645 0.22 16);
-  --chart-1: oklch(0.645 0.22 16);
-  --chart-2: oklch(0.7 0.18 340);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
   --sidebar: oklch(0.16 0.012 15);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.645 0.22 16);
@@ -284,6 +262,49 @@ html[data-theme='rose'] {
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(0.28 0.012 15);
   --sidebar-ring: oklch(0.645 0.22 16);
+}
+
+/* ============================================================
+ * CHART PALETTE
+ *
+ * One categorical ramp shared by all five themes — deliberately.
+ * Chart colour follows the *entity* (bookings, revenue, a stylist),
+ * never the theme; rotating hues per theme would repaint every series
+ * on a theme switch and destroy recognition across screenshots.
+ *
+ * These replace the previous per-theme `--chart-1..5`, which were both
+ * unused and unusable: slots 3–5 were declared `oklch(… 0 0)` — pure
+ * grey, zero chroma — so any categorical chart would have rendered
+ * three indistinguishable series.
+ *
+ * VALIDATED, not eyeballed. Run from the dataviz skill directory:
+ *
+ *   node scripts/validate_palette.js \
+ *     "#3987e5,#d95926,#199e70,#c98500,#d55181" \
+ *     --mode dark --surface "#0d1218"
+ *
+ * All five checks pass against every theme's `--card` surface (the
+ * panel background charts sit on), the darkest being cobalt #0d1218
+ * and the lightest amber #17110d:
+ *   lightness band, chroma floor, CVD separation (worst adjacent
+ *   ΔE 8.4 protan), normal-vision floor (worst adjacent ΔE 19.3),
+ *   contrast ≥ 3:1.
+ *
+ * Worst-case CVD sits in the 8–9 band, so multi-series charts must
+ * carry secondary encoding — a legend plus direct labels or gaps, per
+ * the skill's rule. Colour alone is never the encoding.
+ *
+ * Re-run the validator before changing any value here.
+ * ============================================================ */
+
+:root {
+  --chart-1: #3987e5; /* blue */
+  --chart-2: #d95926; /* orange */
+  --chart-3: #199e70; /* aqua */
+  --chart-4: #c98500; /* yellow */
+  --chart-5: #d55181; /* magenta */
+  /* Recessive grid + axis ink for charts. */
+  --chart-grid: oklch(1 0 0 / 0.08);
 }
 
 /* ============================================================

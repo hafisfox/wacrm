@@ -173,6 +173,7 @@ export interface SaluDashboardData {
   recentActivity: SaluSection<SaluActivityRow[]>;
   setupHealth: SaluSection<SaluSetupHealth>;
   n8n: SaluSection<SaluN8nHealth>;
+  trends: SaluSection<SaluDashboardTrends>;
   /** True when every section loaded. Drives the page-level banner. */
   ok: boolean;
   /**
@@ -192,6 +193,15 @@ const EMPTY_METRICS: SaluMetrics = {
   customers_seen_7d: 0,
   messages_today: 0,
   human_mode_sessions: 0,
+};
+
+const EMPTY_TRENDS: SaluDashboardTrends = {
+  daily: [],
+  bookingsDelta: { current: 0, previous: 0 },
+  revenueDelta: { current: 0, previous: 0 },
+  messagesDelta: { current: 0, previous: 0 },
+  depositFunnel: [],
+  stylistLoad: [],
 };
 
 const EMPTY_SETUP_HEALTH: SaluSetupHealth = {
@@ -244,6 +254,7 @@ export async function loadSaluDashboardData(): Promise<SaluDashboardData> {
     recentActivity,
     setupHealth,
     n8n,
+    trends,
   ] = await Promise.all([
     section(loadConfig(), null as SaluConfig | null),
     section(loadMetrics(), EMPTY_METRICS),
@@ -256,6 +267,10 @@ export async function loadSaluDashboardData(): Promise<SaluDashboardData> {
     // loadN8nHealth already returns its own error state rather than
     // throwing, so this wrapper is belt-and-braces.
     section(loadN8nHealth(), unreachableN8nHealth('n8n health unavailable')),
+    // Analytical queries scan wider ranges than the operational ones.
+    // Sectioned like the rest so a slow or failing trend query costs
+    // the charts and nothing else — the queues are why this page exists.
+    section(loadDashboardTrends(), EMPTY_TRENDS),
   ]);
 
   const all = [
@@ -280,6 +295,7 @@ export async function loadSaluDashboardData(): Promise<SaluDashboardData> {
     recentActivity,
     setupHealth,
     n8n,
+    trends,
     ok: all.every((s) => s.ok),
     down: all.every((s) => !s.ok),
   };
@@ -580,6 +596,251 @@ export async function loadCustomers(limit = 50) {
     `,
     [limit]
   );
+}
+
+export interface SaluDailyPoint {
+  /** ISO date (YYYY-MM-DD) in the salon's timezone. */
+  day: string;
+  bookings_created: number;
+  bookings_confirmed: number;
+  revenue_paise: number;
+  messages: number;
+}
+
+export interface SaluTrendPoint {
+  label: string;
+  value: number;
+}
+
+/**
+ * One metric's value now versus the same weekday a week ago.
+ *
+ * Same weekday, not "yesterday": salon traffic is strongly weekly, so
+ * a Monday compared against a Sunday says nothing useful.
+ */
+export interface SaluDelta {
+  current: number;
+  previous: number;
+}
+
+export interface SaluDashboardTrends {
+  daily: SaluDailyPoint[];
+  bookingsDelta: SaluDelta;
+  revenueDelta: SaluDelta;
+  messagesDelta: SaluDelta;
+  depositFunnel: SaluTrendPoint[];
+  stylistLoad: SaluTrendPoint[];
+}
+
+/**
+ * Daily series for the trend panel, gap-filled.
+ *
+ * `generate_series` supplies every day in the window so a quiet day
+ * renders as a zero rather than vanishing — a line chart that silently
+ * skips days compresses the x-axis and misrepresents the shape.
+ */
+export async function loadDailySeries(days = 14, timezone = TZ) {
+  return saluQuery<SaluDailyPoint>(
+    `
+      with bounds as (
+        select
+          (now() at time zone $2)::date as today,
+          ((now() at time zone $2)::date - ($1::int - 1)) as start_day
+      ),
+      days as (
+        select generate_series(
+          (select start_day from bounds),
+          (select today from bounds),
+          interval '1 day'
+        )::date as day
+      )
+      select
+        d.day::text as day,
+        (
+          select count(*)::int from salu.bookings b
+          where (b.created_at at time zone $2)::date = d.day
+        ) as bookings_created,
+        (
+          select count(*)::int from salu.bookings b
+          where b.appointment_date = d.day
+            and b.status = 'confirmed'
+        ) as bookings_confirmed,
+        (
+          select coalesce(sum(p.amount_paise), 0)::bigint from salu.payments p
+          where p.status = 'paid'
+            and (p.paid_at at time zone $2)::date = d.day
+        ) as revenue_paise,
+        (
+          select count(*)::int from salu.message_events e
+          where (e.created_at at time zone $2)::date = d.day
+        ) as messages
+      from days d
+      order by d.day asc
+    `,
+    [days, timezone]
+  );
+}
+
+/**
+ * Today vs the same weekday last week, for the metric tiles.
+ *
+ * A bare integer says nothing about whether it is a good day. One
+ * query for all three so the tiles can't disagree about "today".
+ */
+export async function loadMetricDeltas(timezone = TZ) {
+  const rows = await saluQuery<{
+    bookings_current: number;
+    bookings_previous: number;
+    revenue_current: number;
+    revenue_previous: number;
+    messages_current: number;
+    messages_previous: number;
+  }>(
+    `
+      with bounds as (
+        select
+          (now() at time zone $1)::date as today,
+          ((now() at time zone $1)::date - 7) as last_week
+      )
+      select
+        (
+          select count(*)::int from salu.bookings b, bounds
+          where b.appointment_date = bounds.today
+            and b.status in ('pending', 'confirmed')
+        ) as bookings_current,
+        (
+          select count(*)::int from salu.bookings b, bounds
+          where b.appointment_date = bounds.last_week
+            and b.status in ('pending', 'confirmed')
+        ) as bookings_previous,
+        (
+          select coalesce(sum(p.amount_paise), 0)::bigint
+          from salu.payments p, bounds
+          where p.status = 'paid'
+            and (p.paid_at at time zone $1)::date = bounds.today
+        ) as revenue_current,
+        (
+          select coalesce(sum(p.amount_paise), 0)::bigint
+          from salu.payments p, bounds
+          where p.status = 'paid'
+            and (p.paid_at at time zone $1)::date = bounds.last_week
+        ) as revenue_previous,
+        (
+          select count(*)::int from salu.message_events e, bounds
+          where (e.created_at at time zone $1)::date = bounds.today
+        ) as messages_current,
+        (
+          select count(*)::int from salu.message_events e, bounds
+          where (e.created_at at time zone $1)::date = bounds.last_week
+        ) as messages_previous
+    `,
+    [timezone]
+  );
+
+  const row = rows[0];
+  return {
+    bookingsDelta: {
+      current: Number(row?.bookings_current ?? 0),
+      previous: Number(row?.bookings_previous ?? 0),
+    },
+    revenueDelta: {
+      current: Number(row?.revenue_current ?? 0),
+      previous: Number(row?.revenue_previous ?? 0),
+    },
+    messagesDelta: {
+      current: Number(row?.messages_current ?? 0),
+      previous: Number(row?.messages_previous ?? 0),
+    },
+  };
+}
+
+/**
+ * Where deposit holds ended up over the last 30 days.
+ *
+ * Surfaces the leak the ops queue only ever shows one row at a time:
+ * if "Expired" rivals "Paid", the hold window or the reminder cadence
+ * is wrong, and no existing panel would tell you that.
+ */
+export async function loadDepositFunnel(days = 30) {
+  return saluQuery<SaluTrendPoint>(
+    `
+      with recent as (
+        select * from salu.payments
+        where created_at >= now() - ($1::int * interval '1 day')
+      )
+      select 'Requested' as label, count(*)::int as value from recent
+      union all
+      select 'Paid', count(*)::int from recent where status = 'paid'
+      union all
+      select 'Expired', count(*)::int from recent where status = 'expired'
+      union all
+      select 'Needs review', count(*)::int from recent
+        where status in ('refund_required', 'verification_failed')
+    `,
+    [days]
+  );
+}
+
+/**
+ * Booked minutes per active stylist over the next 14 days.
+ *
+ * Nothing in the console showed load distribution, so an overbooked
+ * stylist beside an idle one was invisible until a customer complained.
+ * Includes stylists with zero upcoming work — those are the whole point.
+ */
+export async function loadStylistLoad(days = 14) {
+  return saluQuery<SaluTrendPoint>(
+    `
+      select
+        s.stylist_name as label,
+        coalesce(sum(b.duration_minutes) filter (
+          where b.status in ('pending', 'confirmed')
+            and b.starts_at >= now()
+            and b.starts_at < now() + ($1::int * interval '1 day')
+        ), 0)::int as value
+      from salu.stylists s
+      left join salu.bookings b on b.stylist_id = s.stylist_id
+      where s.active
+      group by s.stylist_id, s.stylist_name
+      order by value desc, s.stylist_name asc
+      limit 12
+    `,
+    [days]
+  );
+}
+
+/**
+ * Trend data for the dashboard, settled independently of the
+ * operational panels — a slow analytical query must never delay the
+ * queues, which are the reason the page exists.
+ */
+export async function loadDashboardTrends(
+  timezone = TZ
+): Promise<SaluDashboardTrends> {
+  const [daily, deltas, depositFunnel, stylistLoad] = await Promise.all([
+    loadDailySeries(14, timezone),
+    loadMetricDeltas(timezone),
+    loadDepositFunnel(30),
+    loadStylistLoad(14),
+  ]);
+
+  return {
+    // pg returns bigint as string to avoid precision loss; the charts
+    // need real numbers.
+    daily: daily.map((point) => ({
+      ...point,
+      bookings_created: Number(point.bookings_created),
+      bookings_confirmed: Number(point.bookings_confirmed),
+      revenue_paise: Number(point.revenue_paise),
+      messages: Number(point.messages),
+    })),
+    depositFunnel: depositFunnel.map((p) => ({
+      ...p,
+      value: Number(p.value),
+    })),
+    stylistLoad: stylistLoad.map((p) => ({ ...p, value: Number(p.value) })),
+    ...deltas,
+  };
 }
 
 export async function loadSetupHealth() {

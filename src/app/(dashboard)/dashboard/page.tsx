@@ -18,10 +18,13 @@ import { Button } from '@/components/ui/button';
 import { AutoRefresh } from '@/components/layout/auto-refresh';
 import { HandoffActions } from '@/components/dashboard/handoff-actions';
 import { CopyLinkButton } from '@/components/dashboard/copy-link-button';
+import { TrendsPanel } from '@/components/dashboard/trends-panel';
+import { MetricTrend, Sparkline } from '@/components/dashboard/metric-trend';
 import {
   type SaluActivityRow,
   type SaluBookingRow,
   type SaluDashboardData,
+  type SaluDelta,
   type SaluHandoffRow,
   type SaluMetrics,
   type SaluPaymentQueueRow,
@@ -58,6 +61,9 @@ export default async function DashboardPage() {
   }
 
   const n8n = data.n8n.data;
+  // Undefined when the trend queries failed, so the tiles simply omit
+  // their delta and sparkline rather than rendering a flat fake zero.
+  const trends = data.trends.ok ? data.trends.data : undefined;
   const salonName = data.config.data?.salon_name || 'Salu Salon';
 
   return (
@@ -124,6 +130,8 @@ export default async function DashboardPage() {
           value={metricValue(data.metrics, (m) => m.today_bookings)}
           detail={`${count(data.metrics.data.upcoming_confirmed)} upcoming confirmed`}
           failed={!data.metrics.ok}
+          delta={trends?.bookingsDelta}
+          spark={trends?.daily.map((d) => d.bookings_created)}
         />
         <MetricTile
           icon={CreditCard}
@@ -132,6 +140,11 @@ export default async function DashboardPage() {
           detail={`${formatPaise(data.metrics.data.paid_today_paise)} paid today`}
           tone={data.metrics.data.pending_payment_holds ? 'warn' : 'normal'}
           failed={!data.metrics.ok}
+          // No delta or sparkline: the headline here is a *stock*
+          // (holds outstanding right now), and the only series we have
+          // is a *flow* (deposits collected per day). Attaching one to
+          // the other would put a trend under a number it doesn't
+          // describe. The flow is charted properly in Trends below.
         />
         <MetricTile
           icon={AlertTriangle}
@@ -147,8 +160,14 @@ export default async function DashboardPage() {
           value={metricValue(data.metrics, (m) => m.messages_today)}
           detail={`${count(data.metrics.data.customers_seen_7d)} customers seen in 7 days`}
           failed={!data.metrics.ok}
+          delta={trends?.messagesDelta}
+          spark={trends?.daily.map((d) => d.messages)}
         />
       </section>
+
+      <Panel title="Trends" section={data.trends}>
+        <TrendsPanel trends={data.trends.data} />
+      </Panel>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
         <Panel
@@ -303,6 +322,9 @@ function MetricTile({
   detail,
   tone = 'normal',
   failed = false,
+  delta,
+  invertDelta,
+  spark,
 }: {
   icon: typeof CalendarCheck;
   label: string;
@@ -310,11 +332,16 @@ function MetricTile({
   detail: string;
   tone?: 'normal' | 'warn' | 'danger';
   failed?: boolean;
+  /** Week-on-week comparison. Omitted when trends failed to load. */
+  delta?: SaluDelta;
+  invertDelta?: boolean;
+  /** 14-day series, oldest first. Context only — see MetricTrend. */
+  spark?: number[];
 }) {
   return (
     <div
       className={cn(
-        'ops-surface p-5',
+        'ops-surface flex flex-col p-5',
         !failed && tone === 'warn' && 'border-warning/30',
         !failed && tone === 'danger' && 'border-destructive/30'
       )}
@@ -331,6 +358,14 @@ function MetricTile({
       <p className="text-muted-foreground mt-2 text-sm">
         {failed ? 'Could not be loaded' : detail}
       </p>
+      {!failed && delta ? (
+        <div className="mt-2">
+          <MetricTrend delta={delta} invert={invertDelta} />
+        </div>
+      ) : null}
+      {!failed && spark?.length ? (
+        <Sparkline values={spark} className="mt-3" />
+      ) : null}
     </div>
   );
 }
