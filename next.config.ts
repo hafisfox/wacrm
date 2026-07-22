@@ -1,14 +1,24 @@
 import type { NextConfig } from "next";
 
+const isDev = process.env.NODE_ENV === "development";
+
 /**
- * Baseline security headers applied to every response.
+ * Content-Security-Policy, enforced.
  *
- * CSP ships as `Content-Security-Policy-Report-Only` so the browser
- * surfaces violations in the console without blocking anything — once
- * we have confidence nothing legit trips it (two deploys, a pass on
- * every route), flip the key to `Content-Security-Policy` to enforce.
+ * This shipped as `Content-Security-Policy-Report-Only` while we
+ * confirmed nothing legitimate tripped it. Nothing did — the app talks
+ * to exactly one external origin (Supabase REST + realtime); every Meta
+ * API call happens server-side, and there are no third-party scripts,
+ * fonts, or analytics to whitelist. So it enforces now.
  *
- * The rest of the headers are straight blocks, safe to enforce today:
+ * Known weak spots, deliberately accepted rather than papered over:
+ *   - `script-src` still carries 'unsafe-inline', because Next.js
+ *     inlines its hydration bootstrap. This is the one directive doing
+ *     less work than it looks like it is. Nonce-based CSP via middleware
+ *     is the real fix and is its own project.
+ *   - 'unsafe-eval' is dev-only below; production does not get it.
+ *
+ * The rest of the headers are straight blocks:
  *   - HSTS: only meaningful on HTTPS (no-op on http://localhost).
  *   - X-Content-Type-Options / X-Frame-Options / Referrer-Policy:
  *     baseline OWASP hardening, no behavioural cost.
@@ -16,6 +26,36 @@ import type { NextConfig } from "next";
  *     deny them. A supply-chain compromise or a forgotten plugin
  *     can't silently opt back in.
  */
+const CSP_DIRECTIVES = [
+  "default-src 'self'",
+  // 'unsafe-inline' covers Next.js's inline hydration script. 'unsafe-eval'
+  // is dev-only: Turbopack's HMR runtime needs it, production does not.
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
+  // Tailwind + inline style attributes on lots of components.
+  "style-src 'self' 'unsafe-inline'",
+  // Supabase public-bucket avatars, contact avatars (arbitrary
+  // https URLs paste-able from the UI), OG images, data URLs for
+  // tiny inline assets.
+  "img-src 'self' data: blob: https:",
+  "font-src 'self' data:",
+  // Supabase REST + realtime (WSS). All Meta API calls happen
+  // server-side, so graph.facebook.com does not belong here.
+  // In dev, the HMR socket is same-origin ws: — CSP3 says 'self' covers
+  // that, but the browsers disagree in practice, so name it explicitly
+  // rather than have the dev loop die on a spec argument.
+  `connect-src 'self' https://*.supabase.co wss://*.supabase.co${
+    isDev ? " ws://localhost:* ws://127.0.0.1:*" : ""
+  }`,
+  // Next.js loads some chunks into blob: workers.
+  "worker-src 'self' blob:",
+  // No <object>/<embed> anywhere in the app; this closes a classic
+  // plugin-based XSS route that default-src alone does not cover.
+  "object-src 'none'",
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+].join("; ");
+
 const SECURITY_HEADERS = [
   {
     key: "Strict-Transport-Security",
@@ -28,29 +68,7 @@ const SECURITY_HEADERS = [
     key: "Permissions-Policy",
     value: "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
   },
-  {
-    key: "Content-Security-Policy-Report-Only",
-    value: [
-      "default-src 'self'",
-      // Next.js needs 'unsafe-inline' for its inline hydration script
-      // and 'unsafe-eval' in dev + some production optimisations.
-      // Nonce-based CSP is a later project.
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-      // Tailwind + inline style attributes on lots of components.
-      "style-src 'self' 'unsafe-inline'",
-      // Supabase public-bucket avatars, contact avatars (arbitrary
-      // https URLs paste-able from the UI), OG images, data URLs for
-      // tiny inline assets.
-      "img-src 'self' data: blob: https:",
-      "font-src 'self' data:",
-      // Supabase REST + realtime (WSS). All Meta API calls happen
-      // server-side, so graph.facebook.com does not belong here.
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
-      "frame-ancestors 'none'",
-      "base-uri 'self'",
-      "form-action 'self'",
-    ].join("; "),
-  },
+  { key: "Content-Security-Policy", value: CSP_DIRECTIVES },
 ] as const;
 
 const nextConfig: NextConfig = {
