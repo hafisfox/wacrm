@@ -16,9 +16,7 @@ export default async function ContactsPage() {
     loadError = error;
   }
 
-  if (loadError || !pageData) {
-    return <ContactsSetupError error={loadError} />;
-  }
+  if (loadError || !pageData) return <ContactsSetupError />;
 
   return (
     <ContactsClient
@@ -29,7 +27,7 @@ export default async function ContactsPage() {
   );
 }
 
-function ContactsSetupError({ error }: { error: unknown }) {
+function ContactsSetupError() {
   return (
     <div className="border-destructive/30 bg-destructive/10 rounded-xl border p-5">
       <div className="flex items-start gap-3">
@@ -39,20 +37,8 @@ function ContactsSetupError({ error }: { error: unknown }) {
             Unable to load customers
           </h1>
           <p className="text-foreground/80 mt-2 text-sm">
-            {error instanceof Error
-              ? error.message
-              : 'A database error occurred.'}
-          </p>
-          <p className="text-foreground/80 mt-3 text-sm">
-            Run{' '}
-            <code className="bg-background rounded px-1.5 py-0.5">
-              npm run setup:salu-env
-            </code>
-            , then{' '}
-            <code className="bg-background rounded px-1.5 py-0.5">
-              npm run check:salu-setup
-            </code>
-            .
+            Please refresh the page. If it keeps happening, contact your salon
+            support team.
           </p>
         </div>
       </div>

@@ -64,7 +64,8 @@ export function PasswordForm() {
         password: next,
       });
       if (updateError) {
-        toast.error(`Password update failed: ${updateError.message}`);
+        console.error('[password] update failed:', updateError);
+        toast.error('Could not update your password. Please try again.');
         return;
       }
 
@@ -73,8 +74,8 @@ export function PasswordForm() {
       setConfirm('');
       toast.success('Password updated');
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Unknown error';
-      toast.error(msg);
+      console.error('[password] update failed:', err);
+      toast.error('Could not update your password. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -152,6 +153,7 @@ export function PasswordForm() {
           <div className="flex justify-end">
             <Button
               type="submit"
+              className="min-h-11"
               disabled={saving || !current || !next || !confirm}
             >
               {saving ? (

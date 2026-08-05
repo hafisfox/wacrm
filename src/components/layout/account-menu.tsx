@@ -51,11 +51,7 @@ export function AccountMenuItems({
       </DropdownMenuItem>
       <DropdownMenuItem
         render={
-          <Link
-            href="/settings?tab=whatsapp"
-            onClick={onNavigate}
-            className={ITEM_CLASS}
-          />
+          <Link href="/settings" onClick={onNavigate} className={ITEM_CLASS} />
         }
       >
         <SettingsIcon className="size-4" />

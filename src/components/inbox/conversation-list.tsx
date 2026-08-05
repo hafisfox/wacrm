@@ -4,11 +4,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
-import type {
-  ConnectionState,
-  Conversation,
-  ConversationStatus,
-} from '@/types';
+import type { Conversation, ConversationStatus } from '@/types';
 import { Search, ChevronDown } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Input } from '@/components/ui/input';
@@ -33,53 +29,6 @@ interface ConversationListProps {
    * or the tab was throttled. Optional so existing callers keep working.
    */
   resyncToken?: number;
-  /** Live socket state, so the header can stop claiming "Live"
-   *  unconditionally. */
-  connection?: ConnectionState;
-}
-
-/**
- * Header indicator for the realtime socket.
- *
- * This was a hardcoded "Live" chip that never changed — so during an
- * outage the inbox looked healthy while silently receiving nothing,
- * which is the one failure an agent most needs to see.
- */
-function ConnectionPill({ state = 'connecting' }: { state?: ConnectionState }) {
-  const meta = {
-    live: {
-      label: 'Live',
-      className: 'bg-chat-accent/15 text-chat-accent-soft',
-    },
-    connecting: {
-      label: 'Connecting',
-      className: 'bg-chat-surface-strong text-chat-ink-3',
-    },
-    reconnecting: {
-      label: 'Reconnecting',
-      className: 'bg-warning/15 text-warning',
-    },
-  }[state];
-
-  return (
-    <span
-      role="status"
-      aria-live="polite"
-      className={cn(
-        'flex items-center gap-1.5 rounded-full px-2 py-1 text-[10px] font-semibold',
-        meta.className
-      )}
-    >
-      <span
-        aria-hidden
-        className={cn(
-          'size-1.5 rounded-full bg-current',
-          state !== 'live' && 'animate-pulse'
-        )}
-      />
-      {meta.label}
-    </span>
-  );
 }
 
 /**
@@ -100,7 +49,7 @@ const FILTER_OPTIONS: {
   value: ConversationStatus | 'all' | 'unread' | 'needs_human';
 }[] = [
   { label: 'All', value: 'all' },
-  { label: 'Needs human', value: 'needs_human' },
+  { label: 'Needs your reply', value: 'needs_human' },
   { label: 'Unread', value: 'unread' },
   { label: 'Open', value: 'open' },
   { label: 'Pending', value: 'pending' },
@@ -113,7 +62,6 @@ export function ConversationList({
   conversations,
   onConversationsLoaded,
   resyncToken = 0,
-  connection = 'connecting',
 }: ConversationListProps) {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<
@@ -226,14 +174,13 @@ export function ConversationList({
 
   return (
     <div className="border-chat-line bg-chat-panel flex h-full w-full flex-col border-r lg:w-[360px]">
-      <div className="border-chat-line flex h-[61px] shrink-0 items-center justify-between border-b px-4">
+      <div className="border-chat-line flex h-[61px] shrink-0 items-center border-b px-4">
         <div>
           <p className="text-chat-muted text-[10px] font-semibold tracking-[0.14em] uppercase">
-            Live inbox
+            Customer conversations
           </p>
-          <h2 className="text-chat-ink text-lg font-semibold">WhatsApp</h2>
+          <h2 className="text-chat-ink text-lg font-semibold">Messages</h2>
         </div>
-        <ConnectionPill state={connection} />
       </div>
       {/* Search + Filter */}
       <div className="border-chat-line shrink-0 space-y-3 border-b p-3">
@@ -244,12 +191,12 @@ export function ConversationList({
             onChange={handleSearchChange}
             aria-label="Search conversations"
             placeholder="Search conversations"
-            className="bg-chat-surface text-chat-ink placeholder-chat-muted h-10 rounded-full border-transparent pl-11 text-sm focus:border-transparent focus:ring-0"
+            className="bg-chat-surface text-chat-ink placeholder-chat-muted h-11 rounded-full border-transparent pl-11 text-sm focus:border-transparent focus:ring-0"
           />
         </div>
 
         <DropdownMenu>
-          <DropdownMenuTrigger className="border-chat-surface-strong text-chat-ink-3 hover:bg-chat-surface hover:text-chat-ink focus-visible:outline-chat-accent inline-flex h-9 items-center justify-center gap-1 rounded-full border px-3 text-xs font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">
+          <DropdownMenuTrigger className="border-chat-surface-strong text-chat-ink-3 hover:bg-chat-surface hover:text-chat-ink focus-visible:outline-chat-accent inline-flex h-11 items-center justify-center gap-1 rounded-full border px-3 text-xs font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">
             {activeFilter?.label ?? 'All'}
             <ChevronDown className="h-3 w-3" />
           </DropdownMenuTrigger>
@@ -262,7 +209,7 @@ export function ConversationList({
                 key={opt.value}
                 onClick={() => setFilter(opt.value)}
                 className={cn(
-                  'text-sm',
+                  'min-h-11 text-sm',
                   filter === opt.value ? 'text-chat-accent' : 'text-chat-ink-2'
                 )}
               >
@@ -367,7 +314,7 @@ function ConversationItem({
               conversation.handoff_state === 'requested' ||
               conversation.handoff_state === 'active') && (
               <span className="shrink-0 rounded-full bg-red-500/20 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-red-300 uppercase">
-                Needs human
+                Needs your reply
               </span>
             )}
           </div>

@@ -9,7 +9,6 @@ import {
   CreditCard,
   ExternalLink,
   MessageSquareText,
-  Scissors,
   UsersRound,
 } from 'lucide-react';
 
@@ -29,7 +28,6 @@ import {
   type SaluMetrics,
   type SaluPaymentQueueRow,
   type SaluSection,
-  type SaluSetupHealth,
   loadSaluDashboardData,
 } from '@/lib/salu/queries';
 import {
@@ -57,10 +55,9 @@ export default async function DashboardPage() {
   // setup guidance is the useful response. Any lesser failure renders
   // the healthy panels and marks the broken ones individually.
   if (data.down) {
-    return <SetupError error={data.metrics.error} />;
+    return <SetupError />;
   }
 
-  const n8n = data.n8n.data;
   // Undefined when the trend queries failed, so the tiles simply omit
   // their delta and sparkline rather than rendering a flat fake zero.
   const trends = data.trends.ok ? data.trends.data : undefined;
@@ -68,51 +65,29 @@ export default async function DashboardPage() {
 
   return (
     <div className="ops-page">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="ops-eyebrow">Today&apos;s control room</p>
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-foreground text-2xl font-bold tracking-tight sm:text-3xl">
-              {salonName}
-            </h1>
-            <StatusBadge tone={n8n.ok ? 'good' : 'warn'}>
-              {n8n.ok
-                ? 'n8n live'
-                : n8n.configured
-                  ? 'n8n needs review'
-                  : 'n8n not configured'}
-            </StatusBadge>
-          </div>
+          <h1 className="text-foreground text-2xl font-bold tracking-tight sm:text-3xl">
+            {salonName}
+          </h1>
           <p className="text-muted-foreground mt-2 text-sm">
-            Prioritise customer handoffs, booking exceptions, and today&apos;s
-            appointments.
+            Your appointments, customer messages, and deposits for today.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <AutoRefresh className="mr-1" />
-          <Button render={<Link href="/inbox" />}>
+        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+          <AutoRefresh className="mr-auto sm:mr-1" />
+          <Button className="min-h-11" render={<Link href="/inbox" />}>
             <MessageSquareText className="h-4 w-4" />
-            Open inbox
+            Messages
           </Button>
-          <Button variant="outline" render={<Link href="/contacts" />}>
+          <Button
+            variant="outline"
+            className="min-h-11"
+            render={<Link href="/contacts" />}
+          >
             <UsersRound className="h-4 w-4" />
             Customers
           </Button>
-          {process.env.N8N_URL ? (
-            <Button
-              variant="outline"
-              render={
-                <a
-                  href={process.env.N8N_URL}
-                  target="_blank"
-                  rel="noreferrer"
-                />
-              }
-            >
-              <ExternalLink className="h-4 w-4" />
-              n8n
-            </Button>
-          ) : null}
         </div>
       </div>
 
@@ -126,7 +101,7 @@ export default async function DashboardPage() {
       >
         <MetricTile
           icon={CalendarCheck}
-          label="Today"
+          label="Appointments today"
           value={metricValue(data.metrics, (m) => m.today_bookings)}
           detail={`${count(data.metrics.data.upcoming_confirmed)} upcoming confirmed`}
           failed={!data.metrics.ok}
@@ -148,15 +123,15 @@ export default async function DashboardPage() {
         />
         <MetricTile
           icon={AlertTriangle}
-          label="Needs Attention"
+          label="Needs your reply"
           value={metricValue(data.metrics, (m) => m.needs_attention)}
-          detail={`${count(data.metrics.data.human_mode_sessions)} human handoff sessions`}
+          detail={`${count(data.metrics.data.human_mode_sessions)} conversation${data.metrics.data.human_mode_sessions === 1 ? '' : 's'} you're handling`}
           tone={data.metrics.data.needs_attention ? 'danger' : 'normal'}
           failed={!data.metrics.ok}
         />
         <MetricTile
           icon={MessageSquareText}
-          label="WhatsApp Today"
+          label="Messages today"
           value={metricValue(data.metrics, (m) => m.messages_today)}
           detail={`${count(data.metrics.data.customers_seen_7d)} customers seen in 7 days`}
           failed={!data.metrics.ok}
@@ -165,13 +140,13 @@ export default async function DashboardPage() {
         />
       </section>
 
-      <Panel title="Trends" section={data.trends}>
+      <Panel title="This week" section={data.trends}>
         <TrendsPanel trends={data.trends.data} />
       </Panel>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
         <Panel
-          title="Today Schedule"
+          title="Today's appointments"
           section={data.todaySchedule}
           action={
             <StatusBadge tone="neutral">{formatDate(todayKey())}</StatusBadge>
@@ -182,7 +157,7 @@ export default async function DashboardPage() {
         </Panel>
 
         <Panel
-          title="Next Appointments"
+          title="Coming up"
           section={data.nextSchedule}
           action={
             <StatusBadge tone="neutral">
@@ -198,7 +173,7 @@ export default async function DashboardPage() {
         </Panel>
 
         <Panel
-          title="Human Handoffs"
+          title="Needs your reply"
           section={data.handoffQueue}
           action={
             <StatusBadge tone={data.handoffQueue.data.length ? 'warn' : 'good'}>
@@ -213,7 +188,7 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <Panel
           id="deposit-queue"
-          title="Deposits & Exceptions"
+          title="Deposits to follow up"
           section={data.opsQueue}
           action={
             <StatusBadge tone={data.opsQueue.data.length ? 'warn' : 'good'}>
@@ -225,73 +200,11 @@ export default async function DashboardPage() {
         </Panel>
 
         <Panel
-          title="WhatsApp Activity"
+          title="Recent customer activity"
           section={data.recentActivity}
           className="xl:col-span-2"
         >
           <ActivityList rows={data.recentActivity.data} />
-        </Panel>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <Panel
-          title="Setup Health"
-          section={data.setupHealth}
-          className="xl:col-span-2"
-        >
-          <SetupHealth health={data.setupHealth.data} />
-        </Panel>
-        <Panel title="n8n Workflows" section={data.n8n}>
-          <div className="space-y-2">
-            {n8n.workflows.map((workflow) => (
-              <div
-                key={workflow.name}
-                className="border-border bg-background/50 flex items-center justify-between gap-3 rounded-lg border px-3 py-2"
-              >
-                <span className="text-foreground/80 min-w-0 truncate text-sm">
-                  {workflow.name}
-                </span>
-                <div className="flex shrink-0 items-center gap-2">
-                  {workflow.role === 'bridge' ? (
-                    <StatusBadge tone="neutral">bridge</StatusBadge>
-                  ) : null}
-                  <StatusBadge tone={workflow.active ? 'good' : 'danger'}>
-                    {workflow.active ? 'active' : 'off'}
-                  </StatusBadge>
-                </div>
-              </div>
-            ))}
-            <div className="border-border border-t pt-3">
-              <div className="mb-2 flex items-center justify-between gap-3">
-                <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-                  Dashboard Bridge
-                </p>
-                <StatusBadge tone={n8n.manualSendReady ? 'good' : 'danger'}>
-                  {n8n.manualSendReady ? 'ready' : 'check env'}
-                </StatusBadge>
-              </div>
-              <div className="space-y-2">
-                {n8n.env.map((check) => (
-                  <div
-                    key={check.key}
-                    className="flex items-center justify-between gap-3 text-xs"
-                  >
-                    <span className="text-muted-foreground truncate">
-                      {check.label}
-                    </span>
-                    <StatusBadge tone={check.configured ? 'good' : 'danger'}>
-                      {check.configured ? 'set' : 'missing'}
-                    </StatusBadge>
-                  </div>
-                ))}
-              </div>
-            </div>
-            {n8n.error ? (
-              <p className="border-warning/20 bg-warning/10 text-warning rounded-lg border p-3 text-xs">
-                {n8n.error}
-              </p>
-            ) : null}
-          </div>
         </Panel>
       </div>
     </div>
@@ -380,10 +293,9 @@ function PartialFailureNotice({ data }: { data: SaluDashboardData }) {
     [
       ['Today Schedule', data.todaySchedule],
       ['Next Appointments', data.nextSchedule],
-      ['Human Handoffs', data.handoffQueue],
-      ['Deposits & Exceptions', data.opsQueue],
-      ['WhatsApp Activity', data.recentActivity],
-      ['Setup Health', data.setupHealth],
+      ['Messages needing your reply', data.handoffQueue],
+      ['Deposits to follow up', data.opsQueue],
+      ['Recent customer activity', data.recentActivity],
       ['Today at a glance', data.metrics],
     ] as const
   )
@@ -405,80 +317,17 @@ function PartialFailureNotice({ data }: { data: SaluDashboardData }) {
             : `${broken.length} panels could not be loaded`}
         </p>
         <p className="text-muted-foreground mt-1 text-sm">
-          Everything else on this page is current. Affected: {broken.join(', ')}
-          .
+          The rest of your information is still available. Try refreshing this
+          page in a moment.
         </p>
       </div>
     </div>
   );
 }
 
-/**
- * The setup checks, as discrete pass/fail items.
- *
- * This used to be a single sum that added *counts* to *booleans* —
- * `stylists_missing_images + stale_pending_holds + failed_payments +
- * (active_services ? 0 : 1) + …`. Twelve stylists missing a photo
- * therefore reported "12 setup checks need review" against a list of
- * only seven checks. Counting the failing checks is both correct and
- * what the label already claimed.
- */
-function setupChecks(health: SaluSetupHealth) {
-  return [
-    {
-      label: 'Active services',
-      value: health.active_services,
-      failing: health.active_services === 0,
-    },
-    {
-      label: 'Active stylists',
-      value: health.active_stylists,
-      failing: health.active_stylists === 0,
-    },
-    {
-      label: 'Stylist service mappings',
-      value: health.active_stylist_services,
-      failing: health.active_stylist_services === 0,
-    },
-    {
-      label: 'Missing stylist photos',
-      value: health.stylists_missing_images,
-      failing: health.stylists_missing_images > 0,
-    },
-    {
-      label: 'Salon availability rules',
-      value: health.availability_rules,
-      // Either level of availability is enough for the booking flow to
-      // offer slots, so these two are one check, not two.
-      failing:
-        health.availability_rules + health.stylist_availability_rules === 0,
-    },
-    {
-      label: 'Stylist availability rules',
-      value: health.stylist_availability_rules,
-      failing: false,
-    },
-    {
-      label: 'Stale pending holds',
-      value: health.stale_pending_holds,
-      failing: health.stale_pending_holds > 0,
-    },
-    {
-      label: 'Failed/refund payments',
-      value: health.failed_payments,
-      failing: health.failed_payments > 0,
-    },
-  ];
-}
-
 function PriorityStrip({ data }: { data: SaluDashboardData }) {
   const handoffs = data.handoffQueue.data;
   const opsQueue = data.opsQueue.data;
-  const n8n = data.n8n.data;
-
-  const failingChecks = setupChecks(data.setupHealth.data).filter(
-    (check) => check.failing
-  ).length;
 
   const handoffHref = handoffs[0]?.conversation_id
     ? `/inbox?conversation=${handoffs[0].conversation_id}`
@@ -486,71 +335,41 @@ function PriorityStrip({ data }: { data: SaluDashboardData }) {
 
   const items = [
     {
-      label: 'Human queue',
+      label: 'Reply next',
       value: handoffs.length,
       detail: handoffs[0]
         ? `${handoffs[0].customer_name || compactPhone(handoffs[0].phone)} · ${formatOpsAge(handoffs[0].handoff_requested_at || handoffs[0].last_message_at)}`
-        : 'No active handoffs',
+        : 'No customer messages need you right now',
       href: handoffHref,
       ok: data.handoffQueue.ok,
       tone: handoffs.length ? ('danger' as const) : ('good' as const),
     },
     {
-      label: 'Deposit queue',
+      label: 'Deposits',
       value: opsQueue.length,
       detail: opsQueue[0]
         ? `${paymentQueueLabel(opsQueue[0])} · ${formatOpsCountdown(opsQueue[0].expires_at || opsQueue[0].hold_expires_at) || 'no expiry'}`
-        : 'No payment exceptions',
+        : 'No deposits need a follow-up',
       // Was '/dashboard' — a link to the page you are already standing
       // on. Anchors to the queue panel further down instead.
       href: '#deposit-queue',
       ok: data.opsQueue.ok,
       tone: opsQueue.length ? ('warn' as const) : ('good' as const),
     },
-    {
-      label: 'Salon setup',
-      value: failingChecks,
-      detail: failingChecks
-        ? `${failingChecks} of ${setupChecks(data.setupHealth.data).length} checks need review`
-        : 'Supabase setup looks steady',
-      href: '/salon-control',
-      ok: data.setupHealth.ok,
-      tone: failingChecks ? ('warn' as const) : ('good' as const),
-    },
-    {
-      label: 'Bridge',
-      value: n8n.activeCount,
-      detail: n8n.ok
-        ? 'n8n and manual-send ready'
-        : `${n8n.activeCount}/${n8n.expectedCount} workflows active`,
-      href: '/system-health',
-      ok: data.n8n.ok,
-      tone: n8n.ok ? ('good' as const) : ('danger' as const),
-    },
   ];
 
   return (
-    <section aria-labelledby="priority-title" className="ops-surface p-3">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1">
-        <div>
-          <h2 id="priority-title" className="ops-section-title">
-            Act next
-          </h2>
-          <p className="text-muted-foreground mt-0.5 text-xs">
-            The queues that can affect a customer&apos;s experience today.
-          </p>
-        </div>
-        <span className="text-muted-foreground text-xs font-medium">
-          Live operational view
-        </span>
-      </div>
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+    <section aria-labelledby="priority-title" className="space-y-3">
+      <h2 id="priority-title" className="text-foreground text-lg font-semibold">
+        Take care of these first
+      </h2>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {items.map((item) => (
           <Link
             key={item.label}
             href={item.href}
             className={cn(
-              'ops-focus-ring group hover:border-primary/50 bg-background/50 hover:bg-card/80 rounded-xl border p-4 transition-colors',
+              'ops-focus-ring group ops-surface hover:border-primary/50 bg-card/80 p-4 transition-colors',
               // A tile whose query failed stays neutral. Painting it
               // green because the list came back empty would assert
               // "all clear" on data we do not actually have.
@@ -561,7 +380,7 @@ function PriorityStrip({ data }: { data: SaluDashboardData }) {
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                <p className="text-muted-foreground text-xs font-medium">
                   {item.label}
                 </p>
                 <p className="text-foreground mt-2 text-2xl font-bold tabular-nums">
@@ -605,21 +424,19 @@ function Panel({
         <h2 className="text-foreground text-sm font-semibold">{title}</h2>
         {failed ? <StatusBadge tone="danger">unavailable</StatusBadge> : action}
       </div>
-      <div className="p-4">
-        {failed ? <PanelError message={section.error} /> : children}
-      </div>
+      <div className="p-4">{failed ? <PanelError /> : children}</div>
     </section>
   );
 }
 
-function PanelError({ message }: { message: string }) {
+function PanelError() {
   return (
     <div className="flex items-start gap-2.5 py-2">
       <AlertTriangle className="text-destructive mt-0.5 h-4 w-4 shrink-0" />
       <div className="min-w-0">
         <p className="text-foreground text-sm">This panel could not load.</p>
-        <p className="text-muted-foreground mt-1 font-mono text-xs break-words">
-          {message || 'Unknown error'}
+        <p className="text-muted-foreground mt-1 text-sm">
+          Try refreshing in a moment.
         </p>
       </div>
     </div>
@@ -695,9 +512,7 @@ function BookingList({
 
 function HandoffQueue({ rows }: { rows: SaluHandoffRow[] }) {
   if (!rows.length)
-    return (
-      <EmptyLine text="No active handoffs. The bot is carrying the queue." />
-    );
+    return <EmptyLine text="No customer messages need your reply right now." />;
 
   return (
     <div className="space-y-3">
@@ -722,7 +537,7 @@ function HandoffQueue({ rows }: { rows: SaluHandoffRow[] }) {
               <p className="text-muted-foreground mt-1 line-clamp-2 text-xs">
                 {row.last_message_text ||
                   row.handoff_reason ||
-                  'Needs human help'}
+                  'This customer needs your help'}
               </p>
             </div>
             <StatusBadge tone={row.unread_count ? 'warn' : 'neutral'}>
@@ -733,8 +548,6 @@ function HandoffQueue({ rows }: { rows: SaluHandoffRow[] }) {
           </div>
           <div className="text-muted-foreground mt-3 flex flex-wrap gap-2 text-xs">
             <span>{compactPhone(row.phone)}</span>
-            <span>{row.handoff_category || 'handoff'}</span>
-            {row.handoff_reason ? <span>{row.handoff_reason}</span> : null}
             {row.handoff_requested_at ? (
               <span>{formatDateTime(row.handoff_requested_at)}</span>
             ) : null}
@@ -846,118 +659,45 @@ function PaymentQueue({ rows }: { rows: SaluPaymentQueueRow[] }) {
 
 function ActivityList({ rows }: { rows: SaluActivityRow[] }) {
   if (!rows.length)
-    return <EmptyLine text="No WhatsApp events recorded yet." />;
+    return <EmptyLine text="No customer activity recorded yet." />;
 
   return (
     <div className="divide-border divide-y">
       {rows.map((row) => (
-        <div
-          key={row.event_id}
-          className="grid gap-3 py-3 sm:grid-cols-[160px_1fr_auto]"
-        >
-          <div className="text-muted-foreground text-xs">
-            <span className="text-muted-foreground block">
-              {formatOpsAge(row.created_at)}
-            </span>
-            <span>{formatDateTime(row.created_at)}</span>
-          </div>
+        <div key={row.event_id} className="flex gap-3 py-3">
           <div className="min-w-0">
             {/* `raw_text` arrives already redacted from loadRecentActivity —
                 identifiers are stripped server-side, not here. Don't swap in
                 an unredacted field; the inbox thread is where a message is
                 read in full. */}
             <p className="text-foreground truncate text-sm">
-              {row.raw_text || row.summary || row.intent || row.event_type}
+              {row.raw_text || row.summary || 'Customer activity'}
             </p>
             <p className="text-muted-foreground mt-1 truncate text-xs">
-              {compactPhone(row.phone)} · {row.route || 'route'} ·{' '}
-              {row.intent || 'intent'}
+              {compactPhone(row.phone)}
             </p>
           </div>
-          <StatusBadge tone={row.status === 'processed' ? 'good' : 'neutral'}>
-            {row.event_type || row.status}
-          </StatusBadge>
+          <span className="text-muted-foreground ml-auto shrink-0 text-xs">
+            {formatOpsAge(row.created_at)}
+          </span>
         </div>
       ))}
     </div>
   );
 }
 
-function SetupHealth({ health }: { health: SaluSetupHealth }) {
-  // Tone now follows the check result rather than being hardcoded.
-  // "Active services" used to render green while reporting 0 — the
-  // single most misleading state on the page, since zero services means
-  // the booking flow cannot offer anything at all.
-  const items = setupChecks(health).map((check) => ({
-    label: check.label,
-    value: check.value,
-    tone: check.failing
-      ? check.label === 'Stale pending holds' ||
-        check.label === 'Failed/refund payments'
-        ? ('danger' as const)
-        : ('warn' as const)
-      : ('good' as const),
-  }));
-
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {items.map((item) => (
-          <div
-            key={item.label}
-            className="border-border bg-background/50 flex items-center justify-between gap-3 rounded-lg border px-3 py-2"
-          >
-            <span className="text-muted-foreground text-sm">{item.label}</span>
-            <StatusBadge tone={item.tone}>{count(item.value)}</StatusBadge>
-          </div>
-        ))}
-      </div>
-
-      <div className="border-border bg-background/50 rounded-lg border p-3">
-        <div className="text-foreground mb-2 flex items-center gap-2 text-sm font-medium">
-          <Scissors className="text-muted-foreground h-4 w-4" />
-          Salon Control
-        </div>
-        <p className="text-muted-foreground text-sm">
-          Services, stylists, staff mappings, salon hours, and availability are
-          managed in Supabase from the control room.
-        </p>
-        <Button
-          size="sm"
-          variant="outline"
-          className="mt-3"
-          render={<Link href="/salon-control" />}
-        >
-          <ArrowRight className="h-3.5 w-3.5" />
-          Open control room
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-function SetupError({ error }: { error: string }) {
+function SetupError() {
   return (
     <div className="border-destructive/30 bg-destructive/10 rounded-xl border p-5">
       <div className="flex items-start gap-3">
         <AlertTriangle className="text-destructive mt-0.5 h-5 w-5 shrink-0" />
         <div>
           <h1 className="text-foreground text-lg font-semibold">
-            Dashboard setup needs attention
+            We couldn&apos;t load today&apos;s information
           </h1>
           <p className="text-foreground/80 mt-2 text-sm">
-            {error || 'Unable to load Salu dashboard data.'}
-          </p>
-          <p className="text-foreground/80 mt-3 text-sm">
-            Run{' '}
-            <code className="bg-background rounded px-1.5 py-0.5">
-              npm run setup:salu-env
-            </code>
-            , then{' '}
-            <code className="bg-background rounded px-1.5 py-0.5">
-              npm run check:salu-setup
-            </code>
-            .
+            Please refresh the page. If it keeps happening, contact your salon
+            support team.
           </p>
         </div>
       </div>

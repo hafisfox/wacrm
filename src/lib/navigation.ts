@@ -1,10 +1,9 @@
 const pageTitles: Record<string, string> = {
-  '/dashboard': 'Dashboard',
-  '/salon-control': 'Salon Control',
-  '/inbox': 'Inbox',
+  '/dashboard': 'Today',
+  '/salon-control': 'Salon',
+  '/inbox': 'Messages',
   '/contacts': 'Customers',
   '/settings': 'Settings',
-  '/system-health': 'System Health',
 };
 
 export function getDashboardPageTitle(pathname: string): string {
@@ -12,5 +11,5 @@ export function getDashboardPageTitle(pathname: string): string {
   const match = Object.entries(pageTitles).find(([path]) =>
     pathname.startsWith(path)
   );
-  return match ? match[1] : 'Dashboard';
+  return match ? match[1] : 'Today';
 }

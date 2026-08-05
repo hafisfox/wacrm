@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useRef, useCallback, KeyboardEvent } from 'react';
-import Link from 'next/link';
 import { Send, LayoutTemplate } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { GatedButton } from '@/components/ui/gated-button';
@@ -110,7 +109,7 @@ export function MessageComposer({
           <p className="min-w-0 text-xs text-amber-300">
             {templatesAvailable
               ? '24-hour session expired. Use a template to re-engage.'
-              : '24-hour session expired. Connect Meta to send a template.'}
+              : '24-hour session expired. Approved templates are unavailable right now.'}
           </p>
           {templatesAvailable ? (
             <Button
@@ -122,16 +121,7 @@ export function MessageComposer({
               <LayoutTemplate className="mr-1 h-3 w-3" />
               Templates
             </Button>
-          ) : (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 shrink-0 text-xs text-amber-300 hover:text-amber-200"
-              render={<Link href="/settings?tab=whatsapp" />}
-            >
-              Connect Meta
-            </Button>
-          )}
+          ) : null}
         </div>
       )}
 
@@ -146,10 +136,10 @@ export function MessageComposer({
               ? undefined
               : templatesAvailable
                 ? 'Send template'
-                : 'Connect Meta to send templates'
+                : 'Approved templates are unavailable right now'
           }
           disabled={!templatesAvailable}
-          className="text-chat-ink-3 hover:bg-chat-surface-strong hover:text-chat-ink h-10 w-10 shrink-0 rounded-full p-0"
+          className="text-chat-ink-3 hover:bg-chat-surface-strong hover:text-chat-ink h-11 w-11 shrink-0 rounded-full p-0 sm:h-10 sm:w-10"
           onClick={onOpenTemplates}
         >
           <LayoutTemplate className="h-4 w-4" />
@@ -164,11 +154,11 @@ export function MessageComposer({
             readOnly
               ? 'Read-only — viewers can browse but not reply'
               : !sendingAvailable
-                ? 'Connect WhatsApp to reply'
+                ? 'Replies are unavailable right now'
                 : sessionExpired
                   ? templatesAvailable
                     ? 'Session expired - use a template'
-                    : 'Session expired - connect Meta to continue'
+                    : 'Session expired - template unavailable'
                   : 'Type a message'
           }
           disabled={sessionExpired || readOnly || !sendingAvailable}
@@ -180,7 +170,7 @@ export function MessageComposer({
             readOnly ? "Read-only — your role can't send messages" : undefined
           }
           className={cn(
-            'bg-chat-surface-strong text-chat-ink placeholder-chat-muted flex-1 resize-none rounded-full border border-transparent px-4 py-2.5 text-[15px] transition-colors outline-none focus:border-transparent',
+            'bg-chat-surface-strong text-chat-ink placeholder-chat-muted min-h-11 flex-1 resize-none rounded-full border border-transparent px-4 py-2.5 text-[15px] transition-colors outline-none focus:border-transparent',
             (sessionExpired || readOnly || !sendingAvailable) &&
               'cursor-not-allowed opacity-50'
           )}
@@ -194,7 +184,7 @@ export function MessageComposer({
             !text.trim() || sessionExpired || sending || !sendingAvailable
           }
           onClick={handleSend}
-          className="bg-chat-accent text-chat-panel hover:bg-chat-accent-hover h-10 w-10 shrink-0 rounded-full p-0 disabled:opacity-40"
+          className="bg-chat-accent text-chat-panel hover:bg-chat-accent-hover h-11 w-11 shrink-0 rounded-full p-0 disabled:opacity-40 sm:h-10 sm:w-10"
         >
           <Send className="h-4 w-4" />
         </GatedButton>

@@ -162,7 +162,8 @@ export function ProfileForm() {
         if (emailError) {
           // Partial success: name/avatar saved but email didn't.
           toast.success('Profile saved');
-          toast.error(`Email change failed: ${emailError.message}`);
+          console.error('[profile] email update failed:', emailError);
+          toast.error('Could not update your email. Please try again.');
           setSaving(false);
           await refreshProfile();
           return;
@@ -182,8 +183,8 @@ export function ProfileForm() {
           : 'Profile saved'
       );
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Unknown error';
-      toast.error(msg);
+      console.error('[profile] save failed:', err);
+      toast.error('Could not save your profile. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -240,6 +241,7 @@ export function ProfileForm() {
                 variant="outline"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={saving}
+                className="min-h-11"
               >
                 <Upload className="size-4" />
                 {currentAvatar ? 'Change photo' : 'Upload photo'}
@@ -250,7 +252,7 @@ export function ProfileForm() {
                   variant="ghost"
                   onClick={onRemoveAvatar}
                   disabled={saving}
-                  className="text-muted-foreground hover:text-foreground"
+                  className="text-muted-foreground hover:text-foreground min-h-11"
                 >
                   <Trash2 className="size-4" />
                   Remove
@@ -336,7 +338,11 @@ export function ProfileForm() {
           )}
 
           <div className="flex justify-end">
-            <Button type="submit" disabled={saving || !dirty || !profile}>
+            <Button
+              type="submit"
+              className="min-h-11"
+              disabled={saving || !dirty || !profile}
+            >
               {saving ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />

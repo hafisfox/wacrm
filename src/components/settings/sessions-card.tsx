@@ -35,13 +35,14 @@ export function SessionsCard() {
       // triggers the usual redirect.
       const { error } = await supabase.auth.signOut({ scope: 'global' });
       if (error) {
-        toast.error(`Sign-out failed: ${error.message}`);
+        console.error('[sessions] sign-out failed:', error);
+        toast.error('Could not sign out. Please try again.');
         return;
       }
       window.location.href = '/login';
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Unknown error';
-      toast.error(msg);
+      console.error('[sessions] sign-out failed:', err);
+      toast.error('Could not sign out. Please try again.');
     } finally {
       setSigningOut(false);
     }
@@ -61,7 +62,12 @@ export function SessionsCard() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button type="button" variant="outline" onClick={() => setOpen(true)}>
+          <Button
+            type="button"
+            variant="outline"
+            className="min-h-11"
+            onClick={() => setOpen(true)}
+          >
             <LogOut className="size-4" />
             Sign out of all devices
           </Button>
@@ -81,12 +87,18 @@ export function SessionsCard() {
             <Button
               type="button"
               variant="ghost"
+              className="min-h-11"
               onClick={() => setOpen(false)}
               disabled={signingOut}
             >
               Cancel
             </Button>
-            <Button type="button" onClick={onConfirm} disabled={signingOut}>
+            <Button
+              type="button"
+              className="min-h-11"
+              onClick={onConfirm}
+              disabled={signingOut}
+            >
               {signingOut ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />

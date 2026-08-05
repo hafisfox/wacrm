@@ -19,7 +19,6 @@ import {
   Scissors,
   Trash2,
   UserRound,
-  UsersRound,
   X,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -57,7 +56,7 @@ import { fetchWithTimeout } from '@/lib/http';
 
 const API = '/api/salu/control-room';
 const INPUT =
-  'h-9 w-full rounded-lg border border-border bg-background/50 px-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60';
+  'h-11 w-full rounded-lg border border-border bg-background/50 px-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60 sm:h-9';
 const TEXTAREA = `${INPUT} h-auto py-2`;
 const WEEKDAY_SET = new Set<string>(WEEKDAYS);
 
@@ -115,7 +114,7 @@ function StatusToggle({
   disabled?: boolean;
 }) {
   return (
-    <label className="border-border bg-background/40 text-foreground inline-flex h-8 items-center gap-2 rounded-lg border px-2.5 text-xs">
+    <label className="border-border bg-background/40 text-foreground inline-flex min-h-11 items-center gap-2 rounded-lg border px-2.5 text-xs sm:min-h-8">
       <input
         type="checkbox"
         checked={checked}
@@ -260,9 +259,8 @@ export function SalonControlClient({
       setData(result as ControlRoomData);
       return true;
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Could not save changes'
-      );
+      console.error('[salon] save failed:', error);
+      toast.error('Could not save changes. Please try again.');
       return false;
     } finally {
       setSaving('');
@@ -281,7 +279,8 @@ export function SalonControlClient({
       setData(result as ControlRoomData);
       toast.success('Salon setup refreshed');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not refresh');
+      console.error('[salon] refresh failed:', error);
+      toast.error('Could not refresh salon information. Please try again.');
     } finally {
       setSaving('');
     }
@@ -432,15 +431,14 @@ export function SalonControlClient({
           body: JSON.stringify({ image_url: uploadedUrl }),
         }).catch(() => undefined);
       }
-      const message =
-        error instanceof Error ? error.message : 'Could not save stylist';
+      console.error('[salon] stylist save failed:', error);
       // Be honest about a partial save. Saying "could not save stylist"
       // when the stylist *did* save sends the user to re-enter a form
       // whose changes already landed.
       toast.error(
         stylistCommitted
-          ? `Stylist saved, but service coverage did not: ${message}`
-          : message
+          ? 'Stylist saved, but their services could not be updated. Please try again.'
+          : 'Could not save stylist. Please try again.'
       );
       return false;
     } finally {
@@ -467,12 +465,7 @@ export function SalonControlClient({
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <Scissors className="text-primary size-5" />
-              <h1 className="text-foreground text-2xl font-semibold">
-                Salon Control
-              </h1>
-              <Badge variant={data.readiness.ready ? 'default' : 'destructive'}>
-                {data.readiness.ready ? 'Booking ready' : 'Setup needed'}
-              </Badge>
+              <h1 className="text-foreground text-2xl font-semibold">Salon</h1>
             </div>
             <p className="text-muted-foreground mt-1 text-sm">
               Manage the customer-facing services, team, and booking schedule in
@@ -482,6 +475,7 @@ export function SalonControlClient({
           <Button
             variant="outline"
             size="sm"
+            className="min-h-11"
             onClick={refresh}
             disabled={saving === 'refresh'}
           >
@@ -494,36 +488,10 @@ export function SalonControlClient({
           </Button>
         </header>
 
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Metric
-            icon={Scissors}
-            label="Active services"
-            value={data.readiness.active_services}
-          />
-          <Metric
-            icon={UsersRound}
-            label="Active stylists"
-            value={data.readiness.active_stylists}
-          />
-          <Metric
-            icon={Check}
-            label="Service assignments"
-            value={data.readiness.active_mappings}
-          />
-          <Metric
-            icon={CalendarClock}
-            label="Schedule rules"
-            value={
-              data.readiness.availability_rules +
-              data.readiness.stylist_availability_rules
-            }
-          />
-        </div>
-
         {blockers.length ? (
           <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
             <p className="font-medium text-amber-100">
-              Finish these setup tasks
+              Before customers can book
             </p>
             <ul className="mt-2 grid gap-1 text-sm text-amber-200/85 sm:grid-cols-2">
               {blockers.map((blocker) => (
@@ -534,10 +502,10 @@ export function SalonControlClient({
         ) : null}
 
         <Tabs defaultValue="overview">
-          <TabsList className="border-border bg-card flex w-full justify-start gap-1 overflow-x-auto border p-1">
+          <TabsList className="border-border bg-card flex h-12 w-full justify-start gap-1 overflow-x-auto border p-1">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="services">Services</TabsTrigger>
-            <TabsTrigger value="team">Team & expertise</TabsTrigger>
+            <TabsTrigger value="team">Team</TabsTrigger>
             <TabsTrigger value="schedule">Schedule</TabsTrigger>
           </TabsList>
 
@@ -560,6 +528,7 @@ export function SalonControlClient({
                 action={
                   <Button
                     disabled={!canEdit}
+                    className="min-h-11"
                     onClick={() => setServiceEditor('new')}
                   >
                     <Plus /> Add service
@@ -593,11 +562,12 @@ export function SalonControlClient({
             <section className="grid gap-4">
               <SectionHeader
                 icon={UserRound}
-                title="Team & expertise"
+                title="Team"
                 description="Profiles, customer-facing specialties, and the services each stylist can perform."
                 action={
                   <Button
                     disabled={!canEdit}
+                    className="min-h-11"
                     onClick={() => setStylistEditor('new')}
                   >
                     <Plus /> Add stylist
@@ -687,28 +657,6 @@ export function SalonControlClient({
         }}
       />
     </div>
-  );
-}
-
-function Metric({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: typeof Scissors;
-  label: string;
-  value: number;
-}) {
-  return (
-    <Card className="bg-card/60">
-      <CardContent className="p-4">
-        <div className="text-muted-foreground flex items-center justify-between text-sm">
-          <span>{label}</span>
-          <Icon className="text-primary size-4" />
-        </div>
-        <strong className="text-foreground mt-2 block text-2xl">{value}</strong>
-      </CardContent>
-    </Card>
   );
 }
 
@@ -819,8 +767,8 @@ function SalonDetails({
               Customer-facing booking hours
             </p>
             <p className="text-muted-foreground mt-1 text-sm">
-              These are generated from the main weekly schedule so WhatsApp and
-              booking slots stay aligned.
+              These are generated from the main weekly schedule so customer
+              messages and booking slots stay aligned.
             </p>
             <p className="text-foreground mt-2 text-sm">
               {config.hours ||
@@ -829,10 +777,13 @@ function SalonDetails({
           </div>
           <details className="border-border rounded-lg border p-3 lg:col-span-2">
             <summary className="text-foreground cursor-pointer text-sm font-medium">
-              Advanced bot policy
+              Customer reply instructions
             </summary>
             <div className="mt-3">
-              <Field label="Bot policy">
+              <Field
+                label="Reply instructions"
+                hint="Optional notes for how customer questions should be handled."
+              >
                 <textarea
                   className={TEXTAREA}
                   rows={4}
@@ -846,7 +797,7 @@ function SalonDetails({
             </div>
           </details>
           <div className="flex justify-end lg:col-span-2">
-            <Button disabled={disabled || saving}>
+            <Button className="min-h-11" disabled={disabled || saving}>
               {saving ? <Loader2 className="animate-spin" /> : <Check />} Save
               details
             </Button>
@@ -902,6 +853,7 @@ function ServiceCard({
           <Button
             variant="outline"
             size="icon-sm"
+            className="size-11 sm:size-7"
             title="Move up"
             disabled={disabled || index === 0}
             onClick={() => onMove(-1)}
@@ -911,6 +863,7 @@ function ServiceCard({
           <Button
             variant="outline"
             size="icon-sm"
+            className="size-11 sm:size-7"
             title="Move down"
             disabled={disabled || index === lastIndex}
             onClick={() => onMove(1)}
@@ -920,6 +873,7 @@ function ServiceCard({
           <Button
             variant="outline"
             size="sm"
+            className="min-h-11 sm:min-h-7"
             disabled={disabled}
             onClick={onEdit}
           >
@@ -928,6 +882,7 @@ function ServiceCard({
           <Button
             variant="destructive"
             size="icon-sm"
+            className="size-11 sm:size-7"
             title="Deactivate"
             disabled={disabled || !service.active}
             onClick={onDeactivate}
@@ -1097,7 +1052,11 @@ function ServiceEditor({
             </div>
           </details>
           <DialogFooter>
-            <Button type="submit" disabled={disabled || busy}>
+            <Button
+              type="submit"
+              className="min-h-11"
+              disabled={disabled || busy}
+            >
               {busy ? <Loader2 className="animate-spin" /> : <Check />}
               {service ? 'Save service' : 'Add service'}
             </Button>
@@ -1185,6 +1144,7 @@ function StylistCard({
           <Button
             variant="outline"
             size="icon-sm"
+            className="size-11 sm:size-7"
             title="Move up"
             disabled={disabled || index === 0}
             onClick={() => onMove(-1)}
@@ -1194,6 +1154,7 @@ function StylistCard({
           <Button
             variant="outline"
             size="icon-sm"
+            className="size-11 sm:size-7"
             title="Move down"
             disabled={disabled || index === lastIndex}
             onClick={() => onMove(1)}
@@ -1203,6 +1164,7 @@ function StylistCard({
           <Button
             variant="outline"
             size="sm"
+            className="min-h-11 sm:min-h-7"
             disabled={disabled}
             onClick={onEdit}
           >
@@ -1211,6 +1173,7 @@ function StylistCard({
           <Button
             variant="destructive"
             size="icon-sm"
+            className="size-11 sm:size-7"
             title="Deactivate"
             disabled={disabled || !stylist.active}
             onClick={onDeactivate}
@@ -1699,7 +1662,11 @@ function StylistEditor({
             </div>
           </details>
           <DialogFooter>
-            <Button type="submit" disabled={disabled || busy}>
+            <Button
+              type="submit"
+              className="min-h-11"
+              disabled={disabled || busy}
+            >
               {busy ? <Loader2 className="animate-spin" /> : <Check />}
               {stylist ? 'Save stylist' : 'Add stylist'}
             </Button>
@@ -1948,7 +1915,10 @@ function SchedulePanel({
               />
             </Field>
             <div className="flex items-end">
-              <Button disabled={disabled || saving === 'closure'}>
+              <Button
+                className="min-h-11 w-full lg:w-auto"
+                disabled={disabled || saving === 'closure'}
+              >
                 {saving === 'closure' ? (
                   <Loader2 className="animate-spin" />
                 ) : (
@@ -2073,10 +2043,11 @@ function ScheduleGrid({
             <CardTitle>{title}</CardTitle>
             <p className="text-muted-foreground mt-1 text-sm">{description}</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
             <Button
               variant="outline"
               size="sm"
+              className="min-h-11 sm:min-h-7"
               disabled={disabled}
               onClick={() => copy('Monday', WEEKDAYS.slice(1) as Weekday[])}
             >
@@ -2086,6 +2057,7 @@ function ScheduleGrid({
               <Button
                 variant="outline"
                 size="sm"
+                className="min-h-11 sm:min-h-7"
                 disabled={disabled}
                 onClick={() =>
                   setWeek(
@@ -2132,7 +2104,7 @@ function ScheduleGrid({
                 {rules.map((rule, index) => (
                   <div
                     key={rule.id || `${day}-${index}`}
-                    className="grid grid-cols-[1fr_1fr_110px_auto] gap-2"
+                    className="grid grid-cols-2 gap-2 sm:grid-cols-[1fr_1fr_110px_auto]"
                   >
                     <input
                       className={INPUT}
@@ -2167,7 +2139,7 @@ function ScheduleGrid({
                       }
                     />
                     <select
-                      className={INPUT}
+                      className={`${INPUT} col-span-2 sm:col-span-1`}
                       value={rule.slot_interval_minutes}
                       disabled={disabled}
                       onChange={(event) =>
@@ -2196,6 +2168,7 @@ function ScheduleGrid({
                       type="button"
                       variant="ghost"
                       size="icon-sm"
+                      className="col-span-2 min-h-11 justify-self-end sm:col-span-1 sm:min-h-7"
                       title="Remove time range"
                       disabled={disabled}
                       onClick={() =>
@@ -2214,6 +2187,7 @@ function ScheduleGrid({
                 type="button"
                 variant="outline"
                 size="sm"
+                className="min-h-11 w-full md:min-h-7 md:w-auto"
                 disabled={disabled || !rules.length}
                 onClick={() =>
                   setDay(day, [
@@ -2232,7 +2206,11 @@ function ScheduleGrid({
           );
         })}
         <div className="flex justify-end pt-2">
-          <Button disabled={disabled || saving} onClick={save}>
+          <Button
+            className="min-h-11 w-full sm:w-auto"
+            disabled={disabled || saving}
+            onClick={save}
+          >
             {saving ? <Loader2 className="animate-spin" /> : <Check />} Save
             weekly hours
           </Button>

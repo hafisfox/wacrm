@@ -34,7 +34,7 @@ interface ContactsClientProps {
 
 const FILTERS: Array<{ value: CustomerOpsFilter; label: string }> = [
   { value: 'all', label: 'All' },
-  { value: 'handoff', label: 'Handoff' },
+  { value: 'handoff', label: 'Needs reply' },
   { value: 'payment', label: 'Payment' },
   { value: 'booking', label: 'Booking' },
   { value: 'recent', label: 'Recent' },
@@ -63,17 +63,16 @@ export function ContactsClient({
     <div className="ops-page">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="ops-eyebrow">Customer memory</p>
           <h1 className="text-foreground text-2xl font-bold">Customers</h1>
           <p className="text-muted-foreground mt-1 text-sm">
-            Durable WhatsApp customer memory from the Salu booking concierge.
+            Find customer details, preferences, and recent messages.
           </p>
         </div>
-        <div className="flex flex-col items-end gap-2">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
           <AutoRefresh />
           <div className="grid grid-cols-3 gap-2 text-center">
             <MiniStat label="7d seen" value={metrics.customers_seen_7d} />
-            <MiniStat label="handoff" value={metrics.human_mode_sessions} />
+            <MiniStat label="needs reply" value={metrics.human_mode_sessions} />
             <MiniStat label="holds" value={metrics.pending_payment_holds} />
           </div>
         </div>
@@ -87,7 +86,7 @@ export function ContactsClient({
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search name, phone, preference, or last message"
-              className="border-border bg-background text-foreground pl-9"
+              className="border-border bg-background text-foreground h-11 pl-9"
             />
           </div>
           <div className="flex [scrollbar-width:none] gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden">
@@ -98,7 +97,7 @@ export function ContactsClient({
                 onClick={() => setFilter(item.value)}
                 aria-pressed={filter === item.value}
                 className={cn(
-                  'ops-focus-ring h-10 shrink-0 rounded-md border px-3 text-sm transition-colors',
+                  'ops-focus-ring h-11 shrink-0 rounded-md border px-3 text-sm transition-colors',
                   filter === item.value
                     ? 'border-primary/60 bg-primary/10 text-primary'
                     : 'border-border bg-background text-muted-foreground hover:border-border hover:text-foreground'
@@ -129,7 +128,7 @@ export function ContactsClient({
           <span>Current State</span>
           <span>Last Seen</span>
         </div>
-        <div className="divide-border divide-y">
+        <div className="divide-border lg:divide-y">
           {filtered.map((customer) => (
             <CustomerRow key={customer.phone} customer={customer} />
           ))}
@@ -154,7 +153,7 @@ function CustomerRow({ customer }: { customer: SaluCustomerRow }) {
   const displayName = customer.customer_name || compactPhone(customer.phone);
 
   return (
-    <div className="grid gap-3 px-4 py-4 lg:grid-cols-[1.2fr_1fr_1fr_150px] lg:items-center">
+    <div className="border-border bg-background/30 m-2 grid gap-3 rounded-xl border p-4 lg:m-0 lg:grid-cols-[1.2fr_1fr_1fr_150px] lg:items-center lg:rounded-none lg:border-0 lg:bg-transparent lg:px-4 lg:py-4">
       <div className="min-w-0">
         {customer.conversation_id ? (
           <Link
@@ -191,7 +190,7 @@ function CustomerRow({ customer }: { customer: SaluCustomerRow }) {
       <div className="flex flex-wrap gap-2">
         {customer.human_mode ? (
           <StateBadge tone="danger" icon={UserRoundCheck}>
-            handoff
+            needs reply
           </StateBadge>
         ) : null}
         {customer.pending_payment_reference_id ? (
@@ -215,7 +214,7 @@ function CustomerRow({ customer }: { customer: SaluCustomerRow }) {
         {customer.conversation_id ? (
           <Link
             href={`/inbox?conversation=${customer.conversation_id}`}
-            className="ops-focus-ring hover:border-primary/50 border-border bg-muted text-foreground/80 hover:text-foreground inline-flex min-h-8 items-center gap-1 rounded-md border px-2 py-0.5 text-xs"
+            className="ops-focus-ring hover:border-primary/50 border-border bg-muted text-foreground/80 hover:text-foreground inline-flex min-h-11 items-center gap-1 rounded-md border px-3 text-xs lg:min-h-8 lg:px-2 lg:py-0.5"
           >
             <MessageSquareText className="h-3 w-3" />
             open chat
@@ -232,7 +231,9 @@ function CustomerRow({ customer }: { customer: SaluCustomerRow }) {
             <span className="text-muted-foreground block">
               {formatOpsAge(customer.last_seen_at)}
             </span>
-            <span>{formatDateTime(customer.last_seen_at)}</span>
+            <span className="hidden lg:inline">
+              {formatDateTime(customer.last_seen_at)}
+            </span>
           </>
         ) : (
           'Not seen'

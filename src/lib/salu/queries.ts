@@ -172,8 +172,6 @@ export interface SaluDashboardData {
   opsQueue: SaluSection<SaluPaymentQueueRow[]>;
   handoffQueue: SaluSection<SaluHandoffRow[]>;
   recentActivity: SaluSection<SaluActivityRow[]>;
-  setupHealth: SaluSection<SaluSetupHealth>;
-  n8n: SaluSection<SaluN8nHealth>;
   trends: SaluSection<SaluDashboardTrends>;
   /** True when every section loaded. Drives the page-level banner. */
   ok: boolean;
@@ -203,17 +201,6 @@ const EMPTY_TRENDS: SaluDashboardTrends = {
   messagesDelta: { current: 0, previous: 0 },
   depositFunnel: [],
   stylistLoad: [],
-};
-
-const EMPTY_SETUP_HEALTH: SaluSetupHealth = {
-  active_services: 0,
-  active_stylists: 0,
-  stylists_missing_images: 0,
-  active_stylist_services: 0,
-  availability_rules: 0,
-  stylist_availability_rules: 0,
-  stale_pending_holds: 0,
-  failed_payments: 0,
 };
 
 /** Resolve a section, downgrading a rejection to a rendered error. */
@@ -253,8 +240,6 @@ export async function loadSaluDashboardData(): Promise<SaluDashboardData> {
     opsQueue,
     handoffQueue,
     recentActivity,
-    setupHealth,
-    n8n,
     trends,
   ] = await Promise.all([
     section(loadConfig(), null as SaluConfig | null),
@@ -264,10 +249,6 @@ export async function loadSaluDashboardData(): Promise<SaluDashboardData> {
     section(loadOpsQueue(), [] as SaluPaymentQueueRow[]),
     section(loadHandoffQueue(), [] as SaluHandoffRow[]),
     section(loadRecentActivity(14), [] as SaluActivityRow[]),
-    section(loadSetupHealth(), EMPTY_SETUP_HEALTH),
-    // loadN8nHealth already returns its own error state rather than
-    // throwing, so this wrapper is belt-and-braces.
-    section(loadN8nHealth(), unreachableN8nHealth('n8n health unavailable')),
     // Analytical queries scan wider ranges than the operational ones.
     // Sectioned like the rest so a slow or failing trend query costs
     // the charts and nothing else — the queues are why this page exists.
@@ -282,8 +263,6 @@ export async function loadSaluDashboardData(): Promise<SaluDashboardData> {
     opsQueue,
     handoffQueue,
     recentActivity,
-    setupHealth,
-    n8n,
   ];
 
   return {
@@ -294,8 +273,6 @@ export async function loadSaluDashboardData(): Promise<SaluDashboardData> {
     opsQueue,
     handoffQueue,
     recentActivity,
-    setupHealth,
-    n8n,
     trends,
     ok: all.every((s) => s.ok),
     down: all.every((s) => !s.ok),

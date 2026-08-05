@@ -37,7 +37,13 @@ export function CopyLinkButton({
   }
 
   return (
-    <Button size="sm" variant="outline" onClick={copy} aria-label={label}>
+    <Button
+      size="sm"
+      variant="outline"
+      className="min-h-11 sm:min-h-7"
+      onClick={copy}
+      aria-label={label}
+    >
       {copied ? (
         <Check className="h-3.5 w-3.5" />
       ) : (

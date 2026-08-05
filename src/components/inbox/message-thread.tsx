@@ -22,6 +22,7 @@ import {
   ArrowLeft,
   RefreshCw,
   PanelRightOpen,
+  MoreHorizontal,
   PlayCircle,
   PauseCircle,
   Loader2,
@@ -112,9 +113,9 @@ interface MessageThreadProps {
   onMessageSent?: () => void;
   /** Opens Salu customer details when the persistent sidebar is hidden. */
   onOpenDetails?: () => void;
-  /** Whether the account has direct Meta access for template sends. */
+  /** Whether approved templates are available for sending. */
   templatesAvailable?: boolean;
-  /** Whether this deployment can send normal replies through Meta or n8n. */
+  /** Whether this deployment can send normal replies. */
   sendingAvailable?: boolean;
 }
 
@@ -247,13 +248,13 @@ export function MessageThread({
       if (!res.ok) throw new Error(payload?.error || `HTTP ${res.status}`);
       toast.success(
         nextHumanMode
-          ? 'Bot paused for this customer'
-          : 'Bot resumed — auto-replies are back on'
+          ? 'You are now handling this conversation'
+          : 'Automatic replies are back on'
       );
       onRefresh?.();
     } catch (err) {
-      const reason = err instanceof Error ? err.message : 'request failed';
-      toast.error(`Could not update the bot: ${reason}`);
+      console.error('[message-thread] reply handling update failed:', err);
+      toast.error('Could not update reply handling. Please try again.');
     } finally {
       setTogglingBot(false);
     }
@@ -584,7 +585,7 @@ export function MessageThread({
         if (!res.ok) {
           const reason = payload?.error || `HTTP ${res.status}`;
           console.error('Failed to send message:', reason);
-          toast.error(`Failed to send: ${reason}`);
+          toast.error('Message could not be sent. Please try again.');
           // Leave the bubble visible and marked failed so the text
           // isn't lost and the retry affordance has something to act on.
           onUpdateMessage(bubbleId, { status: 'failed' });
@@ -598,8 +599,7 @@ export function MessageThread({
         onMessageSent?.();
       } catch (err) {
         console.error('Failed to send message:', err);
-        const reason = err instanceof Error ? err.message : 'network error';
-        toast.error(`Failed to send: ${reason}`);
+        toast.error('Message could not be sent. Please try again.');
         onUpdateMessage(bubbleId, { status: 'failed' });
       }
     },
@@ -735,7 +735,7 @@ export function MessageThread({
         if (!res.ok) {
           const reason = payload?.error || `HTTP ${res.status}`;
           console.error('Failed to send template:', reason);
-          toast.error(`Failed to send template: ${reason}`);
+          toast.error('Template could not be sent. Please try again.');
           onUpdateMessage(tempId, { status: 'failed' });
           return;
         }
@@ -744,8 +744,7 @@ export function MessageThread({
         onMessageSent?.();
       } catch (err) {
         console.error('Failed to send template:', err);
-        const reason = err instanceof Error ? err.message : 'network error';
-        toast.error(`Failed to send template: ${reason}`);
+        toast.error('Template could not be sent. Please try again.');
         onUpdateMessage(tempId, { status: 'failed' });
       }
     },
@@ -850,8 +849,8 @@ export function MessageThread({
           throw new Error(payload?.error || `HTTP ${res.status}`);
         }
       } catch (err) {
-        const reason = err instanceof Error ? err.message : 'network error';
-        toast.error(`Reaction failed: ${reason}`);
+        console.error('Reaction failed:', err);
+        toast.error('Reaction could not be saved. Please try again.');
         setReactions(snapshot);
       }
     },
@@ -947,7 +946,7 @@ export function MessageThread({
             conversation.handoff_state === 'requested' ||
             conversation.handoff_state === 'active') && (
             <Badge className="ml-1 shrink-0 border border-red-400/40 bg-red-500/20 text-[10px] font-semibold text-red-200 hover:bg-red-500/20">
-              Needs human
+              Needs your reply
             </Badge>
           )}
           {/* Session timer badge — hidden on the narrowest phones so
@@ -973,16 +972,16 @@ export function MessageThread({
             aria-checked={!botPaused}
             aria-label={
               botPaused
-                ? `Resume bot for ${displayName}`
-                : `Pause bot for ${displayName}`
+                ? `Turn on automatic replies for ${displayName}`
+                : `Take over replies for ${displayName}`
             }
             title={
               botPaused
-                ? `Auto-replies are off for ${displayName} — click to resume`
-                : `Auto-replies are on for ${displayName} — click to pause`
+                ? `Automatic replies are off for ${displayName}`
+                : `Take over replies for ${displayName}`
             }
             className={cn(
-              'focus-visible:outline-chat-accent inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-60 sm:px-3',
+              'focus-visible:outline-chat-accent inline-flex h-11 shrink-0 items-center gap-1.5 rounded-md border px-3 text-xs font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-60 sm:h-9',
               botPaused
                 ? 'border-chat-accent/40 bg-chat-accent/10 text-chat-accent hover:bg-chat-accent/20'
                 : 'border-amber-400/30 bg-amber-400/10 text-amber-200 hover:bg-amber-400/20'
@@ -996,7 +995,7 @@ export function MessageThread({
               <PauseCircle className="h-3.5 w-3.5" />
             )}
             <span className="hidden sm:inline">
-              {botPaused ? 'Resume bot' : 'Pause bot'}
+              {botPaused ? 'Turn on replies' : 'Take over'}
             </span>
           </button>
 
@@ -1006,7 +1005,7 @@ export function MessageThread({
               onClick={onOpenDetails}
               aria-label="Open customer details"
               title="Customer details"
-              className="text-chat-ink-3 hover:bg-chat-surface hover:text-chat-ink focus-visible:outline-chat-accent inline-flex h-9 w-9 items-center justify-center rounded-md transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 2xl:hidden"
+              className="text-chat-ink-3 hover:bg-chat-surface hover:text-chat-ink focus-visible:outline-chat-accent hidden h-9 w-9 items-center justify-center rounded-md transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 md:inline-flex 2xl:hidden"
             >
               <PanelRightOpen className="h-3.5 w-3.5" />
             </button>
@@ -1025,7 +1024,7 @@ export function MessageThread({
               aria-label="Refresh conversation"
               title="Refresh"
               className={cn(
-                'text-chat-ink-3 hover:bg-chat-surface hover:text-chat-ink focus-visible:outline-chat-accent inline-flex h-9 w-9 items-center justify-center rounded-md transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-60'
+                'text-chat-ink-3 hover:bg-chat-surface hover:text-chat-ink focus-visible:outline-chat-accent hidden h-9 w-9 items-center justify-center rounded-md transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-60 md:inline-flex'
               )}
             >
               <RefreshCw
@@ -1038,7 +1037,7 @@ export function MessageThread({
           <DropdownMenu>
             <DropdownMenuTrigger
               className={cn(
-                'hover:bg-chat-surface focus-visible:outline-chat-accent inline-flex h-9 items-center justify-center gap-1 rounded-md px-2 text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2',
+                'hover:bg-chat-surface focus-visible:outline-chat-accent hidden h-9 items-center justify-center gap-1 rounded-md px-2 text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 md:inline-flex',
                 currentStatus?.color ?? 'text-chat-ink-3'
               )}
             >
@@ -1065,7 +1064,7 @@ export function MessageThread({
           <DropdownMenu>
             <DropdownMenuTrigger
               className={cn(
-                'hover:bg-chat-surface inline-flex h-7 items-center justify-center gap-1 rounded-md px-2 text-xs',
+                'hover:bg-chat-surface hidden h-9 items-center justify-center gap-1 rounded-md px-2 text-xs md:inline-flex',
                 assignedAgentId ? 'text-primary' : 'text-chat-ink-3'
               )}
             >
@@ -1113,6 +1112,75 @@ export function MessageThread({
                   </DropdownMenuItem>
                 </>
               )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              aria-label="More conversation options"
+              className="text-chat-ink-3 hover:bg-chat-surface hover:text-chat-ink focus-visible:outline-chat-accent inline-flex h-11 w-11 items-center justify-center rounded-md transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 md:hidden"
+            >
+              <MoreHorizontal className="h-5 w-5" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              className="border-chat-line bg-chat-surface min-w-52"
+            >
+              {onOpenDetails ? (
+                <DropdownMenuItem
+                  onClick={onOpenDetails}
+                  className="text-chat-ink-2 min-h-11 text-sm"
+                >
+                  Customer details
+                </DropdownMenuItem>
+              ) : null}
+              {onRefresh ? (
+                <DropdownMenuItem
+                  onClick={handleRefreshClick}
+                  disabled={isRefreshing}
+                  className="text-chat-ink-2 min-h-11 text-sm"
+                >
+                  {isRefreshing ? 'Refreshing…' : 'Refresh conversation'}
+                </DropdownMenuItem>
+              ) : null}
+              <DropdownMenuSeparator className="bg-chat-surface-strong" />
+              <DropdownMenuItem disabled className="text-chat-muted text-xs">
+                Status: {currentStatus?.label ?? 'Open'}
+              </DropdownMenuItem>
+              {STATUS_OPTIONS.map((opt) => (
+                <DropdownMenuItem
+                  key={opt.value}
+                  onClick={() => handleStatusChange(opt.value)}
+                  className={cn('min-h-11 text-sm', opt.color)}
+                >
+                  Mark as {opt.label.toLowerCase()}
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuSeparator className="bg-chat-surface-strong" />
+              <DropdownMenuItem disabled className="text-chat-muted text-xs">
+                {assignedAgentId ? `Assigned to ${assignLabel}` : 'Assign to'}
+              </DropdownMenuItem>
+              {profiles.map((profile) => (
+                <DropdownMenuItem
+                  key={profile.id}
+                  onClick={() => handleAssignChange(profile.user_id)}
+                  className="text-chat-ink-2 min-h-11 text-sm"
+                >
+                  {profile.full_name}
+                  {profile.user_id === user?.id ? ' (me)' : ''}
+                  {profile.user_id === assignedAgentId ? (
+                    <Check className="ml-auto h-3.5 w-3.5" />
+                  ) : null}
+                </DropdownMenuItem>
+              ))}
+              {assignedAgentId ? (
+                <DropdownMenuItem
+                  onClick={() => handleAssignChange(null)}
+                  className="text-chat-ink-2 min-h-11 text-sm"
+                >
+                  Unassign
+                </DropdownMenuItem>
+              ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

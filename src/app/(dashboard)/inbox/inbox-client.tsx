@@ -1,9 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ExternalLink, Workflow, WifiOff } from 'lucide-react';
+import { WifiOff } from 'lucide-react';
 
 import { ContactSidebar } from '@/components/inbox/contact-sidebar';
 import { ConversationList } from '@/components/inbox/conversation-list';
@@ -21,7 +20,6 @@ import {
 } from '@/lib/salu/transcript';
 import { cn } from '@/lib/utils';
 import type {
-  ConnectionState,
   Contact,
   Conversation,
   ConversationStatus,
@@ -90,10 +88,11 @@ function upsertMessage(messages: Message[], next: Message): Message[] {
 }
 
 interface InboxClientProps {
-  n8nOwnedWhatsapp: boolean;
+  /** The server has confirmed that the salon can send text replies. */
+  sendingAvailable: boolean;
 }
 
-export function InboxClient({ n8nOwnedWhatsapp }: InboxClientProps) {
+export function InboxClient({ sendingAvailable }: InboxClientProps) {
   const { accountId } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -107,10 +106,6 @@ export function InboxClient({ n8nOwnedWhatsapp }: InboxClientProps) {
     null
   );
   const [resyncToken, setResyncToken] = useState(0);
-  // Real socket state, reported by the channel's subscribe callback.
-  // Starts pessimistic — we are genuinely not receiving events until
-  // the first SUBSCRIBED lands.
-  const [connection, setConnection] = useState<ConnectionState>('connecting');
   const [saluDetailsToken, setSaluDetailsToken] = useState(0);
   const [detailsOpen, setDetailsOpen] = useState(false);
 
@@ -325,21 +320,10 @@ export function InboxClient({ n8nOwnedWhatsapp }: InboxClientProps) {
         }
       )
       .subscribe((status) => {
-        // Only 'SUBSCRIBED' used to be handled, so a dropped socket was
-        // invisible — the header kept claiming "Live" while no events
-        // were arriving, which is the worst possible failure for an
-        // inbox. Every terminal status now moves the indicator.
+        // Re-fetch once the socket connects so any messages received while
+        // this screen was inactive are reflected in the customer list.
         if (status === 'SUBSCRIBED') {
-          setConnection('live');
           setResyncToken((token) => token + 1);
-          return;
-        }
-        if (
-          status === 'CHANNEL_ERROR' ||
-          status === 'TIMED_OUT' ||
-          status === 'CLOSED'
-        ) {
-          setConnection('reconnecting');
         }
       });
 
@@ -407,43 +391,18 @@ export function InboxClient({ n8nOwnedWhatsapp }: InboxClientProps) {
 
   const connectionBanner = useMemo(() => {
     if (whatsappConnected === null || whatsappConnected) return null;
-
-    if (n8nOwnedWhatsapp) {
-      return (
-        <div className="border-chat-line flex shrink-0 items-center gap-2 border-b bg-sky-950/70 px-4 py-2 text-xs text-sky-200">
-          <Workflow className="h-4 w-4 shrink-0" />
-          <span className="min-w-0 flex-1">
-            Connected through n8n for live text replies. Meta setup is only
-            needed for template messages.
-          </span>
-          <Link
-            href="/settings?tab=whatsapp"
-            className="hover:text-chat-ink inline-flex shrink-0 items-center gap-1 font-medium text-sky-100"
-          >
-            Set up Meta
-            <ExternalLink className="h-3 w-3" />
-          </Link>
-        </div>
-      );
-    }
+    if (sendingAvailable) return null;
 
     return (
       <div className="border-chat-line flex shrink-0 items-center gap-2 border-b bg-amber-950/70 px-4 py-2 text-xs text-amber-200">
         <WifiOff className="h-4 w-4 shrink-0" />
         <span className="min-w-0 flex-1">
-          WhatsApp is not connected. Synced history is available, but sending is
-          disabled.
+          Messages are unavailable right now. Your message history is still
+          here; please try again shortly.
         </span>
-        <Link
-          href="/settings?tab=whatsapp"
-          className="hover:text-chat-ink inline-flex shrink-0 items-center gap-1 font-medium text-amber-100"
-        >
-          Connect WhatsApp
-          <ExternalLink className="h-3 w-3" />
-        </Link>
       </div>
     );
-  }, [n8nOwnedWhatsapp, whatsappConnected]);
+  }, [sendingAvailable, whatsappConnected]);
 
   return (
     <div className="bg-chat-canvas text-chat-ink flex h-full min-h-0 flex-col overflow-hidden">
@@ -461,7 +420,6 @@ export function InboxClient({ n8nOwnedWhatsapp }: InboxClientProps) {
             onConversationsLoaded={handleConversationsLoaded}
             onSelect={handleSelectConversation}
             resyncToken={resyncToken}
-            connection={connection}
           />
         </div>
 
@@ -484,7 +442,7 @@ export function InboxClient({ n8nOwnedWhatsapp }: InboxClientProps) {
             resyncToken={resyncToken}
             onRefresh={handleRefresh}
             onOpenDetails={() => setDetailsOpen(true)}
-            sendingAvailable={whatsappConnected === true || n8nOwnedWhatsapp}
+            sendingAvailable={whatsappConnected === true || sendingAvailable}
             templatesAvailable={whatsappConnected === true}
             onMessageSent={() => {
               setSaluDetailsToken((token) => token + 1);
@@ -512,7 +470,7 @@ export function InboxClient({ n8nOwnedWhatsapp }: InboxClientProps) {
         >
           <SheetTitle className="sr-only">Customer details</SheetTitle>
           <SheetDescription className="sr-only">
-            Salu booking, payment, memory, and bot takeover controls for the
+            Customer booking, payment, notes, and reply controls for the
             selected conversation.
           </SheetDescription>
           <ContactSidebar

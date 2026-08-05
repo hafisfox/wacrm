@@ -181,7 +181,7 @@ export function ContactSidebar({
     // the text but the note never appeared and nothing said why.
     if (error || !data) {
       console.error('[contact-sidebar] add note failed:', error);
-      toast.error(error?.message || 'Could not save note');
+      toast.error('Could not save note. Please try again.');
       setAddingNote(false);
       return;
     }
@@ -210,11 +210,13 @@ export function ContactSidebar({
         setSaluDetails(payload.details as SaluCustomerDetails);
         onTakeoverChange?.();
         toast.success(
-          humanMode ? 'Bot paused for this customer' : 'Bot resumed'
+          humanMode
+            ? 'You are now handling this conversation'
+            : 'Automatic replies are back on'
         );
       } catch (err) {
-        const reason = err instanceof Error ? err.message : 'request failed';
-        toast.error(`Could not update bot state: ${reason}`);
+        console.error('[contact-sidebar] reply handling update failed:', err);
+        toast.error('Could not update reply handling. Please try again.');
       } finally {
         setTakeoverSaving(false);
       }
@@ -281,7 +283,7 @@ export function ContactSidebar({
           <div className="mt-4 space-y-2">
             <button
               onClick={handleCopyPhone}
-              className="text-chat-ink-2 hover:bg-chat-surface flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors"
+              className="text-chat-ink-2 hover:bg-chat-surface flex min-h-11 w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors"
             >
               <Phone className="text-chat-muted h-4 w-4" />
               <span className="flex-1 text-left">{contact.phone}</span>
@@ -303,12 +305,12 @@ export function ContactSidebar({
           {/* Divider */}
           <div className="border-chat-line my-4 border-t" />
 
-          {/* Salu CRM */}
+          {/* Customer details */}
           <div>
             <div className="flex items-center justify-between gap-2 px-1">
               <div className="text-chat-muted flex items-center gap-2 text-xs font-medium tracking-wider uppercase">
                 <Sparkles className="h-3 w-3" />
-                Salu
+                Customer details
               </div>
               <span
                 className={cn(
@@ -318,7 +320,7 @@ export function ContactSidebar({
                     : 'border-chat-accent/30 bg-chat-accent/10 text-chat-accent'
                 )}
               >
-                {humanMode ? 'human mode' : 'bot active'}
+                {humanMode ? 'you’re handling this' : 'automatic replies on'}
               </span>
             </div>
 
@@ -330,7 +332,7 @@ export function ContactSidebar({
                 disabled={takeoverSaving || saluLoading}
                 onClick={() => handleTakeoverToggle(!humanMode)}
                 className={cn(
-                  'border-chat-surface-strong bg-chat-surface text-chat-ink hover:bg-chat-surface-strong h-9 w-full',
+                  'border-chat-surface-strong bg-chat-surface text-chat-ink hover:bg-chat-surface-strong min-h-11 w-full',
                   humanMode && 'border-chat-accent/40 text-chat-accent'
                 )}
               >
@@ -341,7 +343,7 @@ export function ContactSidebar({
                 ) : (
                   <PauseCircle className="mr-2 h-4 w-4" />
                 )}
-                {humanMode ? 'Resume bot' : 'Pause bot'}
+                {humanMode ? 'Turn on automatic replies' : 'Take over replies'}
               </Button>
 
               <div className="grid grid-cols-2 gap-2">
@@ -352,7 +354,7 @@ export function ContactSidebar({
                   render={
                     <a href={whatsappHref} target="_blank" rel="noreferrer" />
                   }
-                  className="border-chat-surface-strong bg-chat-surface text-chat-ink hover:bg-chat-surface-strong"
+                  className="border-chat-surface-strong bg-chat-surface text-chat-ink hover:bg-chat-surface-strong min-h-11"
                 >
                   <ExternalLink className="mr-1 h-3.5 w-3.5" />
                   WhatsApp
@@ -363,7 +365,7 @@ export function ContactSidebar({
                   variant="outline"
                   disabled={!pendingPayment?.payment_link}
                   onClick={handleCopyPaymentLink}
-                  className="border-chat-surface-strong bg-chat-surface text-chat-ink hover:bg-chat-surface-strong"
+                  className="border-chat-surface-strong bg-chat-surface text-chat-ink hover:bg-chat-surface-strong min-h-11"
                 >
                   {copiedPayment ? (
                     <Check className="text-chat-accent mr-1 h-3.5 w-3.5" />
@@ -381,26 +383,14 @@ export function ContactSidebar({
                 </div>
               ) : (
                 <>
-                  {humanMode ||
-                  session?.handoff_reason ||
-                  session?.handoff_category ? (
+                  {humanMode ? (
                     <div className="rounded-lg border border-amber-400/20 bg-amber-400/10 px-3 py-3">
                       <div className="flex items-center gap-2 text-xs font-medium text-amber-100">
                         <PauseCircle className="h-3.5 w-3.5" />
-                        Handoff
+                        Needs your reply
                       </div>
                       <div className="mt-2 space-y-1 text-xs text-amber-100/90">
-                        <p>
-                          {session?.handoff_reason ||
-                            (humanMode
-                              ? 'Bot is paused for human handling.'
-                              : 'Recently handled by a human.')}
-                        </p>
-                        {session?.handoff_category ? (
-                          <p className="text-amber-100/70">
-                            {session.handoff_category}
-                          </p>
-                        ) : null}
+                        <p>You are handling this conversation.</p>
                         {session?.handoff_started_at ? (
                           <p className="text-amber-100/70">
                             Started {formatOpsAge(session.handoff_started_at)}
@@ -579,7 +569,7 @@ export function ContactSidebar({
                 />
                 <Button
                   size="sm"
-                  className="bg-chat-accent text-chat-panel hover:bg-chat-accent-hover h-auto px-2"
+                  className="bg-chat-accent text-chat-panel hover:bg-chat-accent-hover min-h-11 min-w-11 px-2"
                   onClick={handleAddNote}
                   disabled={!newNote.trim() || addingNote}
                 >

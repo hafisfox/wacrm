@@ -5,7 +5,7 @@ import { InboxClient } from './inbox-client';
 export const dynamic = 'force-dynamic';
 
 export default function InboxPage() {
-  const n8nOwnedWhatsapp =
+  const sendingAvailable =
     process.env.SALU_DASHBOARD_MODE === 'n8n-owned-whatsapp';
 
   return (
@@ -16,7 +16,7 @@ export default function InboxPage() {
         </div>
       }
     >
-      <InboxClient n8nOwnedWhatsapp={n8nOwnedWhatsapp} />
+      <InboxClient sendingAvailable={sendingAvailable} />
     </Suspense>
   );
 }

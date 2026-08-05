@@ -123,7 +123,8 @@ export function InviteMemberDialog({
 
       if (!res.ok) {
         const payload = await res.json().catch(() => ({}));
-        toast.error(payload.error || 'Failed to create invitation');
+        console.error('[invite-member] create failed:', payload.error);
+        toast.error('Could not create the invitation. Please try again.');
         return;
       }
 
@@ -221,7 +222,7 @@ export function InviteMemberDialog({
                 <Button
                   type="button"
                   onClick={copyToClipboard}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground shrink-0"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground min-h-11 shrink-0"
                 >
                   <Copy className="size-4" />
                   Copy
@@ -254,7 +255,7 @@ export function InviteMemberDialog({
                 className={buttonVariants({
                   variant: 'outline',
                   className:
-                    'border-border text-foreground/80 hover:bg-muted w-full',
+                    'border-border text-foreground/80 hover:bg-muted min-h-11 w-full',
                 })}
               >
                 <MessageCircle className="size-4" />
@@ -265,7 +266,7 @@ export function InviteMemberDialog({
             <DialogFooter className="bg-card border-border">
               <Button
                 onClick={() => onOpenChange(false)}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground min-h-11"
               >
                 Done
               </Button>
@@ -345,14 +346,14 @@ export function InviteMemberDialog({
               <Button
                 variant="outline"
                 onClick={() => onOpenChange(false)}
-                className="border-border text-foreground/80 hover:bg-muted"
+                className="border-border text-foreground/80 hover:bg-muted min-h-11"
               >
                 Cancel
               </Button>
               <Button
                 onClick={handleCreate}
                 disabled={submitting}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground min-h-11"
               >
                 {submitting ? (
                   <>

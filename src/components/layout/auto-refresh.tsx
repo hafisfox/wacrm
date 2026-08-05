@@ -105,6 +105,7 @@ export function AutoRefresh({
         type="button"
         variant="outline"
         size="sm"
+        className="min-h-11 sm:min-h-7"
         onClick={refresh}
         disabled={pending}
         aria-label="Refresh data now"

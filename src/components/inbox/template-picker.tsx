@@ -186,8 +186,8 @@ export function TemplatePicker({
           </DialogTitle>
           <DialogDescription className="text-muted-foreground">
             {selected
-              ? 'Fill in the placeholders to render this template. Meta requires every variable to be set.'
-              : 'Pick an approved WhatsApp template to send to this contact.'}
+              ? 'Fill in every placeholder to send this template.'
+              : 'Pick an approved message template to send to this customer.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -203,8 +203,8 @@ export function TemplatePicker({
                   No approved templates
                 </p>
                 <p className="text-muted-foreground mt-1 text-xs">
-                  Approve a template in Meta WhatsApp Manager, then sync it from
-                  Settings → Templates.
+                  Create and submit a template from Settings → Message
+                  templates, then try again once it is approved.
                 </p>
               </div>
             ) : (
@@ -213,7 +213,7 @@ export function TemplatePicker({
                   key={t.id}
                   type="button"
                   onClick={() => pickTemplate(t)}
-                  className="border-border bg-background/50 hover:border-primary/40 hover:bg-card w-full rounded-md border p-3 text-left transition-colors"
+                  className="border-border bg-background/50 hover:border-primary/40 hover:bg-card min-h-11 w-full rounded-md border p-3 text-left transition-colors"
                 >
                   <div className="flex items-start gap-2">
                     <div className="min-w-0 flex-1">

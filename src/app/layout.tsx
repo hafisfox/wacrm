@@ -7,10 +7,10 @@ import { DEFAULT_THEME, STORAGE_KEY, THEME_IDS } from '@/lib/themes';
 
 export const metadata: Metadata = {
   title: {
-    default: 'Salu WhatsApp Dashboard',
-    template: '%s — Salu WhatsApp',
+    default: 'Salu Salon',
+    template: '%s — Salu Salon',
   },
-  description: 'WhatsApp operations dashboard for Salu Salon.',
+  description: 'Appointments, messages, and customers for Salu Salon.',
   robots: {
     index: false,
     follow: false,
@@ -28,6 +28,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   themeColor: '#020617',
   colorScheme: 'dark',
+  viewportFit: 'cover',
 };
 
 // Inline boot script — runs before React hydrates so the user's

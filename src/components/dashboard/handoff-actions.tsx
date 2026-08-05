@@ -3,18 +3,17 @@
 // ============================================================
 // HandoffActions
 //
-// Pause / resume the bot for one customer, straight from the
-// dashboard's handoff queue.
+// Change the reply handling for one customer, straight from the
+// dashboard's priority queue.
 //
-// Everything on the ops dashboard used to be a link to somewhere else:
+// The original dashboard only linked away from a customer who needed help:
 // seeing that a customer was waiting meant opening the inbox, finding
 // the thread, and toggling there. The API for this already existed
 // (POST /api/salu/takeover) — it just had no caller outside the
 // message thread.
 //
-// Pausing acquires the Salu human-mode lock so n8n stops replying;
-// "Resume bot" is the only way back, matching the contract documented
-// in SALU_DASHBOARD.md.
+// Taking over acquires the Salu human-mode lock; turning replies back on is
+// the only way to return the conversation to automatic handling.
 // ============================================================
 
 import { useState, useTransition } from 'react';
@@ -61,15 +60,16 @@ export function HandoffActions({
       }
 
       toast.success(
-        paused ? 'Bot resumed' : 'Bot paused — you have the thread'
+        paused
+          ? 'Automatic replies are back on'
+          : 'You are now handling this conversation'
       );
       // Re-render the server page so the queue reflects the new state
       // rather than waiting for the next auto-refresh tick.
       startTransition(() => router.refresh());
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Could not update takeover'
-      );
+      console.error('[handoff-actions] update failed:', error);
+      toast.error('Could not update reply handling. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -78,13 +78,16 @@ export function HandoffActions({
   return (
     <GatedButton
       canAct={canSend}
-      gateReason="pause or resume the bot"
+      gateReason="take over or turn on automatic replies"
       size="sm"
       variant="outline"
+      className="min-h-11 lg:min-h-8"
       onClick={toggle}
       disabled={busy}
       aria-label={
-        paused ? `Resume bot for ${phone}` : `Pause bot and take over ${phone}`
+        paused
+          ? `Turn on automatic replies for ${phone}`
+          : `Take over replies for ${phone}`
       }
     >
       {busy ? (
@@ -94,7 +97,7 @@ export function HandoffActions({
       ) : (
         <PauseCircle className="h-3.5 w-3.5" />
       )}
-      {paused ? 'Resume bot' : 'Take over'}
+      {paused ? 'Turn on replies' : 'Take over'}
     </GatedButton>
   );
 }

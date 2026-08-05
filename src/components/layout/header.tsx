@@ -3,7 +3,6 @@
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { getDashboardPageTitle } from '@/lib/navigation';
-import { Menu } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -16,13 +15,7 @@ import {
   ACCOUNT_MENU_CONTENT_CLASS,
 } from '@/components/layout/account-menu';
 
-interface HeaderProps {
-  /** Wired to the shell's drawer state. Used only on mobile — the
-   *  hamburger button is hidden on lg+. */
-  onOpenSidebar?: () => void;
-}
-
-export function Header({ onOpenSidebar }: HeaderProps) {
+export function Header() {
   const pathname = usePathname();
   const { profile } = useAuth();
   const title = getDashboardPageTitle(pathname);
@@ -33,20 +26,11 @@ export function Header({ onOpenSidebar }: HeaderProps) {
     'U';
 
   return (
-    <header className="border-border bg-background/95 flex h-14 shrink-0 items-center justify-between gap-3 border-b px-4 backdrop-blur lg:px-6">
+    <header className="border-border bg-background/95 flex h-[calc(3.5rem+env(safe-area-inset-top))] shrink-0 items-center justify-between gap-3 border-b px-4 pt-[env(safe-area-inset-top)] backdrop-blur lg:h-14 lg:px-6 lg:pt-0">
       <div className="flex min-w-0 items-center gap-2">
-        {/* Hamburger — mobile only. 44×44 hit target per Apple HIG. */}
-        <button
-          type="button"
-          onClick={onOpenSidebar}
-          aria-label="Open menu"
-          className="ops-focus-ring text-foreground/80 hover:bg-muted hover:text-foreground flex h-11 w-11 items-center justify-center rounded-md transition-colors lg:hidden"
-        >
-          <Menu className="h-5 w-5" />
-        </button>
         <div className="min-w-0">
           <p className="text-muted-foreground hidden text-[10px] font-semibold tracking-[0.14em] uppercase sm:block">
-            Salu Operations
+            Salu Salon
           </p>
           <h1 className="text-foreground truncate text-base font-semibold sm:text-lg">
             {title}
@@ -56,7 +40,7 @@ export function Header({ onOpenSidebar }: HeaderProps) {
 
       <DropdownMenu>
         <DropdownMenuTrigger
-          className="ops-focus-ring hover:bg-muted/70 data-popup-open:bg-muted/70 flex items-center gap-2 rounded-md px-1 py-1 transition-colors sm:gap-3 sm:pr-3 sm:pl-1"
+          className="ops-focus-ring hover:bg-muted/70 data-popup-open:bg-muted/70 flex min-h-11 min-w-11 items-center gap-2 rounded-md px-1 py-1 transition-colors sm:gap-3 sm:pr-3 sm:pl-1"
           aria-label="Open account menu"
         >
           <Avatar className="size-8">

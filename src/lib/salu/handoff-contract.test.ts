@@ -13,7 +13,9 @@ describe('Salu human handoff contracts', () => {
 
     expect(pause).toBeGreaterThan(-1);
     expect(send).toBeGreaterThan(pause);
-    expect(route).toContain("{ error: 'Could not pause the bot. The message was not sent.' }");
+    expect(route).toContain(
+      "{ error: 'Could not pause the bot. The message was not sent.' }"
+    );
     expect(route).toContain('{ status: 503 }');
     expect(route).toContain('await logSaluAgentMessage({');
   });
@@ -25,22 +27,22 @@ describe('Salu human handoff contracts', () => {
     expect(route).not.toContain("'X-N8N-API-KEY': process.env.N8N_API_KEY");
   });
 
-  it('surfaces an urgent Needs human queue in the inbox', () => {
+  it('surfaces an urgent owner-reply queue in the inbox', () => {
     const list = source('../../components/inbox/conversation-list.tsx');
     const thread = source('../../components/inbox/message-thread.tsx');
     expect(list).toContain("value: 'needs_human'");
-    expect(list).toContain('Needs human');
-    expect(thread).toContain('Needs human');
+    expect(list).toContain('Needs your reply');
+    expect(thread).toContain('Needs your reply');
   });
 
-  it('exposes a two-way bot toggle in the thread header, not only the 2xl-gated sidebar', () => {
+  it('keeps both reply-handling directions available in the thread', () => {
     const thread = source('../../components/inbox/message-thread.tsx');
     // Both directions reachable at any width, unconditionally rendered.
     expect(thread).toContain('human_mode: nextHumanMode');
     expect(thread).toContain("'dashboard_pause_bot'");
     expect(thread).toContain("'dashboard_resume_bot'");
-    expect(thread).toContain('Resume bot');
-    expect(thread).toContain('Pause bot');
+    expect(thread).toContain('Turn on replies');
+    expect(thread).toContain('Take over');
   });
 
   it('scopes the bot toggle to one contact rather than a global switch', () => {
@@ -52,7 +54,9 @@ describe('Salu human handoff contracts', () => {
   });
 
   it('assigns owner before admin and keeps resume manual', () => {
-    const migration = source('../../../supabase/migrations/025_salu_handoff_capture.sql');
+    const migration = source(
+      '../../../supabase/migrations/025_salu_handoff_capture.sql'
+    );
     const takeover = source('../../app/api/salu/takeover/route.ts');
     expect(migration).toMatch(/when 'owner' then 0\s+when 'admin' then 1/);
     expect(migration).toContain("handoff_priority = 'urgent'");

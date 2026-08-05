@@ -162,7 +162,8 @@ export function MembersTab() {
 
       if (!mres.ok) {
         const payload = await mres.json().catch(() => ({}));
-        toast.error(payload.error || 'Failed to load members');
+        console.error('[members] load failed:', payload.error);
+        toast.error('Could not load your team. Please try again.');
         return;
       }
       const mdata = (await mres.json()) as { members: Member[] };
@@ -171,7 +172,8 @@ export function MembersTab() {
       if (ires) {
         if (!ires.ok) {
           const payload = await ires.json().catch(() => ({}));
-          toast.error(payload.error || 'Failed to load invitations');
+          console.error('[members] invitations load failed:', payload.error);
+          toast.error('Could not load invitations. Please try again.');
           return;
         }
         const idata = (await ires.json()) as { invitations: Invitation[] };
@@ -224,7 +226,8 @@ export function MembersTab() {
           )
         );
         const payload = await res.json().catch(() => ({}));
-        toast.error(payload.error || 'Failed to update role');
+        console.error('[members] role update failed:', payload.error);
+        toast.error('Could not update the team role. Please try again.');
         return;
       }
       toast.success(`Updated ${member.full_name || 'member'} to ${nextRole}`);
@@ -252,7 +255,8 @@ export function MembersTab() {
       );
       if (!res.ok) {
         const payload = await res.json().catch(() => ({}));
-        toast.error(payload.error || 'Failed to remove member');
+        console.error('[members] removal failed:', payload.error);
+        toast.error('Could not remove this team member. Please try again.');
         return;
       }
       toast.success(`Removed ${removingMember.full_name || 'member'}`);
@@ -278,7 +282,8 @@ export function MembersTab() {
       );
       if (!res.ok) {
         const payload = await res.json().catch(() => ({}));
-        toast.error(payload.error || 'Failed to revoke invitation');
+        console.error('[members] invitation revoke failed:', payload.error);
+        toast.error('Could not revoke this invitation. Please try again.');
         return;
       }
       toast.success('Invitation revoked');
@@ -300,7 +305,7 @@ export function MembersTab() {
   return (
     <div className="mt-4 space-y-6">
       {/* Header + invite button */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-foreground text-lg font-semibold">
             Account members
@@ -313,7 +318,7 @@ export function MembersTab() {
         <RequireRole min="admin">
           <Button
             onClick={() => setInviteOpen(true)}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground min-h-11 self-start"
           >
             <Plus className="size-4" />
             Invite member
@@ -402,7 +407,7 @@ export function MembersTab() {
                         }
                       >
                         <SelectTrigger
-                          className="bg-muted border-border text-foreground w-32"
+                          className="bg-muted border-border text-foreground h-11 w-32"
                           disabled={isBusy}
                         >
                           <SelectValue />
@@ -437,7 +442,7 @@ export function MembersTab() {
                         size="sm"
                         onClick={() => setRemovingMember(member)}
                         disabled={isBusy}
-                        className="border-red-500/40 bg-red-500/10 text-red-300 hover:border-red-500/60 hover:bg-red-500/20 hover:text-red-200"
+                        className="size-11 border-red-500/40 bg-red-500/10 text-red-300 hover:border-red-500/60 hover:bg-red-500/20 hover:text-red-200"
                       >
                         <Trash2 className="size-4" />
                       </Button>
