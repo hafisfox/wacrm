@@ -6,6 +6,7 @@ import { AuthProvider, useAuth } from '@/hooks/use-auth';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Header } from '@/components/layout/header';
 import { MobileNav } from '@/components/layout/mobile-nav';
+import { useTotalUnread } from '@/hooks/use-total-unread';
 
 // Auth-gated dashboard shell. Extracted from the layout so the layout
 // itself can stay a server component and export metadata (noindex) —
@@ -16,6 +17,11 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const isInbox = pathname.startsWith('/inbox');
+  // Sidebar and MobileNav are both mounted at every viewport size; CSS only
+  // controls which one is visible. Keep the realtime subscription here so
+  // those two views share one channel instead of subscribing twice to the
+  // same Supabase topic (the second subscription throws at runtime).
+  const totalUnread = useTotalUnread();
 
   useEffect(() => {
     if (!loading && !user) {
@@ -42,7 +48,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="bg-background flex h-dvh min-h-0 overflow-hidden">
-      <Sidebar />
+      <Sidebar totalUnread={totalUnread} />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <Header />
         <main
@@ -54,7 +60,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
         >
           {children}
         </main>
-        <MobileNav />
+        <MobileNav totalUnread={totalUnread} />
       </div>
     </div>
   );

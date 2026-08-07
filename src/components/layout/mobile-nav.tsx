@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LayoutDashboard, MessageSquare, Scissors, Users } from 'lucide-react';
 
-import { useTotalUnread } from '@/hooks/use-total-unread';
 import { cn } from '@/lib/utils';
 
 const mobileNavItems = [
@@ -19,9 +18,8 @@ const mobileNavItems = [
  * It stays in the shell's flex layout instead of floating over content, so
  * chat composers and forms never end up behind it on short screens.
  */
-export function MobileNav() {
+export function MobileNav({ totalUnread }: { totalUnread: number }) {
   const pathname = usePathname();
-  const totalUnread = useTotalUnread();
 
   return (
     <nav
