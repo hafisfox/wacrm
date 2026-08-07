@@ -1,0 +1,12 @@
+Use case: ui-mockup
+Asset type: high-fidelity product design composition preview for Salu Salon
+Primary request: Create a polished design-review board showing the same mobile-first salon operations dashboard at two responsive sizes: a complete 390x844 Android phone screen on the left and a complete 1440x900 desktop screen on the right. This is Composition B, “Now Line”.
+Surface structure in order: dark app shell; compact Salu Salon navigation; one route headline “Today at Salu”; a single current-time ribbon that joins urgent replies, the appointment happening now, and expiring deposits into one horizontal operational seam; below it, an uninterrupted chronological daybook with a bright “now” marker and direct row actions. Desktop uses a wide central time spine and a narrow right rail only for exceptions. Mobile preserves the same time spine and bottom nav.
+Style/medium: high-fidelity real product UI mockup, restrained dark operations software, precise responsive layouts, production-grade component detail
+Color palette: cool near-black canvas, dark slate planes, white/cool gray text, controlled violet accent, semantic colors only for states
+Materials/textures: flat tonal layers, precise ruled seams, subtle ambient shadow only around overlays
+Typography: compact sans serif, strong tabular time numerals, clear information hierarchy
+Composition/framing: neutral dark review-board background, front-on flat phone and desktop screens, no device photography or perspective
+Text (verbatim where legible): “Salu Salon”, “Today at Salu”, “Needs your reply”, “Happening now”, “Deposit expires soon”, “Today’s appointments”, “Messages”, “Customers”, “Salon”
+Constraints: urgent work above analytics; 48px phone targets; one semantic page heading; labels with every status icon; no first-viewport charts; enough content to show a full working day
+Avoid: SaaS bento cards, gradients, glassmorphism, glowing neon, salon photos, scissors decoration, serif display type, excessive pill shapes, illegible text, watermark

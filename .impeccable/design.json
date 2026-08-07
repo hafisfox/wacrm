@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-07T00:00:00.000Z",
+  "title": "Design System: Salu Salon",
+  "extensions": {
+    "colorMeta": {
+      "night-canvas": { "role": "neutral", "displayName": "Night Canvas", "canonical": "oklch(0.13 0.01 260)", "tonalRamp": ["oklch(0.15 0.01 260)", "oklch(0.25 0.01 260)", "oklch(0.35 0.01 260)", "oklch(0.45 0.01 260)", "oklch(0.55 0.01 260)", "oklch(0.68 0.01 260)", "oklch(0.82 0.01 260)", "oklch(0.95 0.005 260)"] },
+      "primary-violet": { "role": "primary", "displayName": "Salu Violet", "canonical": "oklch(0.526 0.247 293)", "tonalRamp": ["oklch(0.18 0.12 293)", "oklch(0.28 0.17 293)", "oklch(0.38 0.21 293)", "oklch(0.526 0.247 293)", "oklch(0.62 0.21 293)", "oklch(0.72 0.16 293)", "oklch(0.84 0.09 293)", "oklch(0.95 0.03 293)"] },
+      "whatsapp-green": { "role": "secondary", "displayName": "Conversation Green", "canonical": "#00a884", "tonalRamp": ["#062b24", "#07503f", "#08745b", "#009176", "#00a884", "#2bc29f", "#72d9bf", "#c7f3e8"] }
+    },
+    "typographyMeta": {
+      "headline": { "displayName": "Page Headline", "purpose": "One route-level heading per screen." },
+      "body": { "displayName": "Operational Body", "purpose": "Compact task and supporting text." },
+      "label": { "displayName": "Operational Label", "purpose": "Statuses, metadata, and section eyebrows." }
+    },
+    "shadows": [
+      { "name": "ambient-low", "value": "0 1px 2px rgba(0,0,0,0.18)", "purpose": "Subtle separation for bounded surfaces." }
+    ],
+    "motion": [
+      { "name": "state-change", "value": "150ms ease-out", "purpose": "Colour and opacity changes for controls and live state." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" }
+    ]
+  },
+  "components": [],
+  "narrative": {
+    "northStar": "The Salu Daybook",
+    "overview": "A dark, phone-first shift book where the next customer, unresolved message, and expiring deposit are immediately legible.",
+    "keyCharacteristics": ["Chronological time spines", "One selected accent", "Status words before colour", "Tonal rather than floating depth"],
+    "rules": [
+      { "name": "The One Accent Rule", "body": "Outside Messages, the selected theme colour is the only decorative accent.", "section": "colors" },
+      { "name": "The Flat-By-Default Rule", "body": "A card exists only when its boundary carries meaning.", "section": "elevation" }
+    ],
+    "dos": ["Put urgent action and current-day state before historical analysis."],
+    "donts": ["Do not rebuild the product as a generic metric-card grid."]
+  }
+}

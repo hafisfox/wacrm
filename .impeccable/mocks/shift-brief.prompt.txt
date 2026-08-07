@@ -1,0 +1,12 @@
+Use case: ui-mockup
+Asset type: high-fidelity product design composition preview for Salu Salon
+Primary request: Create a polished design-review board showing the same mobile-first salon operations dashboard at two responsive sizes: a complete 390x844 Android phone screen on the left and a complete 1440x900 desktop screen on the right. This is Composition A, “Opening Shift Brief”.
+Surface structure in order: dark app shell; compact Salu Salon brand/navigation; one prominent route headline “Friday shift”; a concise three-row action brief for “Reply next”, “Deposit expiring”, and “Next appointment”; then a continuous chronological appointment daybook with a visible vertical time spine; historical insights are compact and below the operational content. Desktop expands the same reading order into a dominant daybook column and narrow action rail, not a metric-card grid.
+Style/medium: high-fidelity real product UI mockup, restrained dark operations software, precise responsive layouts, production-grade component detail
+Color palette: cool near-black #111318 canvas, dark slate surfaces, white and cool gray text, one controlled violet accent, semantic amber/red/green only for statuses; no WhatsApp green outside message-related controls
+Materials/textures: flat tonal layering, hairline seams, subtle ambient depth, crisp appointment-ledger lines
+Typography: compact workhorse sans serif, tabular numerals for times and counts, strong but not promotional hierarchy
+Composition/framing: neutral dark review-board background with the two full interface screens clearly separated and fully visible; front-on flat screens, no device photography or perspective
+Text (verbatim where legible): “Salu Salon”, “Friday shift”, “Reply next”, “Deposit expiring”, “Next appointment”, “Today’s appointments”, “Messages”, “Customers”, “Salon”
+Constraints: phone-first; 48px touch targets; bottom navigation with labels on phone; left navigation on desktop; only one page heading; clear icons plus status words; no invented charts in the first viewport; enough below-fold content to prove the system
+Avoid: generic SaaS bento grids, gradient glow, glassmorphism, floating statistic cards, stock salon photography, decorative scissors, neon, cream backgrounds, serif display type, excessive rounded containers, illegible tiny text, watermarks

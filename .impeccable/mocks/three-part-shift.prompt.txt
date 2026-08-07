@@ -1,0 +1,12 @@
+Use case: ui-mockup
+Asset type: high-fidelity product design composition preview for Salu Salon
+Primary request: Create a polished design-review board showing the same mobile-first salon operations dashboard at two responsive sizes: a complete 390x844 Android phone screen on the left and a complete 1440x900 desktop screen on the right. This is Composition C, “Three-Part Shift”.
+Surface structure in order: dark Salu shell; route headline “Your salon today”; three clearly separated chronological chapters—“Before the next chair”, “On the floor”, and “Later today”. The first chapter contains the one dominant action for a customer reply and an expiring deposit. The middle chapter is a compact appointment timeline centered on the current booking. The final chapter previews later appointments and follow-ups. Desktop lays these chapters across one continuous ruled work surface with no card grid; mobile stacks them with a visible vertical connective line.
+Style/medium: high-fidelity real product UI mockup, sophisticated but practical operations interface, production-ready responsive detail
+Color palette: cool near-black and slate, white/cool gray type, restrained violet selection accent, amber/red/green reserved for named states
+Materials/textures: dark appointment ledger, fine rules, quiet inset regions, very low shadow
+Typography: compact workhorse sans serif, tabular times and amounts, distinct chapter headings
+Composition/framing: neutral dark review-board background with full phone and desktop screens shown straight-on and fully visible
+Text (verbatim where legible): “Salu Salon”, “Your salon today”, “Before the next chair”, “On the floor”, “Later today”, “Reply to customer”, “Deposit expires soon”, “Messages”, “Customers”, “Salon”
+Constraints: phone-first one-handed use; 48px controls; desktop is an expansion of the same hierarchy; one page h1; direct actions; status text is never color-only
+Avoid: generic analytics dashboard, floating metric tiles, gradients, glass, neon, stock salon imagery, decorative beauty motifs, serif headlines, excessive roundness, tiny text, watermark
