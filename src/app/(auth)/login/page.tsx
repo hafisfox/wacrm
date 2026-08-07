@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/card';
 import { MessageSquare, UsersRound } from 'lucide-react';
 import { fetchWithTimeout } from '@/lib/http';
+import { safeNextPath } from '@/lib/auth/redirects';
 
 function isEmailNotConfirmed(message: string): boolean {
   return message.toLowerCase().includes('email not confirmed');
@@ -40,6 +41,8 @@ function LoginPageInner() {
   // account. After a successful sign-in we send them to the join
   // page to accept rather than to /dashboard.
   const inviteToken = searchParams.get('invite');
+  const nextPath = safeNextPath(searchParams.get('next'));
+  const resetComplete = searchParams.get('reset') === 'success';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -57,7 +60,7 @@ function LoginPageInner() {
       if (inviteToken) {
         router.push(`/join/${encodeURIComponent(inviteToken)}`);
       } else {
-        router.push('/dashboard');
+        router.push(nextPath);
       }
     };
 
@@ -118,8 +121,8 @@ function LoginPageInner() {
   };
 
   return (
-    <div className="bg-background flex min-h-dvh items-center justify-center px-3 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] sm:px-4">
-      <Card className="min-w-0 w-full max-w-[calc(100vw-1.5rem)] border-0 shadow-none sm:max-w-md sm:border sm:shadow-sm">
+    <main className="auth-page">
+      <Card className="auth-card">
         <CardHeader className="items-center text-center">
           <div className="bg-primary/10 mb-2 flex h-12 w-12 items-center justify-center rounded-xl">
             {inviteToken ? (
@@ -139,6 +142,14 @@ function LoginPageInner() {
         </CardHeader>
         <CardContent className="min-w-0">
           <form onSubmit={handleLogin} className="flex min-w-0 flex-col gap-4">
+            {resetComplete ? (
+              <div
+                className="border-success/30 bg-success/10 text-foreground rounded-lg border px-4 py-3 text-sm"
+                role="status"
+              >
+                Password updated. Sign in with your new password.
+              </div>
+            ) : null}
             {error && (
               <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
                 {error}
@@ -186,7 +197,7 @@ function LoginPageInner() {
             <Button
               type="submit"
               disabled={loading}
-              className="bg-primary text-primary-foreground hover:bg-primary/90 mt-2 h-12 w-full sm:h-10 disabled:opacity-50"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 mt-2 h-12 w-full disabled:opacity-50 sm:h-10"
             >
               {loading ? 'Signing in...' : 'Sign in'}
             </Button>
@@ -198,7 +209,7 @@ function LoginPageInner() {
               href={
                 inviteToken
                   ? `/signup?invite=${encodeURIComponent(inviteToken)}`
-                  : '/signup'
+                  : `/signup?next=${encodeURIComponent(nextPath)}`
               }
               className="text-primary hover:text-primary/80"
             >
@@ -207,6 +218,6 @@ function LoginPageInner() {
           </p>
         </CardContent>
       </Card>
-    </div>
+    </main>
   );
 }

@@ -70,11 +70,11 @@ export function ContactsClient({
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
           <AutoRefresh />
-          <div className="grid grid-cols-3 gap-2 text-center">
+          <dl className="border-border bg-card grid grid-cols-3 divide-x overflow-hidden rounded-lg border text-center">
             <MiniStat label="7d seen" value={metrics.customers_seen_7d} />
             <MiniStat label="needs reply" value={metrics.human_mode_sessions} />
             <MiniStat label="holds" value={metrics.pending_payment_holds} />
-          </div>
+          </dl>
         </div>
       </div>
 
@@ -282,11 +282,11 @@ function StateBadge({
 
 function MiniStat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="border-border bg-card rounded-lg border px-3 py-2">
-      <p className="text-foreground text-lg font-semibold tabular-nums">
+    <div className="flex flex-col-reverse px-3 py-2">
+      <dt className="text-muted-foreground text-xs">{label}</dt>
+      <dd className="text-foreground text-lg font-semibold tabular-nums">
         {value.toLocaleString('en-IN')}
-      </p>
-      <p className="text-muted-foreground text-xs">{label}</p>
+      </dd>
     </div>
   );
 }

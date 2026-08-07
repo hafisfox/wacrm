@@ -485,9 +485,8 @@ export async function logSaluAgentMessage({
   const canonicalPhone = canonicalSaluPhone(phone);
   if (!canonicalPhone || !messageId) return;
 
-  await saluQuery(
-    `select salu.upsert_message_event($1::jsonb) as result`,
-    [{
+  await saluQuery(`select salu.upsert_message_event($1::jsonb) as result`, [
+    {
       event_id: messageId,
       message_id: messageId,
       phone: canonicalPhone,
@@ -502,6 +501,6 @@ export async function logSaluAgentMessage({
       direction: 'outbound',
       sender_type: 'agent',
       sender_id: senderId,
-    }],
-  );
+    },
+  ]);
 }

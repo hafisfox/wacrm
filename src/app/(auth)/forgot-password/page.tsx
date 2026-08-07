@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,9 +16,14 @@ import {
 } from '@/components/ui/card';
 import { MessageSquare, CheckCircle, ArrowLeft } from 'lucide-react';
 
-export default function ForgotPasswordPage() {
+function ForgotPasswordForm() {
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(() =>
+    searchParams.get('error') === 'invalid_or_expired'
+      ? 'That reset link is invalid or has expired. Request a fresh link below.'
+      : null
+  );
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const supabase = createClient();
@@ -43,10 +49,10 @@ export default function ForgotPasswordPage() {
 
   if (success) {
     return (
-      <div className="bg-background flex min-h-screen items-center justify-center px-4">
-        <Card className="w-full max-w-md">
+      <main className="auth-page">
+        <Card className="auth-card">
           <CardHeader className="items-center text-center">
-            <div className="bg-primary/10 mb-2 flex h-12 w-12 items-center justify-center rounded-xl">
+            <div className="auth-mark">
               <CheckCircle className="text-primary h-6 w-6" />
             </div>
             <CardTitle className="text-foreground text-xl">
@@ -69,15 +75,15 @@ export default function ForgotPasswordPage() {
             </Link>
           </CardContent>
         </Card>
-      </div>
+      </main>
     );
   }
 
   return (
-    <div className="bg-background flex min-h-screen items-center justify-center px-4">
-      <Card className="w-full max-w-md">
+    <main className="auth-page">
+      <Card className="auth-card">
         <CardHeader className="items-center text-center">
-          <div className="bg-primary/10 mb-2 flex h-12 w-12 items-center justify-center rounded-xl">
+          <div className="auth-mark">
             <MessageSquare className="text-primary h-6 w-6" />
           </div>
           <CardTitle className="text-foreground text-xl">
@@ -91,7 +97,10 @@ export default function ForgotPasswordPage() {
         <CardContent>
           <form onSubmit={handleReset} className="flex flex-col gap-4">
             {error && (
-              <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+              <div
+                role="alert"
+                className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300"
+              >
                 {error}
               </div>
             )}
@@ -129,6 +138,14 @@ export default function ForgotPasswordPage() {
           </Link>
         </CardContent>
       </Card>
-    </div>
+    </main>
+  );
+}
+
+export default function ForgotPasswordPage() {
+  return (
+    <Suspense fallback={<main className="auth-page" aria-busy="true" />}>
+      <ForgotPasswordForm />
+    </Suspense>
   );
 }

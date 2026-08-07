@@ -1,6 +1,6 @@
 {
   "name": "salu-whatsapp-dashboard",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "private": true,
   "description": "Salu Salon WhatsApp operations console for daily triage, shared inbox, customer memory, and Meta template maintenance.",
   "license": "MIT",

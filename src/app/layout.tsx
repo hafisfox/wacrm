@@ -87,6 +87,13 @@ export default function RootLayout({
         />
       </head>
       <body className="bg-background text-foreground min-h-full font-sans">
+        <template
+          data-design-contract="deebff86"
+          dangerouslySetInnerHTML={{
+            __html:
+              '<!-- THESIS: Salu Daybook is organized around a live now seam and an appointment ledger; it refuses the generic metric-card dashboard. OWN-WORLD: cool near-black slate, one selectable theme accent, fine ruled seams, compact sans type, and tabular operational numerals. STORY: the salon owner sees urgent replies, expiring deposits, and the current appointment first; acts; then scans the rest of the shift. FIRST VIEWPORT: compact shell, live ribbon, and full-width timeline on phone; dominant daybook with a narrow exception rail on desktop. FORM: Now Line, grounded candidate 6, seed deebff86. FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md -->',
+          }}
+        />
         <ThemeProvider>
           {children}
           <Toaster

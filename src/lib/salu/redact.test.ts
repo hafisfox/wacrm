@@ -40,7 +40,9 @@ describe('redactCustomerText', () => {
   });
 
   it('redacts six-digit OTPs', () => {
-    expect(redactCustomerText('the otp is 483920')).toBe('the otp is [redacted]');
+    expect(redactCustomerText('the otp is 483920')).toBe(
+      'the otp is [redacted]'
+    );
   });
 
   it('keeps prices and years, which are not identifiers', () => {

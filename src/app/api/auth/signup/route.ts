@@ -6,6 +6,7 @@ import {
   rateLimitResponse,
   RATE_LIMITS,
 } from '@/lib/rate-limit';
+import { passwordLengthError } from '@/lib/auth/password-policy';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -63,11 +64,9 @@ export async function POST(request: Request) {
     );
   }
 
-  if (password.length < 6) {
-    return NextResponse.json(
-      { error: 'Password must be at least 6 characters' },
-      { status: 400 }
-    );
+  const passwordError = passwordLengthError(password);
+  if (passwordError) {
+    return NextResponse.json({ error: passwordError }, { status: 400 });
   }
 
   if (

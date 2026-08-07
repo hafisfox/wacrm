@@ -32,9 +32,9 @@ export function Header() {
           <p className="text-muted-foreground hidden text-[10px] font-semibold tracking-[0.14em] uppercase sm:block">
             Salu Salon
           </p>
-          <h1 className="text-foreground truncate text-base font-semibold sm:text-lg">
+          <p className="text-foreground truncate text-base font-semibold sm:text-lg">
             {title}
-          </h1>
+          </p>
         </div>
       </div>
 

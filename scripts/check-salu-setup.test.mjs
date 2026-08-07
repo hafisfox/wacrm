@@ -102,7 +102,7 @@ describe('validateDashboardEnv', () => {
 
     expect(result.missingEnv).toContain('NEXT_PUBLIC_SUPABASE_URL');
     expect(result.missingEnv).toContain(
-      'SALU_BOOKING_DATABASE_URL_OR_DATABASE_URL',
+      'SALU_BOOKING_DATABASE_URL_OR_DATABASE_URL'
     );
     expect(result.invalidEnv.map((item) => item.key)).toEqual([
       'SALU_DASHBOARD_MODE',

@@ -1,9 +1,9 @@
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
 
-import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Badge } from '@/components/ui/badge';
+import { buttonVariants } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 type LegalSection = {
   title: string;
@@ -19,9 +19,9 @@ type LegalShellProps = {
   relatedLabel: string;
 };
 
-export const LEGAL_LAST_UPDATED = "July 17, 2026";
-export const SALU_CONTACT_EMAIL = "salutechn8n@gmail.com";
-export const SALU_ADDRESS = "Salu Salon, MG Road, Kochi, Kerala, India";
+export const LEGAL_LAST_UPDATED = 'July 17, 2026';
+export const SALU_CONTACT_EMAIL = 'salutechn8n@gmail.com';
+export const SALU_ADDRESS = 'Salu Salon, MG Road, Kochi, Kerala, India';
 
 export function LegalShell({
   title,
@@ -32,13 +32,16 @@ export function LegalShell({
   relatedLabel,
 }: LegalShellProps) {
   return (
-    <main className="min-h-screen bg-background text-foreground">
+    <main className="bg-background text-foreground min-h-screen">
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-10 px-5 py-8 sm:px-8 sm:py-12">
-        <header className="flex flex-col gap-6 border-b border-border pb-8">
+        <header className="border-border flex flex-col gap-6 border-b pb-8">
           <div className="flex flex-wrap items-center gap-3">
             <Link
               href="/"
-              className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "-ml-2")}
+              className={cn(
+                buttonVariants({ variant: 'ghost', size: 'sm' }),
+                '-ml-2'
+              )}
             >
               <ArrowLeft className="size-4" />
               Salu Salon
@@ -47,13 +50,13 @@ export function LegalShell({
           </div>
 
           <div className="flex max-w-3xl flex-col gap-3">
-            <p className="text-sm font-medium tracking-normal text-primary">
+            <p className="text-primary text-sm font-medium tracking-normal">
               {eyebrow}
             </p>
-            <h1 className="text-3xl font-semibold tracking-normal text-foreground sm:text-4xl">
+            <h1 className="text-foreground text-3xl font-semibold tracking-normal sm:text-4xl">
               {title}
             </h1>
-            <p className="text-base leading-7 text-muted-foreground">
+            <p className="text-muted-foreground text-base leading-7">
               {summary}
             </p>
           </div>
@@ -65,7 +68,7 @@ export function LegalShell({
               <h2 className="text-xl font-semibold tracking-normal">
                 {section.title}
               </h2>
-              <div className="grid gap-3 text-sm leading-7 text-muted-foreground sm:text-base">
+              <div className="text-muted-foreground grid gap-3 text-sm leading-7 sm:text-base">
                 {section.body.map((paragraph) => (
                   <p key={paragraph}>{paragraph}</p>
                 ))}
@@ -74,16 +77,19 @@ export function LegalShell({
           ))}
         </div>
 
-        <footer className="flex flex-col gap-4 border-t border-border pt-6 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+        <footer className="border-border text-muted-foreground flex flex-col gap-4 border-t pt-6 text-sm sm:flex-row sm:items-center sm:justify-between">
           <p>
-            Questions:{" "}
-            <a className="text-primary hover:underline" href={`mailto:${SALU_CONTACT_EMAIL}`}>
+            Questions:{' '}
+            <a
+              className="text-primary hover:underline"
+              href={`mailto:${SALU_CONTACT_EMAIL}`}
+            >
               {SALU_CONTACT_EMAIL}
             </a>
           </p>
           <Link
             href={relatedHref}
-            className={buttonVariants({ variant: "outline", size: "sm" })}
+            className={buttonVariants({ variant: 'outline', size: 'sm' })}
           >
             {relatedLabel}
           </Link>

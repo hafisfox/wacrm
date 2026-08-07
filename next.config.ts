@@ -1,6 +1,6 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
 
-const isDev = process.env.NODE_ENV === "development";
+const isDev = process.env.NODE_ENV === 'development';
 
 /**
  * Content-Security-Policy, enforced.
@@ -30,7 +30,7 @@ const CSP_DIRECTIVES = [
   "default-src 'self'",
   // 'unsafe-inline' covers Next.js's inline hydration script. 'unsafe-eval'
   // is dev-only: Turbopack's HMR runtime needs it, production does not.
-  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''}`,
   // Tailwind + inline style attributes on lots of components.
   "style-src 'self' 'unsafe-inline'",
   // Supabase public-bucket avatars, contact avatars (arbitrary
@@ -44,7 +44,7 @@ const CSP_DIRECTIVES = [
   // that, but the browsers disagree in practice, so name it explicitly
   // rather than have the dev loop die on a spec argument.
   `connect-src 'self' https://*.supabase.co wss://*.supabase.co${
-    isDev ? " ws://localhost:* ws://127.0.0.1:*" : ""
+    isDev ? ' ws://localhost:* ws://127.0.0.1:*' : ''
   }`,
   // Next.js loads some chunks into blob: workers.
   "worker-src 'self' blob:",
@@ -54,85 +54,52 @@ const CSP_DIRECTIVES = [
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
-].join("; ");
+].join('; ');
 
 const SECURITY_HEADERS = [
   {
-    key: "Strict-Transport-Security",
-    value: "max-age=63072000; includeSubDomains; preload",
+    key: 'Strict-Transport-Security',
+    value: 'max-age=63072000; includeSubDomains; preload',
   },
-  { key: "X-Content-Type-Options", value: "nosniff" },
-  { key: "X-Frame-Options", value: "DENY" },
-  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  { key: 'X-Frame-Options', value: 'DENY' },
+  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
   {
-    key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
+    key: 'Permissions-Policy',
+    value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
   },
-  { key: "Content-Security-Policy", value: CSP_DIRECTIVES },
+  { key: 'Content-Security-Policy', value: CSP_DIRECTIVES },
+] as const;
+
+const PRIVATE_APP_HEADERS = [
+  {
+    key: 'Cache-Control',
+    value: 'private, no-cache, no-store, max-age=0, must-revalidate',
+  },
 ] as const;
 
 const nextConfig: NextConfig = {
   turbopack: {
     root: process.cwd(),
   },
-  /**
-   * Cache-Control policy.
-   *
-   * Why this exists:
-   *   Hostinger's CDN was applying `s-maxage=31536000` (1 year) to
-   *   prerendered HTML pages by default. When a new deploy shipped
-   *   fresh Turbopack chunk hashes, the edge kept serving year-old
-   *   HTML referencing chunk filenames that no longer existed on
-   *   disk — result: HTML 200, every /_next/static/*.js and .css
-   *   came back 404, the page rendered unstyled. Private/incognito
-   *   did nothing because the cache is server-side.
-   *
-   * Strategy:
-   *   - /_next/static/* — leave to Next. Turbopack dev chunks can go
-   *     stale if we force immutable caching here; Next already emits
-   *     the correct production headers for hashed assets.
-   *   - /api/*          — no-store. API responses are per-user and
-   *     must never be shared across requests at the edge.
-   *   - Everything else — public, brief s-maxage + generous
-   *     stale-while-revalidate. The edge serves instantly from cache
-   *     for the first 5 min, then returns cached content while
-   *     refreshing in the background for up to 24 h. A deploy's
-   *     chunk-hash drift self-heals within ~5 min with no user-
-   *     visible latency.
-   *
-   *   Note: dynamic dashboard routes (/inbox, /contacts, /settings,
-   *   /system-health, etc.) are server-rendered per request — Next.js
-   *   and Supabase auth already prevent them from being served
-   *   from a shared cache. The s-maxage here is a ceiling; Next.js
-   *   and auth middleware still set `private` / `no-store` for
-   *   per-user responses.
-   *
-   * Security headers are appended via a separate catch-all rule
-   * below — Next.js merges headers from every matching rule, so
-   * they apply to every response regardless of which cache rule
-   * matched.
-   */
   async headers() {
     return [
       {
-        source: "/api/:path*",
-        headers: [{ key: "Cache-Control", value: "no-store" }],
+        source: '/api/:path*',
+        headers: [...PRIVATE_APP_HEADERS],
       },
-      {
-        source: "/:path((?!_next/static|_next/image|api).*)",
-        headers: [
-          {
-            key: "Cache-Control",
-            value:
-              "public, max-age=0, s-maxage=300, stale-while-revalidate=86400",
-          },
-        ],
-      },
+      ...[
+        '/dashboard/:path*',
+        '/salon-control/:path*',
+        '/inbox/:path*',
+        '/contacts/:path*',
+        '/settings/:path*',
+      ].map((source) => ({ source, headers: [...PRIVATE_APP_HEADERS] })),
       {
         // Security headers on every response, including /_next/static
         // assets (nosniff matters there) and /api/* (HSTS + referrer-
         // policy don't hurt).
-        source: "/:path*",
+        source: '/:path*',
         headers: [...SECURITY_HEADERS],
       },
     ];

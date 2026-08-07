@@ -43,16 +43,24 @@ function getLinkedProject() {
     repo.projects?.[0];
 
   if (!project?.id || !project?.orgId) {
-    throw new Error('Could not find linked Vercel project id/orgId in dashboard/.vercel/repo.json.');
+    throw new Error(
+      'Could not find linked Vercel project id/orgId in dashboard/.vercel/repo.json.'
+    );
   }
 
   return project;
 }
 
 function getVercelToken() {
-  const authPath = path.join(os.homedir(), 'Library/Application Support/com.vercel.cli/auth.json');
+  const authPath = path.join(
+    os.homedir(),
+    'Library/Application Support/com.vercel.cli/auth.json'
+  );
   const auth = readJson(authPath, 'Vercel CLI auth.json');
-  if (!auth.token) throw new Error('Vercel CLI auth token is missing. Run `vercel login` first.');
+  if (!auth.token)
+    throw new Error(
+      'Vercel CLI auth token is missing. Run `vercel login` first.'
+    );
   return auth.token;
 }
 
@@ -60,12 +68,21 @@ function apiUrl(project, pathname, query = {}) {
   const url = new URL(pathname, API_BASE);
   url.searchParams.set('teamId', project.orgId);
   for (const [key, value] of Object.entries(query)) {
-    if (value !== undefined && value !== null && value !== '') url.searchParams.set(key, value);
+    if (value !== undefined && value !== null && value !== '')
+      url.searchParams.set(key, value);
   }
   return url;
 }
 
-async function vercelFetch({ project, token, pathname, query, method = 'GET', body, secrets }) {
+async function vercelFetch({
+  project,
+  token,
+  pathname,
+  query,
+  method = 'GET',
+  body,
+  secrets,
+}) {
   const response = await fetch(apiUrl(project, pathname, query), {
     method,
     headers: {
@@ -80,8 +97,11 @@ async function vercelFetch({ project, token, pathname, query, method = 'GET', bo
   const data = text ? JSON.parse(text) : null;
 
   if (!response.ok) {
-    const message = data?.error?.message || data?.message || redacted || response.statusText;
-    throw new Error(`${method} ${pathname} failed (${response.status}): ${redact(message, secrets)}`);
+    const message =
+      data?.error?.message || data?.message || redacted || response.statusText;
+    throw new Error(
+      `${method} ${pathname} failed (${response.status}): ${redact(message, secrets)}`
+    );
   }
 
   return data;
@@ -97,7 +117,8 @@ function envRecordsFromResponse(data) {
 const envPath = new URL('../.env.local', import.meta.url);
 const values = loadEnvFile(envPath);
 const missing = KEYS.filter((key) => !String(values[key] || '').trim());
-if (missing.length) throw new Error(`Missing required local env values: ${missing.join(', ')}`);
+if (missing.length)
+  throw new Error(`Missing required local env values: ${missing.join(', ')}`);
 
 const project = getLinkedProject();
 const token = getVercelToken();
@@ -134,7 +155,9 @@ for (const environment of ENVIRONMENTS) {
     query: { target: environment },
     secrets,
   });
-  const present = new Set(envRecordsFromResponse(data).map((record) => record.key));
+  const present = new Set(
+    envRecordsFromResponse(data).map((record) => record.key)
+  );
   verification[environment] = KEYS.filter((key) => present.has(key));
 }
 

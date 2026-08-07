@@ -16,6 +16,32 @@ and polish.
 
 - Updated Salu-specific setup/security/contribution docs and clarified that `dashboard/.env.local` is the canonical dashboard env file.
 
+## [0.2.3] — 2026-08-07
+
+### Added
+
+- Added the Salu Daybook Today view with a live shift brief, chronological appointment ledger, current-time seam, and exception rail.
+- Added complete password recovery through `/auth/callback` and `/reset-password`, including expired-link handling and a shared eight-character password policy.
+- Added deterministic Android hardware-Back handling and a reproducible versioned APK release.
+
+### Changed
+
+- Centralized protected-route policy and made signed-in pages and APIs private/no-store.
+- Refined Messages, Customers, Salon, Settings, and auth around one phone-first form and navigation system while preserving all five appearance themes.
+- Added URL-backed Salon tabs, read-only permission guidance, explicit save state, accessible schedule labels, and confirmation dialogs.
+- Moved dashboard analysis below current-shift work and limited WhatsApp green to the Messages surface.
+- Formatted application-owned source and excluded generated Capacitor assets from formatting checks.
+
+### Fixed
+
+- Protected `/salon-control` before any salon data is loaded; unauthenticated requests can no longer serialize salon, stylist, service, customer, or booking data.
+- Preserved safe intended destinations through sign-in while rejecting external and malformed redirect targets.
+- Removed 17 tracked iCloud conflict copies after comparing them and retaining the useful error-reference behavior.
+
+### Compatibility
+
+- No database migration, Supabase tenancy change, n8n workflow change, webhook ownership change, or dashboard API contract change is required.
+
 ## Imported WACRM History
 
 Multi-user accounts ship. Every wacrm install is multi-tenant on the
@@ -67,8 +93,8 @@ always did.
 
 - `supabase/migrations/020_account_sharing_followups.sql` —
   composite partial indexes on `automations(account_id,
-  trigger_type) WHERE is_active` and `flows(account_id) WHERE
-  status='active'` for the engine dispatch hot path; updated
+trigger_type) WHERE is_active` and `flows(account_id) WHERE
+status='active'` for the engine dispatch hot path; updated
   `flow-media` storage RLS to allow account-member writes under
   the new path convention. Idempotent.
 
@@ -259,10 +285,10 @@ when two users on the same instance saved the same WhatsApp
 - **Inbound WhatsApp messages no longer silently disappear** when two
   users have claimed the same `phone_number_id`. Previously the
   webhook used `.single()` to look up the owning config, which errors
-  `PGRST116` for both 0 rows *and* ≥2 rows — the second user's save
+  `PGRST116` for both 0 rows _and_ ≥2 rows — the second user's save
   put the DB into the ≥2-row state and every inbound message was
-  dropped while the log misleadingly reported *"No config found for
-  phone_number_id"*. Three layers of fix: `POST /api/whatsapp/config`
+  dropped while the log misleadingly reported _"No config found for
+  phone_number_id"_. Three layers of fix: `POST /api/whatsapp/config`
   now returns **409** when another user has already claimed the
   number, the webhook lookup distinguishes 0 rows from ≥2 rows and
   logs the conflicting `user_id`s, and a new DB constraint

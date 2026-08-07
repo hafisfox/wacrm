@@ -179,7 +179,7 @@ export function ConversationList({
           <p className="text-chat-muted text-[10px] font-semibold tracking-[0.14em] uppercase">
             Customer conversations
           </p>
-          <h2 className="text-chat-ink text-lg font-semibold">Messages</h2>
+          <h1 className="text-chat-ink text-lg font-semibold">Messages</h1>
         </div>
       </div>
       {/* Search + Filter */}

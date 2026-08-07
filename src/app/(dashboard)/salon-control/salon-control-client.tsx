@@ -7,6 +7,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   CalendarClock,
   Check,
@@ -59,6 +60,8 @@ const INPUT =
   'h-11 w-full rounded-lg border border-border bg-background/50 px-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60 sm:h-9';
 const TEXTAREA = `${INPUT} h-auto py-2`;
 const WEEKDAY_SET = new Set<string>(WEEKDAYS);
+const SALON_TABS = ['overview', 'services', 'team', 'schedule'] as const;
+type SalonTab = (typeof SALON_TABS)[number];
 
 type Weekday = (typeof WEEKDAYS)[number];
 type DraftRule = {
@@ -215,6 +218,13 @@ export function SalonControlClient({
   initialData: ControlRoomData;
 }) {
   const canEdit = useCan('edit-settings');
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const requestedTab = searchParams.get('tab');
+  const activeTab: SalonTab = SALON_TABS.includes(requestedTab as SalonTab)
+    ? (requestedTab as SalonTab)
+    : 'overview';
   const [data, setData] = useState(initialData);
   const [saving, setSaving] = useState('');
   const [serviceEditor, setServiceEditor] = useState<
@@ -223,6 +233,10 @@ export function SalonControlClient({
   const [stylistEditor, setStylistEditor] = useState<
     SalonStylistRow | 'new' | null
   >(null);
+  const [pendingRemoval, setPendingRemoval] = useState<{
+    path: string;
+    label: string;
+  } | null>(null);
 
   useEffect(() => setData(initialData), [initialData]);
 
@@ -302,15 +316,23 @@ export function SalonControlClient({
     await request(`${API}/order`, 'PUT', { entity, ids }, `order:${entity}`);
   }
 
-  async function remove(path: string, label: string) {
-    if (
-      !window.confirm(
-        `Deactivate this ${label}? Existing bookings will remain unchanged.`
-      )
-    )
-      return;
+  function selectTab(value: string) {
+    if (!SALON_TABS.includes(value as SalonTab)) return;
+    const next = new URLSearchParams(searchParams.toString());
+    if (value === 'overview') next.delete('tab');
+    else next.set('tab', value);
+    const query = next.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, {
+      scroll: false,
+    });
+  }
+
+  async function confirmRemoval() {
+    if (!pendingRemoval) return;
+    const { path, label } = pendingRemoval;
     if (await request(path, 'DELETE', undefined, `remove:${label}`)) {
       toast.success(`${label} deactivated`);
+      setPendingRemoval(null);
     }
   }
 
@@ -501,7 +523,14 @@ export function SalonControlClient({
           </div>
         ) : null}
 
-        <Tabs defaultValue="overview">
+        {!canEdit ? (
+          <div className="border-primary/25 bg-primary-soft text-foreground rounded-xl border px-4 py-3 text-sm">
+            You have read-only access. An owner or admin can change salon
+            details, services, team members, and schedules.
+          </div>
+        ) : null}
+
+        <Tabs value={activeTab} onValueChange={selectTab}>
           <TabsList className="border-border bg-card flex h-12 w-full justify-start gap-1 overflow-x-auto border p-1">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="services">Services</TabsTrigger>
@@ -548,10 +577,10 @@ export function SalonControlClient({
                       reorder('services', service.service_id, direction)
                     }
                     onDeactivate={() =>
-                      remove(
-                        `${API}/services?service_id=${encodeURIComponent(service.service_id)}`,
-                        service.service_name
-                      )
+                      setPendingRemoval({
+                        path: `${API}/services?service_id=${encodeURIComponent(service.service_id)}`,
+                        label: service.service_name,
+                      })
                     }
                   />
                 ))}
@@ -593,10 +622,10 @@ export function SalonControlClient({
                       reorder('stylists', stylist.stylist_id, direction)
                     }
                     onDeactivate={() =>
-                      remove(
-                        `${API}/stylists?stylist_id=${encodeURIComponent(stylist.stylist_id)}`,
-                        stylist.stylist_name
-                      )
+                      setPendingRemoval({
+                        path: `${API}/stylists?stylist_id=${encodeURIComponent(stylist.stylist_id)}`,
+                        label: stylist.stylist_name,
+                      })
                     }
                   />
                 ))}
@@ -656,6 +685,37 @@ export function SalonControlClient({
           return saved;
         }}
       />
+      <Dialog
+        open={pendingRemoval !== null}
+        onOpenChange={(open) => !open && setPendingRemoval(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Deactivate {pendingRemoval?.label}?</DialogTitle>
+            <DialogDescription>
+              Customers will no longer be able to select it. Existing bookings
+              will remain unchanged.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPendingRemoval(null)}>
+              Keep active
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={saving.startsWith('remove:')}
+              onClick={confirmRemoval}
+            >
+              {saving.startsWith('remove:') ? (
+                <Loader2 className="animate-spin" />
+              ) : (
+                <Trash2 />
+              )}
+              Deactivate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -698,6 +758,7 @@ function SalonDetails({
 }) {
   const [form, setForm] = useState(config);
   useEffect(() => setForm(config), [config]);
+  const dirty = JSON.stringify(form) !== JSON.stringify(config);
   function update(key: keyof SalonConfigRow, value: string) {
     setForm((current) => ({ ...current, [key]: value }));
   }
@@ -796,8 +857,14 @@ function SalonDetails({
               </Field>
             </div>
           </details>
-          <div className="flex justify-end lg:col-span-2">
-            <Button className="min-h-11" disabled={disabled || saving}>
+          <div className="flex flex-col items-end gap-2 lg:col-span-2">
+            <p className="text-muted-foreground text-xs" aria-live="polite">
+              {dirty ? 'Unsaved changes' : 'All details saved'}
+            </p>
+            <Button
+              className="min-h-11"
+              disabled={disabled || saving || !dirty}
+            >
               {saving ? <Loader2 className="animate-spin" /> : <Check />} Save
               details
             </Button>
@@ -1989,7 +2056,13 @@ function ScheduleGrid({
   saving: boolean;
   onSave: (rules: DraftRule[], deactivateIds: string[]) => Promise<boolean>;
 }) {
-  const [week, setWeek] = useState(() => weekFromRows(initialRows, scope));
+  const initialWeek = useMemo(
+    () => weekFromRows(initialRows, scope),
+    [initialRows, scope]
+  );
+  const [week, setWeek] = useState(initialWeek);
+  useEffect(() => setWeek(initialWeek), [initialWeek]);
+  const dirty = JSON.stringify(week) !== JSON.stringify(initialWeek);
   const knownIds = useMemo(
     () =>
       initialRows.map((row) =>
@@ -2019,6 +2092,10 @@ function ScheduleGrid({
     }));
   }
   async function save() {
+    if (!dirty) {
+      toast.message('No schedule changes to save');
+      return;
+    }
     const draftRules = WEEKDAYS.flatMap((day) => week[day]);
     const activeIds = new Set(
       draftRules.map((rule) => rule.id).filter(Boolean)
@@ -2029,10 +2106,6 @@ function ScheduleGrid({
         ? { ...rule, availability_id: rule.id }
         : { ...rule, stylist_availability_id: rule.id }
     );
-    if (!rules.length && !deactivateIds.length) {
-      toast.message('No schedule changes to save');
-      return;
-    }
     if (await onSave(rules, deactivateIds)) toast.success(`${title} saved`);
   }
   return (
@@ -2109,6 +2182,7 @@ function ScheduleGrid({
                     <input
                       className={INPUT}
                       type="time"
+                      aria-label={`${day} opening time ${index + 1}`}
                       value={rule.open_time}
                       disabled={disabled}
                       onChange={(event) =>
@@ -2125,6 +2199,7 @@ function ScheduleGrid({
                     <input
                       className={INPUT}
                       type="time"
+                      aria-label={`${day} closing time ${index + 1}`}
                       value={rule.close_time}
                       disabled={disabled}
                       onChange={(event) =>
@@ -2140,6 +2215,7 @@ function ScheduleGrid({
                     />
                     <select
                       className={`${INPUT} col-span-2 sm:col-span-1`}
+                      aria-label={`${day} slot interval ${index + 1}`}
                       value={rule.slot_interval_minutes}
                       disabled={disabled}
                       onChange={(event) =>
@@ -2205,10 +2281,13 @@ function ScheduleGrid({
             </div>
           );
         })}
-        <div className="flex justify-end pt-2">
+        <div className="flex flex-col items-end gap-2 pt-2">
+          <p className="text-muted-foreground text-xs" aria-live="polite">
+            {dirty ? 'Unsaved schedule changes' : 'Schedule is saved'}
+          </p>
           <Button
             className="min-h-11 w-full sm:w-auto"
-            disabled={disabled || saving}
+            disabled={disabled || saving || !dirty}
             onClick={save}
           >
             {saving ? <Loader2 className="animate-spin" /> : <Check />} Save

@@ -382,6 +382,20 @@ html[data-theme='rose'] {
 }
 
 @layer components {
+  .auth-page {
+    @apply bg-background flex min-h-dvh items-center justify-center px-4 py-8;
+    padding-top: max(2rem, env(safe-area-inset-top));
+    padding-bottom: max(2rem, env(safe-area-inset-bottom));
+  }
+
+  .auth-card {
+    @apply border-border bg-card w-full max-w-md shadow-xl shadow-black/20;
+  }
+
+  .auth-mark {
+    @apply bg-primary-soft mb-2 flex h-12 w-12 items-center justify-center rounded-xl;
+  }
+
   .ops-page {
     @apply mx-auto w-full max-w-7xl space-y-4 sm:space-y-5;
   }

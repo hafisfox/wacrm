@@ -1,5 +1,11 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import {
+  isAuthEntryPage,
+  isLegacyPage,
+  isProtectedPage,
+} from '@/lib/auth/route-policy';
+import { safeNextPath } from '@/lib/auth/redirects';
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -12,11 +18,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  const saluPaths = ['/dashboard', '/inbox', '/contacts', '/settings'];
-  const legacyPaths = ['/pipelines', '/broadcasts', '/automations', '/flows'];
-  const isLegacyPath = legacyPaths.some((path) =>
-    request.nextUrl.pathname.startsWith(path)
-  );
+  const isLegacyPath = isLegacyPage(request.nextUrl.pathname);
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -49,12 +51,7 @@ export async function proxy(request: NextRequest) {
   // they can accept the invitation in one click. Without this,
   // a forwarded invite link to someone who's already signed in
   // would silently drop them on /dashboard.
-  if (
-    user &&
-    (request.nextUrl.pathname === '/login' ||
-      request.nextUrl.pathname === '/signup' ||
-      request.nextUrl.pathname === '/forgot-password')
-  ) {
+  if (user && isAuthEntryPage(request.nextUrl.pathname)) {
     const url = request.nextUrl.clone();
     const inviteToken = request.nextUrl.searchParams.get('invite');
     if (
@@ -65,20 +62,25 @@ export async function proxy(request: NextRequest) {
       url.pathname = `/join/${encodeURIComponent(inviteToken)}`;
       url.search = '';
     } else {
-      url.pathname = '/dashboard';
+      const nextPath = safeNextPath(request.nextUrl.searchParams.get('next'));
+      url.pathname = nextPath.split(/[?#]/, 1)[0];
       url.search = '';
+      const parsedNext = new URL(nextPath, request.url);
+      url.search = parsedNext.search;
+      url.hash = parsedNext.hash;
     }
     return NextResponse.redirect(url);
   }
 
   // Protected pages - redirect to login if not authenticated
-  const protectedPaths = [...saluPaths, ...legacyPaths];
-  if (
-    !user &&
-    protectedPaths.some((path) => request.nextUrl.pathname.startsWith(path))
-  ) {
+  if (!user && isProtectedPage(request.nextUrl.pathname)) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
+    url.search = '';
+    url.searchParams.set(
+      'next',
+      `${request.nextUrl.pathname}${request.nextUrl.search}`
+    );
     return NextResponse.redirect(url);
   }
 

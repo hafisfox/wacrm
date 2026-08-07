@@ -16,6 +16,11 @@ import {
 } from '@/components/ui/card';
 import { MessageSquare, UsersRound } from 'lucide-react';
 import { fetchWithTimeout } from '@/lib/http';
+import { safeNextPath } from '@/lib/auth/redirects';
+import {
+  MIN_PASSWORD_LENGTH,
+  passwordLengthError,
+} from '@/lib/auth/password-policy';
 
 // `useSearchParams` opts the component out of static prerendering
 // unless wrapped in Suspense — same pattern as /login.
@@ -33,6 +38,7 @@ function SignupPageInner() {
   // invite token in the query so we can send them to the redeem
   // step after account creation instead of dropping them on /dashboard.
   const inviteToken = searchParams.get('invite');
+  const nextPath = safeNextPath(searchParams.get('next'));
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -52,8 +58,9 @@ function SignupPageInner() {
       return;
     }
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+    const lengthError = passwordLengthError(password);
+    if (lengthError) {
+      setError(lengthError);
       return;
     }
 
@@ -95,7 +102,7 @@ function SignupPageInner() {
       if (inviteToken) {
         router.push(`/join/${encodeURIComponent(inviteToken)}`);
       } else {
-        router.push('/dashboard');
+        router.push(nextPath);
       }
     } catch (err) {
       console.error('[signup] request failed:', err);
@@ -105,8 +112,8 @@ function SignupPageInner() {
   };
 
   return (
-    <div className="bg-background flex min-h-screen items-center justify-center px-4">
-      <Card className="w-full max-w-md">
+    <main className="auth-page">
+      <Card className="auth-card">
         <CardHeader className="items-center text-center">
           <div className="bg-primary/10 mb-2 flex h-12 w-12 items-center justify-center rounded-xl">
             {inviteToken ? (
@@ -169,9 +176,10 @@ function SignupPageInner() {
               <Input
                 id="password"
                 type="password"
-                placeholder="At least 6 characters"
+                placeholder={`At least ${MIN_PASSWORD_LENGTH} characters`}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                minLength={MIN_PASSWORD_LENGTH}
                 required
                 className="focus-visible:border-primary focus-visible:ring-primary/20 border-border bg-muted text-foreground placeholder:text-muted-foreground"
               />
@@ -187,6 +195,7 @@ function SignupPageInner() {
                 placeholder="Repeat your password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
+                minLength={MIN_PASSWORD_LENGTH}
                 required
                 className="focus-visible:border-primary focus-visible:ring-primary/20 border-border bg-muted text-foreground placeholder:text-muted-foreground"
               />
@@ -207,7 +216,7 @@ function SignupPageInner() {
               href={
                 inviteToken
                   ? `/login?invite=${encodeURIComponent(inviteToken)}`
-                  : '/login'
+                  : `/login?next=${encodeURIComponent(nextPath)}`
               }
               className="text-primary hover:text-primary/80"
             >
@@ -216,6 +225,6 @@ function SignupPageInner() {
           </p>
         </CardContent>
       </Card>
-    </div>
+    </main>
   );
 }

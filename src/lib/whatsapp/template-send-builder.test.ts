@@ -24,7 +24,7 @@ describe('buildSendComponents — body', () => {
   it('emits a body component when the template has variables', () => {
     const components = buildSendComponents(
       row({ body_text: 'Hi {{1}}, order {{2}} confirmed.' }),
-      { body: ['John', 'ORD-42'] },
+      { body: ['John', 'ORD-42'] }
     );
     expect(components).toEqual([
       {
@@ -39,18 +39,16 @@ describe('buildSendComponents — body', () => {
 
   it('throws when body has variables but caller supplied too few values', () => {
     expect(() =>
-      buildSendComponents(
-        row({ body_text: 'Hi {{1}} {{2}}' }),
-        { body: ['just one'] },
-      ),
+      buildSendComponents(row({ body_text: 'Hi {{1}} {{2}}' }), {
+        body: ['just one'],
+      })
     ).toThrow(/2 variable\(s\) but only 1/);
   });
 
   it('trims extra body values silently (legacy callers may overshoot)', () => {
-    const components = buildSendComponents(
-      row({ body_text: 'Hi {{1}}' }),
-      { body: ['John', 'extra', 'extra2'] },
-    );
+    const components = buildSendComponents(row({ body_text: 'Hi {{1}}' }), {
+      body: ['John', 'extra', 'extra2'],
+    });
     expect(components).toEqual([
       { type: 'body', parameters: [{ type: 'text', text: 'John' }] },
     ]);
@@ -61,15 +59,15 @@ describe('buildSendComponents — header', () => {
   it('skips static TEXT headers (template carries them)', () => {
     expect(
       buildSendComponents(
-        row({ header_type: 'text', header_content: 'Order Confirmation' }),
-      ),
+        row({ header_type: 'text', header_content: 'Order Confirmation' })
+      )
     ).toEqual([]);
   });
 
   it('emits a TEXT header component when {{1}} is present', () => {
     const components = buildSendComponents(
       row({ header_type: 'text', header_content: 'Hello {{1}}' }),
-      { headerText: 'Sara' },
+      { headerText: 'Sara' }
     );
     expect(components).toEqual([
       { type: 'header', parameters: [{ type: 'text', text: 'Sara' }] },
@@ -79,8 +77,8 @@ describe('buildSendComponents — header', () => {
   it('throws when TEXT header has {{1}} but no value was supplied', () => {
     expect(() =>
       buildSendComponents(
-        row({ header_type: 'text', header_content: 'Hello {{1}}' }),
-      ),
+        row({ header_type: 'text', header_content: 'Hello {{1}}' })
+      )
     ).toThrow(/Header text variable \{\{1\}\}/);
   });
 
@@ -89,7 +87,7 @@ describe('buildSendComponents — header', () => {
       row({
         header_type: 'image',
         header_media_url: 'https://example.com/sample.jpg',
-      }),
+      })
     );
     expect(components).toEqual([
       {
@@ -107,7 +105,7 @@ describe('buildSendComponents — header', () => {
         header_type: 'video',
         header_media_url: 'https://example.com/default.mp4',
       }),
-      { headerMediaUrl: 'https://example.com/custom.mp4' },
+      { headerMediaUrl: 'https://example.com/custom.mp4' }
     );
     expect(components[0]).toEqual({
       type: 'header',
@@ -123,7 +121,7 @@ describe('buildSendComponents — header', () => {
         header_type: 'document',
         header_handle: '4::aBc',
         header_media_url: 'https://x.com/doc.pdf',
-      }),
+      })
     );
     expect(components[0]).toEqual({
       type: 'header',
@@ -132,9 +130,9 @@ describe('buildSendComponents — header', () => {
   });
 
   it('throws on media header with no link OR id available', () => {
-    expect(() =>
-      buildSendComponents(row({ header_type: 'image' })),
-    ).toThrow(/requires a media link or id/);
+    expect(() => buildSendComponents(row({ header_type: 'image' }))).toThrow(
+      /requires a media link or id/
+    );
   });
 });
 
@@ -142,10 +140,8 @@ describe('buildSendComponents — buttons', () => {
   it('omits URL buttons without variables (template carries the URL)', () => {
     const components = buildSendComponents(
       row({
-        buttons: [
-          { type: 'URL', text: 'Visit', url: 'https://example.com' },
-        ],
-      }),
+        buttons: [{ type: 'URL', text: 'Visit', url: 'https://example.com' }],
+      })
     );
     expect(components).toEqual([]);
   });
@@ -153,11 +149,9 @@ describe('buildSendComponents — buttons', () => {
   it('emits a URL button component when the URL has {{1}}', () => {
     const components = buildSendComponents(
       row({
-        buttons: [
-          { type: 'URL', text: 'Track', url: 'https://x.com/{{1}}' },
-        ],
+        buttons: [{ type: 'URL', text: 'Track', url: 'https://x.com/{{1}}' }],
       }),
-      { buttonParams: { 0: 'ORD-42' } },
+      { buttonParams: { 0: 'ORD-42' } }
     );
     expect(components).toEqual([
       {
@@ -173,11 +167,9 @@ describe('buildSendComponents — buttons', () => {
     expect(() =>
       buildSendComponents(
         row({
-          buttons: [
-            { type: 'URL', text: 'Track', url: 'https://x.com/{{1}}' },
-          ],
-        }),
-      ),
+          buttons: [{ type: 'URL', text: 'Track', url: 'https://x.com/{{1}}' }],
+        })
+      )
     ).toThrow(/URL button #1 uses \{\{1\}\}/);
   });
 
@@ -191,7 +183,7 @@ describe('buildSendComponents — buttons', () => {
           { type: 'URL', text: 'Open', url: 'https://x.com/{{1}}' },
         ],
       }),
-      { buttonParams: { 2: 'ORD-42' } },
+      { buttonParams: { 2: 'ORD-42' } }
     );
     const urlBtn = components.find((c) => c.type === 'button');
     expect(urlBtn).toEqual({
@@ -205,10 +197,8 @@ describe('buildSendComponents — buttons', () => {
   it('falls back to the template example for COPY_CODE buttons', () => {
     const components = buildSendComponents(
       row({
-        buttons: [
-          { type: 'COPY_CODE', text: 'Copy', example: 'SUMMER20' },
-        ],
-      }),
+        buttons: [{ type: 'COPY_CODE', text: 'Copy', example: 'SUMMER20' }],
+      })
     );
     expect(components).toEqual([
       {
@@ -225,10 +215,12 @@ describe('buildSendComponents — buttons', () => {
       row({
         buttons: [{ type: 'COPY_CODE', text: 'Copy', example: 'STATIC' }],
       }),
-      { buttonParams: { 0: 'PERSONAL_CODE' } },
+      { buttonParams: { 0: 'PERSONAL_CODE' } }
     );
-    expect((components[0] as { parameters: { coupon_code: string }[] })
-      .parameters[0].coupon_code).toBe('PERSONAL_CODE');
+    expect(
+      (components[0] as { parameters: { coupon_code: string }[] }).parameters[0]
+        .coupon_code
+    ).toBe('PERSONAL_CODE');
   });
 
   it('skips PHONE_NUMBER buttons entirely (no send-time params allowed)', () => {
@@ -237,7 +229,7 @@ describe('buildSendComponents — buttons', () => {
         buttons: [
           { type: 'PHONE_NUMBER', text: 'Call', phone_number: '+15551234567' },
         ],
-      }),
+      })
     );
     expect(components).toEqual([]);
   });
@@ -255,7 +247,7 @@ describe('buildSendComponents — end-to-end mix', () => {
           { type: 'URL', text: 'Track', url: 'https://x.com/{{1}}' },
         ],
       }),
-      { body: ['John'], buttonParams: { 1: 'abc' } },
+      { body: ['John'], buttonParams: { 1: 'abc' } }
     );
     expect(components.map((c) => c.type)).toEqual(['header', 'body', 'button']);
     // QUICK_REPLY at index 0 doesn't need send-time params, so only the

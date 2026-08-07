@@ -2,11 +2,7 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import {
   AlertTriangle,
-  ArrowRight,
-  CalendarCheck,
   CheckCircle2,
-  Clock3,
-  CreditCard,
   ExternalLink,
   MessageSquareText,
   UsersRound,
@@ -18,16 +14,17 @@ import { AutoRefresh } from '@/components/layout/auto-refresh';
 import { HandoffActions } from '@/components/dashboard/handoff-actions';
 import { CopyLinkButton } from '@/components/dashboard/copy-link-button';
 import { TrendsPanel } from '@/components/dashboard/trends-panel';
-import { MetricTrend, Sparkline } from '@/components/dashboard/metric-trend';
+import {
+  DaybookDate,
+  DaybookTimeline,
+  OperationalSummary,
+  ShiftBrief,
+} from '@/components/dashboard/today-daybook';
 import {
   type SaluActivityRow,
-  type SaluBookingRow,
   type SaluDashboardData,
-  type SaluDelta,
   type SaluHandoffRow,
-  type SaluMetrics,
   type SaluPaymentQueueRow,
-  type SaluSection,
   loadSaluDashboardData,
 } from '@/lib/salu/queries';
 import {
@@ -58,25 +55,28 @@ export default async function DashboardPage() {
     return <SetupError />;
   }
 
-  // Undefined when the trend queries failed, so the tiles simply omit
-  // their delta and sparkline rather than rendering a flat fake zero.
-  const trends = data.trends.ok ? data.trends.data : undefined;
   const salonName = data.config.data?.salon_name || 'Salu Salon';
 
   return (
     <div className="ops-page">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-foreground text-2xl font-bold tracking-tight sm:text-3xl">
-            {salonName}
+          <p className="ops-eyebrow">
+            <DaybookDate />
+          </p>
+          <h1 className="text-foreground mt-1 text-2xl font-bold tracking-tight sm:text-3xl">
+            Today at {salonName}
           </h1>
-          <p className="text-muted-foreground mt-2 text-sm">
-            Your appointments, customer messages, and deposits for today.
+          <p className="text-muted-foreground mt-2 max-w-[32ch] text-sm leading-6 sm:max-w-xl">
+            What needs attention now, followed by the rest of your shift.
           </p>
         </div>
         <div className="grid grid-cols-2 items-center gap-2 sm:flex sm:flex-wrap sm:justify-end">
           <AutoRefresh className="col-span-2 mb-1 justify-between sm:mr-1 sm:mb-0" />
-          <Button className="min-h-11 w-full sm:w-auto" render={<Link href="/inbox" />}>
+          <Button
+            className="min-h-11 w-full sm:w-auto"
+            render={<Link href="/inbox" />}
+          >
             <MessageSquareText className="h-4 w-4" />
             Messages
           </Button>
@@ -93,71 +93,49 @@ export default async function DashboardPage() {
 
       <PartialFailureNotice data={data} />
 
-      <PriorityStrip data={data} />
+      <ShiftBrief data={data} />
 
-      <section
-        aria-label="Today at a glance"
-        className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"
-      >
-        <MetricTile
-          icon={CalendarCheck}
-          label="Appointments today"
-          value={metricValue(data.metrics, (m) => m.today_bookings)}
-          detail={`${count(data.metrics.data.upcoming_confirmed)} upcoming confirmed`}
-          failed={!data.metrics.ok}
-          delta={trends?.bookingsDelta}
-          spark={trends?.daily.map((d) => d.bookings_created)}
-        />
-        <MetricTile
-          icon={CreditCard}
-          label="Pending Deposits"
-          value={metricValue(data.metrics, (m) => m.pending_payment_holds)}
-          detail={`${formatPaise(data.metrics.data.paid_today_paise)} paid today`}
-          tone={data.metrics.data.pending_payment_holds ? 'warn' : 'normal'}
-          failed={!data.metrics.ok}
-          // No delta or sparkline: the headline here is a *stock*
-          // (holds outstanding right now), and the only series we have
-          // is a *flow* (deposits collected per day). Attaching one to
-          // the other would put a trend under a number it doesn't
-          // describe. The flow is charted properly in Trends below.
-        />
-        <MetricTile
-          icon={AlertTriangle}
-          label="Needs your reply"
-          value={metricValue(data.metrics, (m) => m.needs_attention)}
-          detail={`${count(data.metrics.data.human_mode_sessions)} conversation${data.metrics.data.human_mode_sessions === 1 ? '' : 's'} you're handling`}
-          tone={data.metrics.data.needs_attention ? 'danger' : 'normal'}
-          failed={!data.metrics.ok}
-        />
-        <MetricTile
-          icon={MessageSquareText}
-          label="Messages today"
-          value={metricValue(data.metrics, (m) => m.messages_today)}
-          detail={`${count(data.metrics.data.customers_seen_7d)} customers seen in 7 days`}
-          failed={!data.metrics.ok}
-          delta={trends?.messagesDelta}
-          spark={trends?.daily.map((d) => d.messages)}
-        />
-      </section>
+      <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
+        <DaybookTimeline section={data.todaySchedule} />
 
-      <Panel title="This week" section={data.trends}>
-        <TrendsPanel trends={data.trends.data} />
-      </Panel>
-
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
-        <Panel
-          title="Today's appointments"
-          section={data.todaySchedule}
-          action={
-            <StatusBadge tone="neutral">{formatDate(todayKey())}</StatusBadge>
-          }
-          className="xl:col-span-2"
+        <aside
+          aria-label="Shift exceptions"
+          className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1"
         >
-          <BookingList bookings={data.todaySchedule.data} />
-        </Panel>
+          <Panel
+            title="Needs your reply"
+            section={data.handoffQueue}
+            action={
+              <StatusBadge
+                tone={data.handoffQueue.data.length ? 'warn' : 'good'}
+              >
+                {data.handoffQueue.data.length}
+              </StatusBadge>
+            }
+          >
+            <HandoffQueue rows={data.handoffQueue.data} />
+          </Panel>
 
+          <Panel
+            id="deposit-queue"
+            title="Deposit follow-up"
+            section={data.opsQueue}
+            action={
+              <StatusBadge tone={data.opsQueue.data.length ? 'warn' : 'good'}>
+                {data.opsQueue.data.length}
+              </StatusBadge>
+            }
+          >
+            <PaymentQueue rows={data.opsQueue.data} />
+          </Panel>
+        </aside>
+      </div>
+
+      <OperationalSummary metrics={data.metrics} />
+
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <Panel
-          title="Coming up"
+          title="Coming up after today"
           section={data.nextSchedule}
           action={
             <StatusBadge tone="neutral">
@@ -165,120 +143,32 @@ export default async function DashboardPage() {
             </StatusBadge>
           }
         >
-          <BookingList
-            bookings={data.nextSchedule.data}
-            showDate
-            emptyText="No upcoming appointments after today."
-          />
+          <FutureBookings bookings={data.nextSchedule.data} />
         </Panel>
 
-        <Panel
-          title="Needs your reply"
-          section={data.handoffQueue}
-          action={
-            <StatusBadge tone={data.handoffQueue.data.length ? 'warn' : 'good'}>
-              {data.handoffQueue.data.length}
-            </StatusBadge>
-          }
-        >
-          <HandoffQueue rows={data.handoffQueue.data} />
-        </Panel>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <Panel
-          id="deposit-queue"
-          title="Deposits to follow up"
-          section={data.opsQueue}
-          action={
-            <StatusBadge tone={data.opsQueue.data.length ? 'warn' : 'good'}>
-              {data.opsQueue.data.length}
-            </StatusBadge>
-          }
-        >
-          <PaymentQueue rows={data.opsQueue.data} />
-        </Panel>
-
-        <Panel
-          title="Recent customer activity"
-          section={data.recentActivity}
-          className="xl:col-span-2"
-        >
+        <Panel title="Recent customer activity" section={data.recentActivity}>
           <ActivityList rows={data.recentActivity.data} />
         </Panel>
       </div>
-    </div>
-  );
-}
 
-/** Locale-formatted count. */
-function count(value: number) {
-  return value.toLocaleString('en-IN');
-}
-
-/**
- * A metric reads as a hard fact, so a failed query must not render as
- * "0" — that is indistinguishable from a real zero and actively
- * misleading during an incident. Show an em dash instead.
- */
-function metricValue(
-  section: SaluSection<SaluMetrics>,
-  pick: (m: SaluMetrics) => number
-) {
-  return section.ok ? count(pick(section.data)) : '—';
-}
-
-function MetricTile({
-  icon: Icon,
-  label,
-  value,
-  detail,
-  tone = 'normal',
-  failed = false,
-  delta,
-  invertDelta,
-  spark,
-}: {
-  icon: typeof CalendarCheck;
-  label: string;
-  value: string;
-  detail: string;
-  tone?: 'normal' | 'warn' | 'danger';
-  failed?: boolean;
-  /** Week-on-week comparison. Omitted when trends failed to load. */
-  delta?: SaluDelta;
-  invertDelta?: boolean;
-  /** 14-day series, oldest first. Context only — see MetricTrend. */
-  spark?: number[];
-}) {
-  return (
-    <div
-      className={cn(
-        'ops-surface flex flex-col p-5',
-        !failed && tone === 'warn' && 'border-warning/30',
-        !failed && tone === 'danger' && 'border-destructive/30'
-      )}
-    >
-      <div className="flex items-start justify-between">
-        <p className="text-muted-foreground text-sm font-medium">{label}</p>
-        <div className="bg-muted text-muted-foreground flex h-8 w-8 items-center justify-center rounded-lg">
-          <Icon className="h-4 w-4" />
+      <details className="ops-surface group overflow-hidden">
+        <summary className="ops-focus-ring hover:bg-muted/40 flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-4 text-sm font-semibold transition-colors sm:px-5">
+          This week’s insights
+          <span className="text-muted-foreground text-xs font-normal group-open:hidden">
+            Show charts
+          </span>
+          <span className="text-muted-foreground hidden text-xs font-normal group-open:inline">
+            Hide charts
+          </span>
+        </summary>
+        <div className="border-border border-t p-4 sm:p-5">
+          {data.trends.ok ? (
+            <TrendsPanel trends={data.trends.data} />
+          ) : (
+            <PanelError />
+          )}
         </div>
-      </div>
-      <p className="text-foreground mt-3 text-[28px] leading-none font-bold tabular-nums">
-        {value}
-      </p>
-      <p className="text-muted-foreground mt-2 text-sm">
-        {failed ? 'Could not be loaded' : detail}
-      </p>
-      {!failed && delta ? (
-        <div className="mt-2">
-          <MetricTrend delta={delta} invert={invertDelta} />
-        </div>
-      ) : null}
-      {!failed && spark?.length ? (
-        <Sparkline values={spark} className="mt-3" />
-      ) : null}
+      </details>
     </div>
   );
 }
@@ -322,80 +212,6 @@ function PartialFailureNotice({ data }: { data: SaluDashboardData }) {
         </p>
       </div>
     </div>
-  );
-}
-
-function PriorityStrip({ data }: { data: SaluDashboardData }) {
-  const handoffs = data.handoffQueue.data;
-  const opsQueue = data.opsQueue.data;
-
-  const handoffHref = handoffs[0]?.conversation_id
-    ? `/inbox?conversation=${handoffs[0].conversation_id}`
-    : '/inbox';
-
-  const items = [
-    {
-      label: 'Reply next',
-      value: handoffs.length,
-      detail: handoffs[0]
-        ? `${handoffs[0].customer_name || compactPhone(handoffs[0].phone)} · ${formatOpsAge(handoffs[0].handoff_requested_at || handoffs[0].last_message_at)}`
-        : 'No customer messages need you right now',
-      href: handoffHref,
-      ok: data.handoffQueue.ok,
-      tone: handoffs.length ? ('danger' as const) : ('good' as const),
-    },
-    {
-      label: 'Deposits',
-      value: opsQueue.length,
-      detail: opsQueue[0]
-        ? `${paymentQueueLabel(opsQueue[0])} · ${formatOpsCountdown(opsQueue[0].expires_at || opsQueue[0].hold_expires_at) || 'no expiry'}`
-        : 'No deposits need a follow-up',
-      // Was '/dashboard' — a link to the page you are already standing
-      // on. Anchors to the queue panel further down instead.
-      href: '#deposit-queue',
-      ok: data.opsQueue.ok,
-      tone: opsQueue.length ? ('warn' as const) : ('good' as const),
-    },
-  ];
-
-  return (
-    <section aria-labelledby="priority-title" className="space-y-3">
-      <h2 id="priority-title" className="text-foreground text-lg font-semibold">
-        Take care of these first
-      </h2>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {items.map((item) => (
-          <Link
-            key={item.label}
-            href={item.href}
-            className={cn(
-              'ops-focus-ring group ops-surface hover:border-primary/50 bg-card/80 p-4 transition-colors',
-              // A tile whose query failed stays neutral. Painting it
-              // green because the list came back empty would assert
-              // "all clear" on data we do not actually have.
-              item.ok && item.tone === 'good' && 'border-success/25',
-              item.ok && item.tone === 'warn' && 'border-warning/30',
-              item.ok && item.tone === 'danger' && 'border-destructive/30'
-            )}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-muted-foreground text-xs font-medium">
-                  {item.label}
-                </p>
-                <p className="text-foreground mt-2 text-2xl font-bold tabular-nums">
-                  {item.ok ? count(item.value) : '—'}
-                </p>
-                <p className="text-muted-foreground mt-1 truncate text-sm">
-                  {item.ok ? item.detail : 'Could not be loaded'}
-                </p>
-              </div>
-              <ArrowRight className="group-hover:text-primary text-muted-foreground/70 mt-1 h-4 w-4 shrink-0 transition-colors" />
-            </div>
-          </Link>
-        ))}
-      </div>
-    </section>
   );
 }
 
@@ -443,37 +259,38 @@ function PanelError() {
   );
 }
 
-function BookingList({
+function FutureBookings({
   bookings,
-  showDate = false,
-  emptyText = 'No appointments on the board for today.',
 }: {
-  bookings: SaluBookingRow[];
-  showDate?: boolean;
-  emptyText?: string;
+  bookings: Array<{
+    booking_id: string;
+    appointment_date: string;
+    appointment_time: string;
+    customer_name: string;
+    phone: string;
+    service_assignments_summary: string;
+    service_labels: string;
+    service_label: string;
+    stylist_names: string;
+    stylist_name: string;
+    status: string;
+    payment_status: string;
+  }>;
 }) {
-  if (!bookings.length) return <EmptyLine text={emptyText} />;
+  if (!bookings.length)
+    return <EmptyLine text="No upcoming appointments after today." />;
 
   return (
     <div className="divide-border divide-y">
       {bookings.map((booking) => (
         <div
           key={booking.booking_id}
-          className="grid gap-3 py-3 sm:grid-cols-[108px_1fr_auto]"
+          className="grid gap-3 py-3 sm:grid-cols-[7rem_1fr_auto]"
         >
-          <div className="text-foreground flex items-center gap-2 text-sm font-semibold">
-            <Clock3 className="text-muted-foreground h-4 w-4" />
-            <span>
-              {showDate ? (
-                <>
-                  {formatDate(booking.appointment_date)}
-                  <span className="text-muted-foreground block text-xs font-normal">
-                    {formatTime(booking.appointment_time)}
-                  </span>
-                </>
-              ) : (
-                formatTime(booking.appointment_time)
-              )}
+          <div className="text-foreground text-sm font-semibold">
+            {formatDate(booking.appointment_date)}
+            <span className="text-muted-foreground block text-xs font-normal tabular-nums">
+              {formatTime(booking.appointment_time)}
             </span>
           </div>
           <div className="min-w-0">
@@ -731,13 +548,4 @@ function StatusBadge({
 
 function EmptyLine({ text }: { text: string }) {
   return <p className="text-muted-foreground py-4 text-sm">{text}</p>;
-}
-
-function todayKey() {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Kolkata',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date());
 }

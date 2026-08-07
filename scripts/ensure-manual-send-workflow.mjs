@@ -24,7 +24,7 @@ function request(baseUrl, apiKey, path, options = {}) {
       throw new Error(
         `${options.method || 'GET'} ${path} failed with ${response.status}: ${
           typeof body === 'string' ? body : JSON.stringify(body)
-        }`,
+        }`
       );
     }
     return body;
@@ -38,7 +38,7 @@ async function listWorkflows(baseUrl, apiKey) {
     const body = await request(
       baseUrl,
       apiKey,
-      `/api/v1/workflows?limit=100${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`,
+      `/api/v1/workflows?limit=100${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`
     );
     workflows.push(...(body.data || []));
     cursor = body.nextCursor || '';
@@ -53,7 +53,7 @@ async function listCredentials(baseUrl, apiKey) {
     const body = await request(
       baseUrl,
       apiKey,
-      `/api/v1/credentials?limit=100${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`,
+      `/api/v1/credentials?limit=100${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`
     );
     credentials.push(...(body.data || []));
     cursor = body.nextCursor || '';
@@ -61,11 +61,16 @@ async function listCredentials(baseUrl, apiKey) {
   return credentials;
 }
 
-async function ensureDashboardWebhookCredential(baseUrl, apiKey, credentials, webhookSecret) {
+async function ensureDashboardWebhookCredential(
+  baseUrl,
+  apiKey,
+  credentials,
+  webhookSecret
+) {
   const existing = credentials.find(
     (credential) =>
       credential.type === 'httpHeaderAuth' &&
-      credential.name === 'Salu Dashboard Manual Send Secret',
+      credential.name === 'Salu Dashboard Manual Send Secret'
   );
   if (existing) return existing;
 
@@ -163,7 +168,9 @@ return [{ json: { payload } }];`,
           jsonBody: '={{ $json.payload }}',
           options: {
             timeout: 30000,
-            response: { response: { responseFormat: 'json', neverError: false } },
+            response: {
+              response: { responseFormat: 'json', neverError: false },
+            },
           },
         },
         credentials: {
@@ -214,14 +221,16 @@ const webhookSecret = env.SALU_N8N_MANUAL_SEND_TOKEN || '';
 const phoneNumberId = env.WHATSAPP_PHONE_NUMBER_ID || DEFAULT_PHONE_NUMBER_ID;
 if (!baseUrl || !apiKey) throw new Error('Missing N8N_URL or N8N_API_KEY');
 if (!webhookSecret || webhookSecret.length < 32) {
-  throw new Error('SALU_N8N_MANUAL_SEND_TOKEN is required and must contain at least 32 characters');
+  throw new Error(
+    'SALU_N8N_MANUAL_SEND_TOKEN is required and must contain at least 32 characters'
+  );
 }
 
 const credentials = await listCredentials(baseUrl, apiKey);
 const metaCredential = credentials.find(
   (credential) =>
     credential.type === 'httpHeaderAuth' &&
-    credential.name === 'Meta WhatsApp Bearer Token',
+    credential.name === 'Meta WhatsApp Bearer Token'
 );
 if (!metaCredential) {
   throw new Error('Missing n8n credential: Meta WhatsApp Bearer Token');
@@ -230,7 +239,7 @@ const webhookCredential = await ensureDashboardWebhookCredential(
   baseUrl,
   apiKey,
   credentials,
-  webhookSecret,
+  webhookSecret
 );
 
 const workflows = await listWorkflows(baseUrl, apiKey);
@@ -239,11 +248,23 @@ const payload = workflowJson(metaCredential, webhookCredential, phoneNumberId);
 let workflow;
 
 if (existing) {
-  const current = await request(baseUrl, apiKey, `/api/v1/workflows/${existing.id}`);
-  workflow = await request(baseUrl, apiKey, `/api/v1/workflows/${existing.id}`, {
-    method: 'PUT',
-    body: JSON.stringify({ ...payload, staticData: current.staticData || null }),
-  });
+  const current = await request(
+    baseUrl,
+    apiKey,
+    `/api/v1/workflows/${existing.id}`
+  );
+  workflow = await request(
+    baseUrl,
+    apiKey,
+    `/api/v1/workflows/${existing.id}`,
+    {
+      method: 'PUT',
+      body: JSON.stringify({
+        ...payload,
+        staticData: current.staticData || null,
+      }),
+    }
+  );
 } else {
   workflow = await request(baseUrl, apiKey, '/api/v1/workflows', {
     method: 'POST',
@@ -265,5 +286,5 @@ console.log(
     name: WORKFLOW_NAME,
     active: workflow.active,
     webhookUrl: `${baseUrl}/webhook/${WEBHOOK_PATH}`,
-  }),
+  })
 );

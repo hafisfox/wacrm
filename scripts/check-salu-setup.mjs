@@ -67,18 +67,20 @@ function parseBoolean(value, defaultValue = false) {
     return defaultValue;
   }
   return ['1', 'true', 'yes', 'y', 'on'].includes(
-    String(value).trim().toLowerCase(),
+    String(value).trim().toLowerCase()
   );
 }
 
 function databaseSslOptions(env) {
-  const mode = String(env.SALU_BOOKING_DB_SSL || 'require').trim().toLowerCase();
+  const mode = String(env.SALU_BOOKING_DB_SSL || 'require')
+    .trim()
+    .toLowerCase();
   if (['disable', 'disabled', 'false', '0', 'off', 'none'].includes(mode)) {
     return undefined;
   }
   const allowUnauthorizedCerts = parseBoolean(
     env.SALU_BOOKING_DB_ALLOW_UNAUTHORIZED_CERTS,
-    true,
+    true
   );
   return { rejectUnauthorized: !allowUnauthorizedCerts };
 }
@@ -140,15 +142,15 @@ async function loadObjectChecks(client) {
       where table_schema in ('public', 'salu')
         and table_type = 'BASE TABLE'
       order by table_schema, table_name
-    `,
+    `
   );
 
   const tables = bySchema(tableRows);
   const missingPublicTables = REQUIRED_PUBLIC_TABLES.filter(
-    (table) => !tables.public?.has(table),
+    (table) => !tables.public?.has(table)
   );
   const missingSaluTables = REQUIRED_SALU_TABLES.filter(
-    (table) => !tables.salu?.has(table),
+    (table) => !tables.salu?.has(table)
   );
 
   const { rows: functionRows } = await client.query(
@@ -162,28 +164,26 @@ async function loadObjectChecks(client) {
           or (n.nspname = 'public' and p.proname = any($2::text[]))
         )
     `,
-    [REQUIRED_SALU_FUNCTIONS, REQUIRED_PUBLIC_RPCS],
+    [REQUIRED_SALU_FUNCTIONS, REQUIRED_PUBLIC_RPCS]
   );
   const saluFunctions = new Set(
     functionRows
       .filter((row) => row.schema_name === 'salu')
-      .map((row) => row.proname),
+      .map((row) => row.proname)
   );
   const publicRpcs = new Set(
     functionRows
       .filter((row) => row.schema_name === 'public')
-      .map((row) => row.proname),
+      .map((row) => row.proname)
   );
 
   return {
     missingPublicTables,
     missingSaluTables,
     missingSaluFunctions: REQUIRED_SALU_FUNCTIONS.filter(
-      (fn) => !saluFunctions.has(fn),
+      (fn) => !saluFunctions.has(fn)
     ),
-    missingPublicRpcs: REQUIRED_PUBLIC_RPCS.filter(
-      (fn) => !publicRpcs.has(fn),
-    ),
+    missingPublicRpcs: REQUIRED_PUBLIC_RPCS.filter((fn) => !publicRpcs.has(fn)),
   };
 }
 
@@ -203,7 +203,7 @@ async function loadSetupCounts(client, canReadSalu, canReadPublic) {
           (select count(*)::int from salu.stylist_services where active) as active_stylist_services,
           (select count(*)::int from salu.availability where active) as active_availability,
           (select count(*)::int from salu.stylist_availability where active) as active_stylist_availability
-      `,
+      `
     );
     counts.salu = rows[0];
   }
@@ -218,7 +218,7 @@ async function loadSetupCounts(client, canReadSalu, canReadPublic) {
           (select count(*)::int from public.messages) as messages,
           (select count(*)::int from public.message_templates) as message_templates,
           (select count(*)::int from public.whatsapp_config) as whatsapp_configs
-      `,
+      `
     );
     counts.public = rows[0];
   }

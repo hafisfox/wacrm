@@ -7,6 +7,7 @@ import { Sidebar } from '@/components/layout/sidebar';
 import { Header } from '@/components/layout/header';
 import { MobileNav } from '@/components/layout/mobile-nav';
 import { useTotalUnread } from '@/hooks/use-total-unread';
+import { NativeBridge } from '@/components/layout/native-bridge';
 
 // Auth-gated dashboard shell. Extracted from the layout so the layout
 // itself can stay a server component and export metadata (noindex) —
@@ -48,6 +49,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="bg-background flex h-dvh min-h-0 overflow-hidden">
+      <NativeBridge />
       <Sidebar totalUnread={totalUnread} />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <Header />
@@ -55,7 +57,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
           className={
             isInbox
               ? 'flex-1 overflow-hidden'
-              : 'flex-1 overscroll-y-contain overflow-y-auto p-3 min-[390px]:p-4 sm:p-6'
+              : 'flex-1 overflow-y-auto overscroll-y-contain p-3 min-[390px]:p-4 sm:p-6'
           }
         >
           {children}

@@ -37,6 +37,12 @@ export default function DashboardError({
               You can choose another section below, or try this page again.
             </p>
 
+            {error.digest ? (
+              <p className="text-muted-foreground mt-3 font-mono text-xs">
+                Support reference: {error.digest}
+              </p>
+            ) : null}
+
             <Button className="mt-4 min-h-11" onClick={() => unstable_retry()}>
               <RotateCw className="h-4 w-4" />
               Try again

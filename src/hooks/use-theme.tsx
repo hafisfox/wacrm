@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import {
   createContext,
@@ -7,14 +7,14 @@ import {
   useEffect,
   useState,
   type ReactNode,
-} from "react";
+} from 'react';
 
 import {
   DEFAULT_THEME,
   STORAGE_KEY,
   isThemeId,
   type ThemeId,
-} from "@/lib/themes";
+} from '@/lib/themes';
 
 /**
  * ThemeProvider — wraps the whole app, owns the active theme state.
@@ -39,7 +39,7 @@ interface ThemeContextValue {
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 function readInitialTheme(): ThemeId {
-  if (typeof window === "undefined") return DEFAULT_THEME;
+  if (typeof window === 'undefined') return DEFAULT_THEME;
   // Whatever the boot script applied is the truth. Fall back to
   // localStorage / default if for some reason the attribute is missing
   // (e.g. someone bypassed the boot script in a custom layout).
@@ -59,7 +59,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const setTheme = useCallback((next: ThemeId) => {
     setThemeState(next);
-    if (typeof document !== "undefined") {
+    if (typeof document !== 'undefined') {
       document.documentElement.dataset.theme = next;
     }
     try {
@@ -80,8 +80,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         document.documentElement.dataset.theme = e.newValue;
       }
     }
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
   }, [theme]);
 
   return (

@@ -5,7 +5,12 @@ const config: CapacitorConfig = {
   appName: 'Salu Salon',
   webDir: 'mobile-shell',
   backgroundColor: '#17181d',
-  loggingBehavior: 'debug',
+  loggingBehavior: 'none',
+  plugins: {
+    App: {
+      disableBackButtonHandler: true,
+    },
+  },
   server: {
     // The dashboard needs its Next.js server routes, so the Android shell
     // opens the production deployment directly instead of copying a stale

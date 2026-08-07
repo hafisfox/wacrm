@@ -1,14 +1,14 @@
-import { NextResponse } from 'next/server'
+import { NextResponse } from 'next/server';
 import {
   ForbiddenError,
   getCurrentAccount,
   requireRole,
   toErrorResponse,
   UnauthorizedError,
-} from '@/lib/auth/account'
-import { verifyPhoneNumber } from '@/lib/whatsapp/meta-api'
-import { encrypt, decrypt } from '@/lib/whatsapp/encryption'
-import { supabaseAdmin } from '@/lib/supabase/admin'
+} from '@/lib/auth/account';
+import { verifyPhoneNumber } from '@/lib/whatsapp/meta-api';
+import { encrypt, decrypt } from '@/lib/whatsapp/encryption';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 
 /**
  * GET /api/whatsapp/config
@@ -25,22 +25,26 @@ import { supabaseAdmin } from '@/lib/supabase/admin'
  */
 export async function GET() {
   try {
-    const ctx = await getCurrentAccount()
-    const supabase = ctx.supabase
-    const accountId = ctx.accountId
+    const ctx = await getCurrentAccount();
+    const supabase = ctx.supabase;
+    const accountId = ctx.accountId;
 
     const { data: config, error: configError } = await supabase
       .from('whatsapp_config')
       .select('phone_number_id, access_token, status')
       .eq('account_id', accountId)
-      .maybeSingle()
+      .maybeSingle();
 
     if (configError) {
-      console.error('Error fetching whatsapp_config:', configError)
+      console.error('Error fetching whatsapp_config:', configError);
       return NextResponse.json(
-        { connected: false, reason: 'db_error', message: 'Failed to fetch configuration' },
+        {
+          connected: false,
+          reason: 'db_error',
+          message: 'Failed to fetch configuration',
+        },
         { status: 200 }
-      )
+      );
     }
 
     if (!config) {
@@ -48,19 +52,20 @@ export async function GET() {
         {
           connected: false,
           reason: 'no_config',
-          message: 'No Meta maintenance credentials are saved yet. Fill in the form and click Save Credentials.',
+          message:
+            'No Meta maintenance credentials are saved yet. Fill in the form and click Save Credentials.',
         },
         { status: 200 }
-      )
+      );
     }
 
     // Try to decrypt the stored token with the current ENCRYPTION_KEY.
     // If this fails, the key changed (or was never consistent across envs).
-    let accessToken: string
+    let accessToken: string;
     try {
-      accessToken = decrypt(config.access_token)
+      accessToken = decrypt(config.access_token);
     } catch (err) {
-      console.error('[whatsapp/config GET] Token decryption failed:', err)
+      console.error('[whatsapp/config GET] Token decryption failed:', err);
       return NextResponse.json(
         {
           connected: false,
@@ -70,7 +75,7 @@ export async function GET() {
             'The stored access token cannot be decrypted with the current ENCRYPTION_KEY. This usually means the key changed, or it differs between environments (local vs Hostinger vs Vercel). Click "Reset Configuration" below, then re-save.',
         },
         { status: 200 }
-      )
+      );
     }
 
     // Validate credentials against Meta
@@ -78,11 +83,15 @@ export async function GET() {
       const phoneInfo = await verifyPhoneNumber({
         phoneNumberId: config.phone_number_id,
         accessToken,
-      })
-      return NextResponse.json({ connected: true, phone_info: phoneInfo })
+      });
+      return NextResponse.json({ connected: true, phone_info: phoneInfo });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown Meta API error'
-      console.error('[whatsapp/config GET] Meta API verification failed:', message)
+      const message =
+        err instanceof Error ? err.message : 'Unknown Meta API error';
+      console.error(
+        '[whatsapp/config GET] Meta API verification failed:',
+        message
+      );
       return NextResponse.json(
         {
           connected: false,
@@ -90,11 +99,11 @@ export async function GET() {
           message: `Meta API rejected the credentials: ${message}`,
         },
         { status: 200 }
-      )
+      );
     }
   } catch (error) {
     if (error instanceof UnauthorizedError) {
-      return toErrorResponse(error)
+      return toErrorResponse(error);
     }
     if (error instanceof ForbiddenError) {
       return NextResponse.json(
@@ -103,14 +112,14 @@ export async function GET() {
           reason: 'no_account',
           message: 'Your profile is not linked to an account.',
         },
-        { status: 200 },
-      )
+        { status: 200 }
+      );
     }
-    console.error('Error in WhatsApp config GET:', error)
+    console.error('Error in WhatsApp config GET:', error);
     return NextResponse.json(
       { connected: false, reason: 'unknown', message: 'Internal server error' },
       { status: 500 }
-    )
+    );
   }
 }
 
@@ -123,18 +132,18 @@ export async function GET() {
  */
 export async function POST(request: Request) {
   try {
-    const ctx = await requireRole('admin')
-    const supabase = ctx.supabase
-    const accountId = ctx.accountId
+    const ctx = await requireRole('admin');
+    const supabase = ctx.supabase;
+    const accountId = ctx.accountId;
 
-    const body = await request.json()
-    const { phone_number_id, waba_id, access_token } = body
+    const body = await request.json();
+    const { phone_number_id, waba_id, access_token } = body;
 
     if (!access_token || !phone_number_id) {
       return NextResponse.json(
         { error: 'access_token and phone_number_id are required' },
         { status: 400 }
-      )
+      );
     }
 
     // Reject if another account has already claimed this phone_number_id.
@@ -146,14 +155,14 @@ export async function POST(request: Request) {
       .select('account_id')
       .eq('phone_number_id', phone_number_id)
       .neq('account_id', accountId)
-      .maybeSingle()
+      .maybeSingle();
 
     if (claimedError) {
-      console.error('Error checking phone_number_id ownership:', claimedError)
+      console.error('Error checking phone_number_id ownership:', claimedError);
       return NextResponse.json(
         { error: 'Failed to validate configuration' },
         { status: 500 }
-      )
+      );
     }
 
     if (claimed) {
@@ -163,46 +172,48 @@ export async function POST(request: Request) {
             'This WhatsApp phone number is already linked to another account on this Salu dashboard instance.',
         },
         { status: 409 }
-      )
+      );
     }
 
     // Verify credentials with Meta BEFORE saving
-    let phoneInfo
+    let phoneInfo;
     try {
       phoneInfo = await verifyPhoneNumber({
         phoneNumberId: phone_number_id,
         accessToken: access_token,
-      })
+      });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown Meta API error'
-      console.error('Meta API verification failed during save:', message)
+      const message =
+        err instanceof Error ? err.message : 'Unknown Meta API error';
+      console.error('Meta API verification failed during save:', message);
       return NextResponse.json(
         { error: `Meta API error: ${message}` },
         { status: 400 }
-      )
+      );
     }
 
     // Encrypt sensitive tokens before storing
-    let encryptedAccessToken: string
+    let encryptedAccessToken: string;
     try {
-      encryptedAccessToken = encrypt(access_token)
+      encryptedAccessToken = encrypt(access_token);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown encryption error'
-      console.error('Encryption failed:', message)
+      const message =
+        err instanceof Error ? err.message : 'Unknown encryption error';
+      console.error('Encryption failed:', message);
       return NextResponse.json(
         {
           error:
             'Failed to encrypt token. Check that ENCRYPTION_KEY is a valid 64-character hex string in your environment variables.',
         },
         { status: 500 }
-      )
+      );
     }
 
     const { data: existing } = await supabase
       .from('whatsapp_config')
       .select('id')
       .eq('account_id', accountId)
-      .maybeSingle()
+      .maybeSingle();
 
     const baseRow = {
       phone_number_id,
@@ -211,20 +222,20 @@ export async function POST(request: Request) {
       status: 'connected',
       connected_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-    }
+    };
 
     if (existing) {
       const { error: updateError } = await supabase
         .from('whatsapp_config')
         .update(baseRow)
-        .eq('account_id', accountId)
+        .eq('account_id', accountId);
 
       if (updateError) {
-        console.error('Error updating whatsapp_config:', updateError)
+        console.error('Error updating whatsapp_config:', updateError);
         return NextResponse.json(
           { error: 'Failed to update configuration' },
           { status: 500 }
-        )
+        );
       }
     } else {
       // Insert with both columns: `account_id` is the tenancy key
@@ -237,14 +248,14 @@ export async function POST(request: Request) {
           account_id: accountId,
           user_id: ctx.userId,
           ...baseRow,
-        })
+        });
 
       if (insertError) {
-        console.error('Error inserting whatsapp_config:', insertError)
+        console.error('Error inserting whatsapp_config:', insertError);
         return NextResponse.json(
           { error: 'Failed to save configuration' },
           { status: 500 }
-        )
+        );
       }
     }
 
@@ -252,13 +263,16 @@ export async function POST(request: Request) {
       success: true,
       saved: true,
       phone_info: phoneInfo,
-    })
+    });
   } catch (error) {
     if (error instanceof UnauthorizedError || error instanceof ForbiddenError) {
-      return toErrorResponse(error)
+      return toErrorResponse(error);
     }
-    console.error('Error in WhatsApp config POST:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    console.error('Error in WhatsApp config POST:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
 
@@ -271,29 +285,32 @@ export async function POST(request: Request) {
  */
 export async function DELETE() {
   try {
-    const ctx = await requireRole('admin')
-    const supabase = ctx.supabase
-    const accountId = ctx.accountId
+    const ctx = await requireRole('admin');
+    const supabase = ctx.supabase;
+    const accountId = ctx.accountId;
 
     const { error: deleteError } = await supabase
       .from('whatsapp_config')
       .delete()
-      .eq('account_id', accountId)
+      .eq('account_id', accountId);
 
     if (deleteError) {
-      console.error('Error deleting whatsapp_config:', deleteError)
+      console.error('Error deleting whatsapp_config:', deleteError);
       return NextResponse.json(
         { error: 'Failed to delete configuration' },
         { status: 500 }
-      )
+      );
     }
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof UnauthorizedError || error instanceof ForbiddenError) {
-      return toErrorResponse(error)
+      return toErrorResponse(error);
     }
-    console.error('Error in WhatsApp config DELETE:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    console.error('Error in WhatsApp config DELETE:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }

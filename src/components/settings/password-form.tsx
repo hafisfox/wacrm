@@ -16,8 +16,10 @@ import {
   CardTitle,
   CardDescription,
 } from '@/components/ui/card';
-
-const MIN_PASSWORD = 8;
+import {
+  MIN_PASSWORD_LENGTH,
+  passwordLengthError,
+} from '@/lib/auth/password-policy';
 
 export function PasswordForm() {
   const { profile } = useAuth();
@@ -35,8 +37,9 @@ export function PasswordForm() {
       toast.error('Cannot change password without a current email');
       return;
     }
-    if (next.length < MIN_PASSWORD) {
-      setConfirmError(`Password must be at least ${MIN_PASSWORD} characters`);
+    const lengthError = passwordLengthError(next);
+    if (lengthError) {
+      setConfirmError(lengthError);
       return;
     }
     if (next !== confirm) {
@@ -89,8 +92,8 @@ export function PasswordForm() {
           Password
         </CardTitle>
         <CardDescription className="text-muted-foreground">
-          Use at least {MIN_PASSWORD} characters. You will stay signed in on
-          this device after changing it.
+          Use at least {MIN_PASSWORD_LENGTH} characters. You will stay signed in
+          on this device after changing it.
         </CardDescription>
       </CardHeader>
 
@@ -122,7 +125,7 @@ export function PasswordForm() {
                 value={next}
                 onChange={(e) => setNext(e.target.value)}
                 autoComplete="new-password"
-                minLength={MIN_PASSWORD}
+                minLength={MIN_PASSWORD_LENGTH}
                 disabled={saving}
                 required
               />
@@ -137,7 +140,7 @@ export function PasswordForm() {
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
                 autoComplete="new-password"
-                minLength={MIN_PASSWORD}
+                minLength={MIN_PASSWORD_LENGTH}
                 disabled={saving}
                 required
               />

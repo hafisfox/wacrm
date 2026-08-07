@@ -1,40 +1,525 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-08-07T00:00:00.000Z",
+  "generatedAt": "2026-08-07T09:42:16Z",
   "title": "Design System: Salu Salon",
   "extensions": {
     "colorMeta": {
-      "night-canvas": { "role": "neutral", "displayName": "Night Canvas", "canonical": "oklch(0.13 0.01 260)", "tonalRamp": ["oklch(0.15 0.01 260)", "oklch(0.25 0.01 260)", "oklch(0.35 0.01 260)", "oklch(0.45 0.01 260)", "oklch(0.55 0.01 260)", "oklch(0.68 0.01 260)", "oklch(0.82 0.01 260)", "oklch(0.95 0.005 260)"] },
-      "primary-violet": { "role": "primary", "displayName": "Salu Violet", "canonical": "oklch(0.526 0.247 293)", "tonalRamp": ["oklch(0.18 0.12 293)", "oklch(0.28 0.17 293)", "oklch(0.38 0.21 293)", "oklch(0.526 0.247 293)", "oklch(0.62 0.21 293)", "oklch(0.72 0.16 293)", "oklch(0.84 0.09 293)", "oklch(0.95 0.03 293)"] },
-      "whatsapp-green": { "role": "secondary", "displayName": "Conversation Green", "canonical": "#00a884", "tonalRamp": ["#062b24", "#07503f", "#08745b", "#009176", "#00a884", "#2bc29f", "#72d9bf", "#c7f3e8"] }
+      "night-canvas": {
+        "role": "neutral",
+        "displayName": "Night Canvas",
+        "canonical": "oklch(0.13 0.01 260)",
+        "tonalRamp": [
+          "oklch(0.15 0.01 260)",
+          "oklch(0.25 0.01 260)",
+          "oklch(0.35 0.01 260)",
+          "oklch(0.45 0.01 260)",
+          "oklch(0.55 0.01 260)",
+          "oklch(0.68 0.01 260)",
+          "oklch(0.82 0.008 260)",
+          "oklch(0.95 0.004 260)"
+        ]
+      },
+      "work-surface": {
+        "role": "neutral",
+        "displayName": "Work Surface",
+        "canonical": "oklch(0.18 0.01 260)",
+        "tonalRamp": [
+          "oklch(0.15 0.01 260)",
+          "oklch(0.25 0.01 260)",
+          "oklch(0.35 0.01 260)",
+          "oklch(0.45 0.01 260)",
+          "oklch(0.55 0.01 260)",
+          "oklch(0.68 0.01 260)",
+          "oklch(0.82 0.008 260)",
+          "oklch(0.95 0.004 260)"
+        ]
+      },
+      "work-surface-raised": {
+        "role": "neutral",
+        "displayName": "Raised Work Surface",
+        "canonical": "oklch(0.22 0.01 260)",
+        "tonalRamp": [
+          "oklch(0.15 0.01 260)",
+          "oklch(0.25 0.01 260)",
+          "oklch(0.35 0.01 260)",
+          "oklch(0.45 0.01 260)",
+          "oklch(0.55 0.01 260)",
+          "oklch(0.68 0.01 260)",
+          "oklch(0.82 0.008 260)",
+          "oklch(0.95 0.004 260)"
+        ]
+      },
+      "quiet-line": {
+        "role": "neutral",
+        "displayName": "Quiet Rule",
+        "canonical": "oklch(0.28 0.01 260)",
+        "tonalRamp": [
+          "oklch(0.15 0.01 260)",
+          "oklch(0.25 0.01 260)",
+          "oklch(0.35 0.01 260)",
+          "oklch(0.45 0.01 260)",
+          "oklch(0.55 0.01 260)",
+          "oklch(0.68 0.01 260)",
+          "oklch(0.82 0.008 260)",
+          "oklch(0.95 0.004 260)"
+        ]
+      },
+      "primary-violet": {
+        "role": "primary",
+        "displayName": "Salu Violet",
+        "canonical": "oklch(0.526 0.247 293)",
+        "tonalRamp": [
+          "oklch(0.15 0.08 293)",
+          "oklch(0.27 0.14 293)",
+          "oklch(0.39 0.20 293)",
+          "oklch(0.526 0.247 293)",
+          "oklch(0.64 0.21 293)",
+          "oklch(0.75 0.15 293)",
+          "oklch(0.86 0.08 293)",
+          "oklch(0.95 0.025 293)"
+        ]
+      },
+      "theme-emerald": {
+        "role": "primary",
+        "displayName": "Theme Emerald",
+        "canonical": "oklch(0.62 0.16 162)",
+        "tonalRamp": [
+          "oklch(0.15 0.05 162)",
+          "oklch(0.27 0.09 162)",
+          "oklch(0.40 0.13 162)",
+          "oklch(0.52 0.16 162)",
+          "oklch(0.62 0.16 162)",
+          "oklch(0.75 0.12 162)",
+          "oklch(0.86 0.07 162)",
+          "oklch(0.95 0.025 162)"
+        ]
+      },
+      "theme-cobalt": {
+        "role": "primary",
+        "displayName": "Theme Cobalt",
+        "canonical": "oklch(0.585 0.2 254)",
+        "tonalRamp": [
+          "oklch(0.15 0.06 254)",
+          "oklch(0.27 0.11 254)",
+          "oklch(0.40 0.16 254)",
+          "oklch(0.50 0.19 254)",
+          "oklch(0.585 0.2 254)",
+          "oklch(0.73 0.15 254)",
+          "oklch(0.85 0.08 254)",
+          "oklch(0.95 0.025 254)"
+        ]
+      },
+      "theme-amber": {
+        "role": "primary",
+        "displayName": "Theme Amber",
+        "canonical": "oklch(0.745 0.16 65)",
+        "tonalRamp": [
+          "oklch(0.15 0.04 65)",
+          "oklch(0.27 0.075 65)",
+          "oklch(0.40 0.11 65)",
+          "oklch(0.54 0.14 65)",
+          "oklch(0.66 0.16 65)",
+          "oklch(0.745 0.16 65)",
+          "oklch(0.86 0.10 65)",
+          "oklch(0.95 0.035 65)"
+        ]
+      },
+      "theme-rose": {
+        "role": "primary",
+        "displayName": "Theme Rose",
+        "canonical": "oklch(0.645 0.22 16)",
+        "tonalRamp": [
+          "oklch(0.15 0.065 16)",
+          "oklch(0.27 0.12 16)",
+          "oklch(0.40 0.17 16)",
+          "oklch(0.53 0.21 16)",
+          "oklch(0.645 0.22 16)",
+          "oklch(0.76 0.16 16)",
+          "oklch(0.87 0.08 16)",
+          "oklch(0.95 0.025 16)"
+        ]
+      },
+      "primary-text": {
+        "role": "neutral",
+        "displayName": "Primary Ink",
+        "canonical": "oklch(0.985 0 0)",
+        "tonalRamp": [
+          "oklch(0.15 0 0)",
+          "oklch(0.27 0 0)",
+          "oklch(0.39 0 0)",
+          "oklch(0.51 0 0)",
+          "oklch(0.63 0 0)",
+          "oklch(0.75 0 0)",
+          "oklch(0.87 0 0)",
+          "oklch(0.985 0 0)"
+        ]
+      },
+      "quiet-text": {
+        "role": "neutral",
+        "displayName": "Quiet Ink",
+        "canonical": "oklch(0.65 0.01 260)",
+        "tonalRamp": [
+          "oklch(0.15 0.01 260)",
+          "oklch(0.27 0.01 260)",
+          "oklch(0.39 0.01 260)",
+          "oklch(0.51 0.01 260)",
+          "oklch(0.65 0.01 260)",
+          "oklch(0.75 0.009 260)",
+          "oklch(0.87 0.006 260)",
+          "oklch(0.95 0.003 260)"
+        ]
+      },
+      "healthy": {
+        "role": "tertiary",
+        "displayName": "Healthy State",
+        "canonical": "oklch(0.7 0.15 162)",
+        "tonalRamp": [
+          "oklch(0.15 0.045 162)",
+          "oklch(0.27 0.08 162)",
+          "oklch(0.39 0.115 162)",
+          "oklch(0.51 0.14 162)",
+          "oklch(0.63 0.15 162)",
+          "oklch(0.75 0.14 162)",
+          "oklch(0.87 0.08 162)",
+          "oklch(0.95 0.025 162)"
+        ]
+      },
+      "caution": {
+        "role": "tertiary",
+        "displayName": "Caution State",
+        "canonical": "oklch(0.78 0.14 75)",
+        "tonalRamp": [
+          "oklch(0.15 0.04 75)",
+          "oklch(0.27 0.07 75)",
+          "oklch(0.39 0.10 75)",
+          "oklch(0.51 0.125 75)",
+          "oklch(0.63 0.14 75)",
+          "oklch(0.78 0.14 75)",
+          "oklch(0.88 0.08 75)",
+          "oklch(0.95 0.025 75)"
+        ]
+      },
+      "serious": {
+        "role": "tertiary",
+        "displayName": "Serious State",
+        "canonical": "oklch(0.577 0.245 27.325)",
+        "tonalRamp": [
+          "oklch(0.15 0.08 27.325)",
+          "oklch(0.27 0.14 27.325)",
+          "oklch(0.39 0.20 27.325)",
+          "oklch(0.50 0.235 27.325)",
+          "oklch(0.577 0.245 27.325)",
+          "oklch(0.72 0.18 27.325)",
+          "oklch(0.85 0.09 27.325)",
+          "oklch(0.95 0.03 27.325)"
+        ]
+      },
+      "whatsapp-green": {
+        "role": "secondary",
+        "displayName": "WhatsApp Action Green",
+        "canonical": "#00a884",
+        "tonalRamp": [
+          "#052a22",
+          "#064638",
+          "#08634f",
+          "#078068",
+          "#00a884",
+          "#27c39e",
+          "#73ddc3",
+          "#cdf5e9"
+        ]
+      },
+      "chat-canvas": {
+        "role": "neutral",
+        "displayName": "Chat Canvas",
+        "canonical": "#0b141a",
+        "tonalRamp": [
+          "#071015",
+          "#12222c",
+          "#1d3443",
+          "#29475a",
+          "#3a5a6d",
+          "#638093",
+          "#9aafba",
+          "#e7eef1"
+        ]
+      },
+      "chat-panel": {
+        "role": "neutral",
+        "displayName": "Chat Panel",
+        "canonical": "#111b21",
+        "tonalRamp": [
+          "#0a1115",
+          "#17252d",
+          "#243943",
+          "#324d59",
+          "#456270",
+          "#6d8793",
+          "#a5b7bf",
+          "#e9eff1"
+        ]
+      },
+      "chat-surface": {
+        "role": "neutral",
+        "displayName": "Chat Control Surface",
+        "canonical": "#202c33",
+        "tonalRamp": [
+          "#0e1418",
+          "#202c33",
+          "#30424c",
+          "#405965",
+          "#57717e",
+          "#7e949f",
+          "#b0bec5",
+          "#edf1f3"
+        ]
+      },
+      "chat-ink": {
+        "role": "neutral",
+        "displayName": "Chat Primary Ink",
+        "canonical": "#e9edef",
+        "tonalRamp": [
+          "#15191b",
+          "#2b3235",
+          "#444d51",
+          "#606b70",
+          "#7e898e",
+          "#a0aaae",
+          "#c4cbce",
+          "#e9edef"
+        ]
+      },
+      "chat-muted": {
+        "role": "neutral",
+        "displayName": "Chat Muted Ink",
+        "canonical": "#8696a0",
+        "tonalRamp": [
+          "#131719",
+          "#293136",
+          "#404b51",
+          "#59666d",
+          "#71828b",
+          "#8696a0",
+          "#bbc4c9",
+          "#edf0f2"
+        ]
+      },
+      "chat-bubble-out": {
+        "role": "secondary",
+        "displayName": "Outgoing Chat Bubble",
+        "canonical": "#005c4b",
+        "tonalRamp": [
+          "#031713",
+          "#052d25",
+          "#064338",
+          "#005c4b",
+          "#177764",
+          "#4a9a84",
+          "#8ec5b5",
+          "#d8eee8"
+        ]
+      }
     },
     "typographyMeta": {
-      "headline": { "displayName": "Page Headline", "purpose": "One route-level heading per screen." },
-      "body": { "displayName": "Operational Body", "purpose": "Compact task and supporting text." },
-      "label": { "displayName": "Operational Label", "purpose": "Statuses, metadata, and section eyebrows." }
+      "headline": {
+        "displayName": "Responsive Page Headline",
+        "purpose": "The route h1: 24px by default and 30px where the Today composition has room."
+      },
+      "title": {
+        "displayName": "Operational Title",
+        "purpose": "16px surface, header, and compact section titles."
+      },
+      "chat-title": {
+        "displayName": "Conversation Title",
+        "purpose": "15px names and composer text inside Messages."
+      },
+      "body": {
+        "displayName": "Operational Body",
+        "purpose": "14px instructions, values, customer content, and error copy."
+      },
+      "label": {
+        "displayName": "Standard Label",
+        "purpose": "12px labels, status chips, and supporting metadata."
+      },
+      "compact-meta": {
+        "displayName": "Compact Metadata",
+        "purpose": "11px bottom-navigation labels and compact chat metadata."
+      },
+      "micro-marker": {
+        "displayName": "Eyebrow and Marker",
+        "purpose": "10px uppercase eyebrows, role markers, timestamps, and the Now label."
+      },
+      "unread-count": {
+        "displayName": "Unread Micro-count",
+        "purpose": "9px only inside the space-constrained mobile unread badge."
+      }
     },
     "shadows": [
-      { "name": "ambient-low", "value": "0 1px 2px rgba(0,0,0,0.18)", "purpose": "Subtle separation for bounded surfaces." }
+      {
+        "name": "ambient-surface",
+        "value": "0 1px 2px rgba(0,0,0,0.18)",
+        "purpose": "Quiet separation for bounded operational surfaces."
+      },
+      {
+        "name": "auth-lift",
+        "value": "0 20px 25px -5px rgba(0,0,0,0.20), 0 8px 10px -6px rgba(0,0,0,0.20)",
+        "purpose": "Broader soft lift for the single centered auth card."
+      },
+      {
+        "name": "focus-ring",
+        "value": "0 0 0 3px color-mix(in oklab, var(--primary) 45%, transparent)",
+        "purpose": "Selected-accent keyboard focus; paired with a visible outline and offset."
+      }
     ],
     "motion": [
-      { "name": "state-change", "value": "150ms ease-out", "purpose": "Colour and opacity changes for controls and live state." }
+      {
+        "name": "state-change",
+        "value": "150ms cubic-bezier(0.4, 0, 0.2, 1)",
+        "purpose": "Colour, opacity, and small position feedback for controls."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "0.01ms",
+        "purpose": "Effective animation and transition duration when reduced motion is requested."
+      }
     ],
     "breakpoints": [
+      { "name": "minimum-phone", "value": "320px" },
+      { "name": "comfortable-phone", "value": "390px" },
       { "name": "sm", "value": "640px" },
       { "name": "lg", "value": "1024px" },
-      { "name": "xl", "value": "1280px" }
+      { "name": "xl", "value": "1280px" },
+      { "name": "large-review", "value": "1440px" }
     ]
   },
-  "components": [],
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The next safe action; follows the selected theme accent and reaches 48px on coarse pointers.",
+      "html": "<button class=\"ds-btn-primary\">Open messages</button>",
+      "css": ".ds-btn-primary { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid transparent; border-radius: 10px; padding: 0 12px; background: var(--primary); color: var(--primary-foreground); font: 500 14px/1 Inter, sans-serif; transition: background-color 150ms cubic-bezier(.4,0,.2,1), transform 150ms cubic-bezier(.4,0,.2,1); } .ds-btn-primary:hover { background: var(--primary-hover); } .ds-btn-primary:active { transform: translateY(1px); } .ds-btn-primary:focus-visible { outline: 1px solid var(--primary); outline-offset: 2px; box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 45%, transparent); } .ds-btn-primary:disabled { opacity: .5; pointer-events: none; } @media (pointer: coarse) { .ds-btn-primary { min-height: 48px; min-width: 48px; } }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Secondary and local actions without competing with the route's primary action.",
+      "html": "<button class=\"ds-btn-outline\">Customers</button>",
+      "css": ".ds-btn-outline { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--border); border-radius: 10px; padding: 0 12px; background: var(--background); color: var(--foreground); font: 500 14px/1 Inter, sans-serif; transition: background-color 150ms cubic-bezier(.4,0,.2,1), border-color 150ms cubic-bezier(.4,0,.2,1); } .ds-btn-outline:hover { background: var(--muted); border-color: var(--primary); } .ds-btn-outline:active { transform: translateY(1px); } .ds-btn-outline:focus-visible { outline: 1px solid var(--primary); outline-offset: 2px; box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 45%, transparent); } @media (pointer: coarse) { .ds-btn-outline { min-height: 48px; min-width: 48px; } }"
+    },
+    {
+      "name": "Operational Field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Dark inset field for search, auth, settings, and Salon editors.",
+      "html": "<label class=\"ds-field-label\" for=\"ds-customer-search\">Customer search</label><input class=\"ds-field\" id=\"ds-customer-search\" placeholder=\"Name, phone, or preference\">",
+      "css": ".ds-field-label { display: block; margin-bottom: 6px; color: var(--foreground); font: 600 12px/1.25 Inter, sans-serif; } .ds-field { width: 100%; min-height: 48px; border: 1px solid var(--input); border-radius: 10px; padding: 0 12px; background: color-mix(in oklab, var(--input) 30%, transparent); color: var(--foreground); font: 400 16px/1.5 Inter, sans-serif; outline: none; transition: border-color 150ms cubic-bezier(.4,0,.2,1), box-shadow 150ms cubic-bezier(.4,0,.2,1); } .ds-field::placeholder { color: var(--muted-foreground); } .ds-field:focus-visible { border-color: var(--ring); box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 50%, transparent); } .ds-field:disabled { cursor: not-allowed; opacity: .5; } @media (min-width: 640px) { .ds-field { min-height: 32px; font-size: 14px; } }"
+    },
+    {
+      "name": "Healthy Status Chip",
+      "kind": "chip",
+      "refersTo": "status-healthy",
+      "description": "A semantic status that carries icon and words before colour.",
+      "html": "<span class=\"ds-status-good\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M20 6 9 17l-5-5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>Confirmed</span>",
+      "css": ".ds-status-good { height: 20px; display: inline-flex; align-items: center; gap: 4px; border: 1px solid color-mix(in oklab, var(--success) 30%, transparent); border-radius: 999px; padding: 0 8px; background: color-mix(in oklab, var(--success) 10%, transparent); color: var(--success); font: 500 12px/1 Inter, sans-serif; white-space: nowrap; } .ds-status-good svg { width: 12px; height: 12px; } .ds-status-good:focus-visible { outline: 1px solid var(--primary); outline-offset: 2px; }"
+    },
+    {
+      "name": "Operational Surface",
+      "kind": "card",
+      "refersTo": "daybook-surface",
+      "description": "A bounded surface used only when a section boundary carries operational meaning.",
+      "html": "<section class=\"ds-ops-surface\"><header><span>Shift totals</span></header><div><strong>3</strong><small>Appointments</small></div></section>",
+      "css": ".ds-ops-surface { overflow: hidden; border: 1px solid var(--border); border-radius: 14px; background: var(--card); color: var(--card-foreground); box-shadow: 0 1px 2px rgba(0,0,0,.18); font-family: Inter, sans-serif; } .ds-ops-surface header { padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 14px; font-weight: 600; } .ds-ops-surface > div { display: grid; gap: 4px; padding: 16px; } .ds-ops-surface strong { font-size: 18px; font-variant-numeric: tabular-nums; } .ds-ops-surface small { color: var(--muted-foreground); font-size: 12px; }"
+    },
+    {
+      "name": "Daybook Now Row",
+      "kind": "custom",
+      "description": "The signature chronological seam joining time, current state, customer, and status.",
+      "html": "<div class=\"ds-daybook-row\"><time>15:30</time><div class=\"ds-daybook-detail\"><strong>Riya Shah</strong><span>Cut &amp; finish with Tara</span></div><div class=\"ds-now-line\"><b>NOW</b><i></i><span>2:59 pm</span></div></div>",
+      "css": ".ds-daybook-row { position: relative; min-height: 88px; display: grid; grid-template-columns: 76px minmax(0,1fr); border-bottom: 1px solid var(--border); background: var(--card); color: var(--foreground); font-family: Inter, sans-serif; } .ds-daybook-row > time { padding: 20px 12px; border-right: 1px solid var(--border); color: var(--muted-foreground); text-align: right; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; } .ds-daybook-detail { display: grid; align-content: center; gap: 5px; padding: 16px; } .ds-daybook-detail strong { font-size: 14px; } .ds-daybook-detail span { color: var(--muted-foreground); font-size: 14px; } .ds-now-line { position: absolute; left: 46px; right: 0; top: 70px; display: grid; grid-template-columns: auto 12px auto 1fr; align-items: center; gap: 7px; color: var(--primary); } .ds-now-line b { font-size: 10px; letter-spacing: .12em; } .ds-now-line i { width: 8px; height: 8px; border-radius: 999px; background: var(--primary); box-shadow: 0 0 0 4px var(--primary-soft); } .ds-now-line span { font-size: 12px; white-space: nowrap; } .ds-now-line::after { content: ''; height: 1px; background: var(--primary); } @media (min-width: 640px) { .ds-daybook-row { grid-template-columns: 96px minmax(0,1fr); } .ds-now-line { left: 76px; } }"
+    },
+    {
+      "name": "Mobile Navigation Item",
+      "kind": "nav",
+      "description": "Thumb-reachable labeled navigation with active tint and a constrained unread count.",
+      "html": "<a class=\"ds-mobile-nav\" href=\"#\" aria-current=\"page\"><span><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"/></svg><b aria-label=\"3 unread conversations\">3</b></span>Messages</a>",
+      "css": ".ds-mobile-nav { position: relative; min-height: 56px; min-width: 72px; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-radius: 14px; color: var(--muted-foreground); font: 600 11px/1.25 Inter, sans-serif; text-decoration: none; transition: color 150ms cubic-bezier(.4,0,.2,1), background-color 150ms cubic-bezier(.4,0,.2,1); } .ds-mobile-nav > span { position: relative; min-width: 48px; height: 32px; display: grid; place-items: center; border-radius: 999px; } .ds-mobile-nav svg { width: 20px; height: 20px; } .ds-mobile-nav b { position: absolute; top: -4px; right: -2px; min-width: 16px; min-height: 16px; display: grid; place-items: center; border-radius: 999px; padding: 0 4px; background: var(--primary); color: var(--primary-foreground); font-size: 9px; font-variant-numeric: tabular-nums; } .ds-mobile-nav[aria-current=page] { color: var(--primary); } .ds-mobile-nav[aria-current=page] > span { background: var(--primary-soft-2); } .ds-mobile-nav:hover { background: var(--muted); color: var(--foreground); } .ds-mobile-nav:focus-visible { outline: 1px solid var(--primary); outline-offset: 2px; box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 45%, transparent); }"
+    },
+    {
+      "name": "Conversation List Row",
+      "kind": "custom",
+      "description": "WhatsApp-familiar message list row; the chat palette never follows the selected Salu accent.",
+      "html": "<button class=\"ds-conversation-row\"><span class=\"ds-conversation-avatar\">M</span><span class=\"ds-conversation-copy\"><span><strong>Meera Nair</strong><time>2:41 pm</time></span><small>Can I move my appointment?</small></span><b aria-label=\"2 unread messages\">2</b></button>",
+      "css": ".ds-conversation-row { width: 100%; min-height: 72px; display: grid; grid-template-columns: 48px minmax(0,1fr) auto; align-items: center; gap: 12px; border: 0; padding: 12px; background: var(--chat-panel); color: var(--chat-ink); text-align: left; font-family: Inter, sans-serif; transition: background-color 150ms cubic-bezier(.4,0,.2,1); } .ds-conversation-row:hover, .ds-conversation-row[aria-current=true] { background: var(--chat-surface); } .ds-conversation-row:focus-visible { position: relative; z-index: 1; outline: 2px solid var(--chat-accent); outline-offset: -2px; } .ds-conversation-avatar { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 999px; background: #2a3942; font-size: 14px; } .ds-conversation-copy { min-width: 0; display: grid; gap: 5px; } .ds-conversation-copy > span { display: flex; justify-content: space-between; gap: 8px; } .ds-conversation-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; font-weight: 500; } .ds-conversation-copy time { color: var(--chat-muted); font-size: 11px; white-space: nowrap; } .ds-conversation-copy small { overflow: hidden; color: var(--chat-muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; } .ds-conversation-row > b { min-width: 20px; height: 20px; display: grid; place-items: center; border-radius: 999px; padding: 0 5px; background: var(--chat-accent); color: var(--chat-panel); font-size: 10px; font-variant-numeric: tabular-nums; }"
+    }
+  ],
   "narrative": {
     "northStar": "The Salu Daybook",
-    "overview": "A dark, phone-first shift book where the next customer, unresolved message, and expiring deposit are immediately legible.",
-    "keyCharacteristics": ["Chronological time spines", "One selected accent", "Status words before colour", "Tonal rather than floating depth"],
-    "rules": [
-      { "name": "The One Accent Rule", "body": "Outside Messages, the selected theme colour is the only decorative accent.", "section": "colors" },
-      { "name": "The Flat-By-Default Rule", "body": "A card exists only when its boundary carries meaning.", "section": "elevation" }
+    "overview": "Salu is a live shift book, not an analytics dashboard. Urgent replies, the current appointment, and expiring deposits lead; history follows. Cool near-black planes, fine ruled seams, compact sans type, tabular numerals, and a visible now line provide the identity established by direction seed `deebff86` and the shipped Now Line composition.\n\nThe interface is phone-first and expands without changing its reading order. Expression stays restrained: the selected accent locates interaction and current state, while familiar WhatsApp material is confined to Messages.",
+    "keyCharacteristics": [
+      "One chronological operational flow with a live now seam.",
+      "Five selectable accents over dark, quiet working surfaces.",
+      "Status words and icons before colour.",
+      "Tonal layering, precise borders, and few meaningful containers.",
+      "Compact metadata that remains subordinate to actions and customer content."
     ],
-    "dos": ["Put urgent action and current-day state before historical analysis."],
-    "donts": ["Do not rebuild the product as a generic metric-card grid."]
+    "rules": [
+      {
+        "name": "The One Accent Rule",
+        "body": "Outside Messages, the selected theme colour is the only decorative accent. Status colours communicate state; chart colours identify data; neither becomes decoration.",
+        "section": "colors"
+      },
+      {
+        "name": "The WhatsApp Boundary Rule",
+        "body": "WhatsApp green and the dedicated chat canvas, panels, bubbles, and ink belong only to Messages. Theme Emerald is deliberately distinct and does not license WhatsApp green elsewhere.",
+        "section": "colors"
+      },
+      {
+        "name": "The Compact-Type Rule",
+        "body": "The 9–11px steps are reserved for short operational metadata with nearby context, never instructions, form values, errors, or body copy.",
+        "section": "typography"
+      },
+      {
+        "name": "The Operational Numeral Rule",
+        "body": "Times, counts, money, and countdowns use tabular numerals so live changes do not shift alignment.",
+        "section": "typography"
+      },
+      {
+        "name": "The Stable Reading Order Rule",
+        "body": "Responsive layouts may add columns, never reorder urgent work behind history or detach a row action from its customer.",
+        "section": "layout"
+      },
+      {
+        "name": "The Flat-By-Default Rule",
+        "body": "Rows share a ruled surface and separate with rhythm or lines. A card exists only when its boundary carries meaning.",
+        "section": "elevation"
+      },
+      {
+        "name": "The One Page Heading Rule",
+        "body": "Every route or route-level error owns exactly one `h1`; the shared header title is contextual text, not a competing heading.",
+        "section": "components"
+      },
+      {
+        "name": "The Honest State Rule",
+        "body": "Loading, empty, partial failure, permission, expired session, save, and send states use explicit text plus icons where useful. Failed or absent data never renders as a healthy zero.",
+        "section": "components"
+      }
+    ],
+    "dos": [
+      "Do put urgent action and current-day state before historical analysis.",
+      "Do preserve all five accents and test focus, text, and semantic status against each.",
+      "Do keep touch targets at least 48px on coarse pointers and preserve visible keyboard focus.",
+      "Do retain drafts and explain recovery after save, send, session, or connection failures.",
+      "Do keep the same task order from 320px phones through 1440px desktop."
+    ],
+    "donts": [
+      "Don't rebuild the product as a generic grid of metric cards.",
+      "Don't use WhatsApp green, chat bubbles, or the doodle canvas outside Messages.",
+      "Don't use gradients, glowing chrome, salon stock imagery, or decorative scissors motifs.",
+      "Don't hide permissions by removing controls without explanation.",
+      "Don't show missing or failed data as zero, empty, saved, sent, or all-clear."
+    ]
   }
 }

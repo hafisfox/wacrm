@@ -1,12 +1,12 @@
-export type OpsTone = "good" | "neutral" | "warn" | "danger";
+export type OpsTone = 'good' | 'neutral' | 'warn' | 'danger';
 
 export type CustomerOpsFilter =
-  | "all"
-  | "handoff"
-  | "payment"
-  | "booking"
-  | "idle"
-  | "recent";
+  | 'all'
+  | 'handoff'
+  | 'payment'
+  | 'booking'
+  | 'idle'
+  | 'recent';
 
 interface DateLikeOptions {
   now?: Date;
@@ -44,7 +44,7 @@ function parseDate(value: string | null | undefined) {
 
 function durationLabel(ms: number) {
   const minutes = Math.max(0, Math.round(ms / 60_000));
-  if (minutes < 1) return "just now";
+  if (minutes < 1) return 'just now';
   if (minutes < 60) return `${minutes}m`;
   const hours = Math.round(minutes / 60);
   if (hours < 24) return `${hours}h`;
@@ -56,21 +56,21 @@ function durationLabel(ms: number) {
 
 export function formatOpsAge(
   value: string | null | undefined,
-  { now = new Date() }: DateLikeOptions = {},
+  { now = new Date() }: DateLikeOptions = {}
 ) {
   const date = parseDate(value);
-  if (!date) return "not recorded";
+  if (!date) return 'not recorded';
   return `${durationLabel(now.getTime() - date.getTime())} ago`;
 }
 
 export function formatOpsCountdown(
   value: string | null | undefined,
-  { now = new Date() }: DateLikeOptions = {},
+  { now = new Date() }: DateLikeOptions = {}
 ) {
   const date = parseDate(value);
-  if (!date) return "";
+  if (!date) return '';
   const diff = date.getTime() - now.getTime();
-  if (Math.abs(diff) < 60_000) return diff >= 0 ? "due now" : "just overdue";
+  if (Math.abs(diff) < 60_000) return diff >= 0 ? 'due now' : 'just overdue';
   return diff >= 0
     ? `in ${durationLabel(diff)}`
     : `${durationLabel(Math.abs(diff))} overdue`;
@@ -79,7 +79,7 @@ export function formatOpsCountdown(
 export function isRecentOpsDate(
   value: string | null | undefined,
   days = 7,
-  { now = new Date() }: DateLikeOptions = {},
+  { now = new Date() }: DateLikeOptions = {}
 ) {
   const date = parseDate(value);
   if (!date) return false;
@@ -88,76 +88,70 @@ export function isRecentOpsDate(
 
 export function paymentQueueTone(
   row: PaymentQueueLike,
-  { now = new Date() }: DateLikeOptions = {},
+  { now = new Date() }: DateLikeOptions = {}
 ): OpsTone {
-  const combined = [
-    row.status,
-    row.payment_status,
-    row.payment_status_row,
-  ]
+  const combined = [row.status, row.payment_status, row.payment_status_row]
     .filter(Boolean)
-    .join(" ")
+    .join(' ')
     .toLowerCase();
 
-  if (combined.includes("refund") || combined.includes("verification")) {
-    return "danger";
+  if (combined.includes('refund') || combined.includes('verification')) {
+    return 'danger';
   }
 
   const expiresAt = parseDate(row.expires_at || row.hold_expires_at);
-  if (expiresAt && expiresAt.getTime() <= now.getTime()) return "danger";
-  if (combined.includes("pending") || combined.includes("expired")) {
-    return "warn";
+  if (expiresAt && expiresAt.getTime() <= now.getTime()) return 'danger';
+  if (combined.includes('pending') || combined.includes('expired')) {
+    return 'warn';
   }
-  return "neutral";
+  return 'neutral';
 }
 
 export function paymentQueueLabel(
   row: PaymentQueueLike,
-  options: DateLikeOptions = {},
+  options: DateLikeOptions = {}
 ) {
   const tone = paymentQueueTone(row, options);
-  const combined = [
-    row.status,
-    row.payment_status,
-    row.payment_status_row,
-  ]
+  const combined = [row.status, row.payment_status, row.payment_status_row]
     .filter(Boolean)
-    .join(" ")
+    .join(' ')
     .toLowerCase();
 
-  if (combined.includes("refund")) return "Refund review";
-  if (combined.includes("verification")) return "Verify payment";
-  if (tone === "danger") return "Expired hold";
-  if (combined.includes("pending")) return "Collect deposit";
-  return "Payment check";
+  if (combined.includes('refund')) return 'Refund review';
+  if (combined.includes('verification')) return 'Verify payment';
+  if (tone === 'danger') return 'Expired hold';
+  if (combined.includes('pending')) return 'Collect deposit';
+  return 'Payment check';
 }
 
 export function customerIsIdle(customer: CustomerMemoryLike) {
-  return !customer.human_mode &&
+  return (
+    !customer.human_mode &&
     !customer.pending_payment_reference_id &&
     !customer.pending_booking_id &&
     !customer.active_booking_id &&
     !customer.last_intent &&
-    !customer.conversation_id;
+    !customer.conversation_id
+  );
 }
 
 export function matchesCustomerOpsFilter(
   customer: CustomerMemoryLike,
   filter: CustomerOpsFilter,
-  options: DateLikeOptions = {},
+  options: DateLikeOptions = {}
 ) {
   switch (filter) {
-    case "handoff":
+    case 'handoff':
       return Boolean(customer.human_mode);
-    case "payment":
+    case 'payment':
       return Boolean(customer.pending_payment_reference_id);
-    case "booking":
+    case 'booking':
       return Boolean(customer.pending_booking_id || customer.active_booking_id);
-    case "idle":
+    case 'idle':
       return customerIsIdle(customer);
-    case "recent":
+    case 'recent':
       return isRecentOpsDate(customer.last_seen_at, 7, options);
-    case "all":
+    case 'all':
     default:
       return true;
   }
@@ -165,7 +159,7 @@ export function matchesCustomerOpsFilter(
 
 export function matchesCustomerSearch(
   customer: CustomerMemoryLike,
-  rawQuery: string,
+  rawQuery: string
 ) {
   const query = rawQuery.trim().toLowerCase();
   if (!query) return true;
@@ -178,5 +172,9 @@ export function matchesCustomerSearch(
     customer.profile_summary,
     customer.last_customer_message,
     customer.last_intent,
-  ].some((value) => String(value || "").toLowerCase().includes(query));
+  ].some((value) =>
+    String(value || '')
+      .toLowerCase()
+      .includes(query)
+  );
 }
