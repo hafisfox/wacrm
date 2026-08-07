@@ -999,7 +999,19 @@ function ServiceEditor({
     event.preventDefault();
     const pricePaise = Number(rupeesToPaiseInput(price) || 0);
     const depositPaise = payment ? Number(rupeesToPaiseInput(deposit) || 0) : 0;
-    if (depositPaise > pricePaise && pricePaise > 0) {
+    if (!Number.isFinite(pricePaise) || !Number.isFinite(depositPaise)) {
+      toast.error('Enter valid price and deposit amounts');
+      return;
+    }
+    if (payment && pricePaise <= 0) {
+      toast.error('Enter a customer price before taking a deposit');
+      return;
+    }
+    if (payment && depositPaise < 100) {
+      toast.error('Enter a deposit of at least ₹1, or turn off Take deposit');
+      return;
+    }
+    if (depositPaise > pricePaise) {
       toast.error('Deposit cannot be greater than the service price');
       return;
     }
@@ -1065,7 +1077,10 @@ function ServiceEditor({
                 onChange={(event) => setPrice(event.target.value)}
               />
             </Field>
-            <Field label="Deposit (₹)" hint="Set 0 for no deposit">
+            <Field
+              label="Deposit (₹)"
+              hint="At least ₹1. Turn off Take deposit for no deposit."
+            >
               <input
                 className={INPUT}
                 type="number"

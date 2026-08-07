@@ -21,6 +21,8 @@ import {
 import type { MessageTemplate } from '@/types';
 import { isMessageTemplate } from '@/lib/whatsapp/template-row-guard';
 import { logSaluAgentMessage, setSaluHumanMode } from '@/lib/salu/crm';
+import { fetchWithTimeout, TIMEOUT_EXTERNAL_MS } from '@/lib/http';
+import type { SendTimeParams } from '@/lib/whatsapp/template-send-builder';
 
 async function sendN8nOwnedTextMessage({
   to,
@@ -42,21 +44,25 @@ async function sendN8nOwnedTextMessage({
     );
   }
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Salu-Source': 'dashboard',
-      ...(process.env.SALU_N8N_MANUAL_SEND_TOKEN
-        ? { 'X-Salu-Webhook-Secret': process.env.SALU_N8N_MANUAL_SEND_TOKEN }
-        : {}),
+  const res = await fetchWithTimeout(
+    url,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Salu-Source': 'dashboard',
+        ...(process.env.SALU_N8N_MANUAL_SEND_TOKEN
+          ? { 'X-Salu-Webhook-Secret': process.env.SALU_N8N_MANUAL_SEND_TOKEN }
+          : {}),
+      },
+      body: JSON.stringify({
+        phone: to,
+        text,
+        context_message_id: contextMessageId,
+      }),
     },
-    body: JSON.stringify({
-      phone: to,
-      text,
-      context_message_id: contextMessageId,
-    }),
-  });
+    TIMEOUT_EXTERNAL_MS
+  );
 
   const payload = await res.json().catch(() => ({}));
   if (!res.ok) {
@@ -90,7 +96,29 @@ export async function POST(request: Request) {
       return rateLimitResponse(limit);
     }
 
-    const body = await request.json();
+    const parsedBody = await request.json().catch(() => null);
+    if (
+      !parsedBody ||
+      typeof parsedBody !== 'object' ||
+      Array.isArray(parsedBody)
+    ) {
+      return NextResponse.json(
+        { error: 'Invalid message payload' },
+        { status: 400 }
+      );
+    }
+
+    const body = parsedBody as {
+      conversation_id?: string;
+      message_type?: string;
+      content_text?: string;
+      media_url?: string;
+      template_name?: string;
+      template_language?: string;
+      template_params?: string[];
+      template_message_params?: SendTimeParams;
+      reply_to_message_id?: string;
+    };
     const {
       conversation_id,
       message_type,
@@ -110,7 +138,17 @@ export async function POST(request: Request) {
       );
     }
 
-    if (message_type === 'text' && !content_text) {
+    if (message_type !== 'text' && message_type !== 'template') {
+      return NextResponse.json(
+        { error: 'message_type must be text or template' },
+        { status: 400 }
+      );
+    }
+
+    if (
+      message_type === 'text' &&
+      (typeof content_text !== 'string' || !content_text.trim())
+    ) {
       return NextResponse.json(
         { error: 'content_text is required for text messages' },
         { status: 400 }
@@ -286,7 +324,7 @@ export async function POST(request: Request) {
         }
         const result = await sendN8nOwnedTextMessage({
           to: phone,
-          text: content_text,
+          text: content_text!,
           contextMessageId,
         });
         return result.messageId;
@@ -297,7 +335,7 @@ export async function POST(request: Request) {
           phoneNumberId: config!.phone_number_id,
           accessToken,
           to: phone,
-          templateName: template_name,
+          templateName: template_name!,
           language: template_language || 'en_US',
           template: templateRow ?? undefined,
           messageParams: template_message_params ?? undefined,
@@ -312,7 +350,7 @@ export async function POST(request: Request) {
         phoneNumberId: config!.phone_number_id,
         accessToken,
         to: phone,
-        text: content_text,
+        text: content_text!,
         contextMessageId,
       });
       return result.messageId;

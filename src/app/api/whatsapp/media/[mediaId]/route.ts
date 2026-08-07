@@ -75,7 +75,7 @@ export async function GET(
       headers: {
         'Content-Type':
           contentType || mediaInfo.mimeType || 'application/octet-stream',
-        'Cache-Control': 'public, max-age=86400',
+        'Cache-Control': 'private, max-age=86400',
       },
     });
   } catch (error) {

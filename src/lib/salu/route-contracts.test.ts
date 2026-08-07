@@ -13,10 +13,19 @@ describe('dashboard route role contracts', () => {
 
     expect(send).toContain("requireRole('agent')");
     expect(send).not.toContain(".from('profiles')");
+    expect(send).toContain('fetchWithTimeout');
+    expect(send).toContain('message_type must be text or template');
     expect(react).toContain("requireRole('agent')");
     expect(react).not.toContain(".from('profiles')");
     expect(takeover).toMatch(/requireRole\(['"]agent['"]\)/);
     expect(takeover).toContain('RATE_LIMITS.takeover');
+  });
+
+  it('keeps authenticated WhatsApp media out of shared caches', () => {
+    const media = source('../../app/api/whatsapp/media/[mediaId]/route.ts');
+
+    expect(media).toContain("'Cache-Control': 'private, max-age=86400'");
+    expect(media).not.toContain("'Cache-Control': 'public");
   });
 
   it('requires admin access for account-wide WhatsApp configuration and templates', () => {

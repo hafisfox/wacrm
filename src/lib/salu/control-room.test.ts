@@ -38,9 +38,42 @@ describe('control-room validation', () => {
       })
     ).toThrow('deposit_paise cannot exceed price_paise');
 
+    expect(() =>
+      sanitizeService({
+        service_name: 'Haircut',
+        payment_required: true,
+        price_paise: 0,
+        deposit_paise: 0,
+      })
+    ).toThrow('must have a customer price');
+
+    expect(() =>
+      sanitizeService({
+        service_name: 'Haircut',
+        payment_required: true,
+        price_paise: 50000,
+        deposit_paise: 99,
+      })
+    ).toThrow('deposit must be at least ₹1');
+
     expect(
-      sanitizeService({ service_name: 'Haircut', price_paise: '125000' })
-        .price_display
+      sanitizeService({
+        service_name: 'Consultation',
+        payment_required: false,
+        price_paise: 0,
+        deposit_paise: 500,
+      })
+    ).toMatchObject({
+      payment_required: false,
+      deposit_paise: 0,
+    });
+
+    expect(
+      sanitizeService({
+        service_name: 'Haircut',
+        price_paise: '125000',
+        payment_required: false,
+      }).price_display
     ).toBe('₹1,250');
   });
 

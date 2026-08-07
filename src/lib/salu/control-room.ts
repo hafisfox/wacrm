@@ -5,6 +5,7 @@ import { saluQuery, saluTransaction } from './db';
 
 // Route-contract guard: CONTROL_ROOM_MUTATION_ROLE = "admin"
 export const CONTROL_ROOM_MUTATION_ROLE = 'admin' as const;
+export const MIN_PAYMENT_PAISE = 100;
 export {
   SKILL_LEVELS,
   WEEKDAYS,
@@ -271,11 +272,18 @@ export function sanitizeService(input: RawInput) {
   const serviceName = text(input.service_name, 'Service');
   const serviceId = slug(input.service_id, slug(serviceName, 'service'));
   const pricePaise = integer(input.price_paise, 0, 0);
-  const depositPaise = integer(input.deposit_paise, 0, 0);
+  const paymentRequired = bool(input.payment_required, true);
+  const depositPaise = paymentRequired ? integer(input.deposit_paise, 0, 0) : 0;
   const priceDisplay =
     optionalText(input.price_display) ||
     (pricePaise ? `₹${(pricePaise / 100).toLocaleString('en-IN')}` : '');
-  if (depositPaise > pricePaise && pricePaise > 0) {
+  if (paymentRequired && pricePaise <= 0) {
+    throw new Error('A paid service must have a customer price');
+  }
+  if (paymentRequired && depositPaise < MIN_PAYMENT_PAISE) {
+    throw new Error('A paid service deposit must be at least ₹1');
+  }
+  if (depositPaise > pricePaise) {
     throw new Error('deposit_paise cannot exceed price_paise');
   }
   return {
@@ -285,7 +293,7 @@ export function sanitizeService(input: RawInput) {
     price_display: priceDisplay,
     price_paise: pricePaise,
     deposit_paise: depositPaise,
-    payment_required: bool(input.payment_required, true),
+    payment_required: paymentRequired,
     payment_label: optionalText(input.payment_label),
     active: bool(input.active, true),
     flow_order: integer(input.flow_order, 999, 0),

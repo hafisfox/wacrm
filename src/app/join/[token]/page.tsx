@@ -24,7 +24,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import {
   AlertTriangle,
@@ -93,6 +93,7 @@ const FAIL_COPY: Record<PeekFail['reason'], { title: string; body: string }> = {
 
 export default function JoinPage() {
   const params = useParams<{ token: string }>();
+  const router = useRouter();
   const token = params?.token;
 
   const [peek, setPeek] = useState<PeekResult | null>(null);
@@ -196,15 +197,16 @@ export default function JoinPage() {
         return;
       }
       toast.success('Welcome to the team');
-      // Full reload (not router.push) so AuthProvider re-fetches
-      // the profile with the new account_id and account_role.
-      window.location.href = '/dashboard';
+      // The dashboard layout mounts AuthProvider, which fetches the
+      // profile with the newly assigned account_id and account_role.
+      router.replace('/dashboard');
+      router.refresh();
     } catch (err) {
       console.error('[join] redeem error:', err);
       toast.error('Could not reach the server');
       setAccepting(false);
     }
-  }, [token]);
+  }, [router, token]);
 
   const handleSignOutAndRetry = useCallback(async () => {
     setSigningOut(true);

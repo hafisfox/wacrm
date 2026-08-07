@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Loader2, LogOut } from 'lucide-react';
 
@@ -23,6 +24,7 @@ import {
 } from '@/components/ui/dialog';
 
 export function SessionsCard() {
+  const router = useRouter();
   const supabase = createClient();
   const [open, setOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
@@ -39,7 +41,8 @@ export function SessionsCard() {
         toast.error('Could not sign out. Please try again.');
         return;
       }
-      window.location.href = '/login';
+      router.replace('/login');
+      router.refresh();
     } catch (err) {
       console.error('[sessions] sign-out failed:', err);
       toast.error('Could not sign out. Please try again.');
