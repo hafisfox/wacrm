@@ -29,9 +29,6 @@ export function Header() {
     <header className="border-border bg-background/98 flex h-[calc(3.75rem+env(safe-area-inset-top))] shrink-0 items-center justify-between gap-3 border-b px-3 pt-[env(safe-area-inset-top)] sm:px-4 lg:h-14 lg:px-6 lg:pt-0">
       <div className="flex min-w-0 items-center gap-2">
         <div className="min-w-0">
-          <p className="text-muted-foreground hidden text-[10px] font-semibold tracking-[0.14em] uppercase sm:block">
-            Salu Salon
-          </p>
           <p className="text-foreground truncate text-base font-semibold sm:text-lg">
             {title}
           </p>

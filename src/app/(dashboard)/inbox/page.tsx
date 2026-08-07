@@ -12,7 +12,17 @@ export default function InboxPage() {
     <Suspense
       fallback={
         <div className="bg-chat-canvas flex h-full items-center justify-center">
-          <div className="border-chat-accent h-6 w-6 animate-spin rounded-full border-2 border-t-transparent" />
+          <div
+            className="flex flex-col items-center gap-3"
+            role="status"
+            aria-live="polite"
+          >
+            <div
+              className="border-chat-accent h-6 w-6 animate-spin rounded-full border-2 border-t-transparent"
+              aria-hidden
+            />
+            <p className="text-chat-muted text-sm">Loading conversations…</p>
+          </div>
         </div>
       }
     >

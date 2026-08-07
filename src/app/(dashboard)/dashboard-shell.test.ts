@@ -27,4 +27,11 @@ describe('dashboard unread subscription ownership', () => {
     expect(sidebarSource).not.toContain('useTotalUnread(');
     expect(mobileNavSource).not.toContain('useTotalUnread(');
   });
+
+  it('keeps keyboard navigation and unauthenticated redirects predictable', () => {
+    expect(shellSource).toContain('href="#main-content"');
+    expect(shellSource).toContain('id="main-content"');
+    expect(shellSource).toContain("router.replace('/login')");
+    expect(shellSource).not.toContain("router.push('/login')");
+  });
 });

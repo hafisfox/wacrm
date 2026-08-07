@@ -394,7 +394,10 @@ export function InboxClient({ sendingAvailable }: InboxClientProps) {
     if (sendingAvailable) return null;
 
     return (
-      <div className="border-chat-line flex shrink-0 items-center gap-2 border-b bg-amber-950/70 px-4 py-2 text-xs text-amber-200">
+      <div
+        className="border-chat-line flex shrink-0 items-center gap-2 border-b bg-amber-950/70 px-4 py-2 text-xs text-amber-200"
+        role="status"
+      >
         <WifiOff className="h-4 w-4 shrink-0" />
         <span className="min-w-0 flex-1">
           Messages are unavailable right now. Your message history is still

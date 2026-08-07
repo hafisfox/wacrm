@@ -128,7 +128,7 @@ export function ShiftBrief({ data }: { data: SaluDashboardData }) {
               <span className="text-foreground mt-1 block text-xl font-semibold tabular-nums">
                 {item.value}
               </span>
-              <span className="text-muted-foreground mt-1 block truncate text-xs">
+              <span className="text-muted-foreground mt-1 line-clamp-2 block text-xs leading-5">
                 {item.detail}
               </span>
             </span>
@@ -213,16 +213,13 @@ function DaybookFrame({
       aria-labelledby="daybook-title"
       className="ops-surface scroll-mt-4 overflow-hidden"
     >
-      <div className="border-border flex items-end justify-between gap-3 border-b px-4 py-4 sm:px-5">
-        <div>
-          <p className="ops-eyebrow">Appointment ledger</p>
-          <h2
-            id="daybook-title"
-            className="text-foreground mt-1 text-lg font-semibold tracking-tight"
-          >
-            Today’s daybook
-          </h2>
-        </div>
+      <div className="border-border flex items-center justify-between gap-3 border-b px-4 py-4 sm:px-5">
+        <h2
+          id="daybook-title"
+          className="text-foreground text-lg font-semibold tracking-tight"
+        >
+          Today’s appointment ledger
+        </h2>
         {typeof count === 'number' ? (
           <Badge variant="outline" className="tabular-nums">
             {count} {count === 1 ? 'booking' : 'bookings'}
@@ -283,6 +280,7 @@ function BookingState({ booking }: { booking: SaluBookingRow }) {
 function NowMarker({ complete = false }: { complete?: boolean }) {
   return (
     <div
+      role="note"
       aria-label={`Current time ${formatLiveTime()}`}
       className="relative grid grid-cols-[4.75rem_minmax(0,1fr)] sm:grid-cols-[6rem_minmax(0,1fr)]"
     >

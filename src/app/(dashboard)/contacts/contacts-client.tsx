@@ -8,10 +8,13 @@ import {
   MessageSquareText,
   Phone,
   Search,
+  SearchX,
   UserRoundCheck,
 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { AutoRefresh } from '@/components/layout/auto-refresh';
 import { compactPhone, formatDateTime } from '@/lib/salu/format';
@@ -58,13 +61,14 @@ export function ContactsClient({
       ),
     [customers, filter, search]
   );
+  const hasFilters = filter !== 'all' || Boolean(search.trim());
 
   return (
     <div className="ops-page">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h1 className="text-foreground text-2xl font-bold">Customers</h1>
-          <p className="text-muted-foreground mt-1 text-sm">
+          <h1 className="ops-page-heading">Customers</h1>
+          <p className="ops-page-description">
             Find customer details, preferences, and recent messages.
           </p>
         </div>
@@ -81,15 +85,27 @@ export function ContactsClient({
       <section className="ops-surface p-3" aria-label="Customer filters">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="relative max-w-xl flex-1">
-            <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+            <label htmlFor="customer-search" className="sr-only">
+              Search customers
+            </label>
+            <Search
+              className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
+              aria-hidden
+            />
             <Input
+              id="customer-search"
+              type="search"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search name, phone, preference, or last message"
               className="border-border bg-background text-foreground h-11 pl-9"
             />
           </div>
-          <div className="flex [scrollbar-width:none] gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden">
+          <div
+            className="flex [scrollbar-width:none] gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden"
+            role="group"
+            aria-label="Filter customers by current state"
+          >
             {FILTERS.map((item) => (
               <button
                 key={item.value}
@@ -133,14 +149,31 @@ export function ContactsClient({
             <CustomerRow key={customer.phone} customer={customer} />
           ))}
           {!filtered.length ? (
-            <div className="px-4 py-10 text-center">
-              <p className="text-foreground/80 text-sm font-medium">
-                No customers match this view
-              </p>
-              <p className="text-muted-foreground mt-1 text-xs">
-                Try clearing the search or choosing another queue.
-              </p>
-            </div>
+            <EmptyState
+              icon={SearchX}
+              title={
+                hasFilters ? 'No customers match this view' : 'No customers yet'
+              }
+              description={
+                hasFilters
+                  ? 'Clear the search and filters to return to all customers.'
+                  : 'Customer profiles will appear here after the first conversation.'
+              }
+              action={
+                hasFilters ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setSearch('');
+                      setFilter('all');
+                    }}
+                  >
+                    Clear search and filters
+                  </Button>
+                ) : undefined
+              }
+            />
           ) : null}
         </div>
       </section>
@@ -179,6 +212,9 @@ function CustomerRow({ customer }: { customer: SaluCustomerRow }) {
       </div>
 
       <div className="text-muted-foreground min-w-0 text-sm">
+        <p className="text-foreground/70 mb-1 text-xs font-medium lg:hidden">
+          Preferences
+        </p>
         <p className="truncate">
           {customer.preferred_services_summary || 'No service preference'}
         </p>
@@ -187,45 +223,53 @@ function CustomerRow({ customer }: { customer: SaluCustomerRow }) {
         </p>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        {customer.human_mode ? (
-          <StateBadge tone="danger" icon={UserRoundCheck}>
-            needs reply
-          </StateBadge>
-        ) : null}
-        {customer.pending_payment_reference_id ? (
-          <StateBadge tone="warn" icon={CreditCard}>
-            payment
-          </StateBadge>
-        ) : null}
-        {customer.pending_booking_id || customer.active_booking_id ? (
-          <StateBadge tone="good" icon={CalendarClock}>
-            booking
-          </StateBadge>
-        ) : null}
-        {customer.last_intent ? (
-          <Badge
-            variant="outline"
-            className="border-border bg-muted text-foreground/80 max-w-full truncate"
-          >
-            {customer.last_intent}
-          </Badge>
-        ) : null}
-        {customer.conversation_id ? (
-          <Link
-            href={`/inbox?conversation=${customer.conversation_id}`}
-            className="ops-focus-ring hover:border-primary/50 border-border bg-muted text-foreground/80 hover:text-foreground inline-flex min-h-11 items-center gap-1 rounded-md border px-3 text-xs lg:min-h-8 lg:px-2 lg:py-0.5"
-          >
-            <MessageSquareText className="h-3 w-3" />
-            open chat
-          </Link>
-        ) : null}
-        {idle ? (
-          <span className="text-muted-foreground text-sm">Idle</span>
-        ) : null}
+      <div>
+        <p className="text-foreground/70 mb-2 text-xs font-medium lg:hidden">
+          Current state
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {customer.human_mode ? (
+            <StateBadge tone="danger" icon={UserRoundCheck}>
+              needs reply
+            </StateBadge>
+          ) : null}
+          {customer.pending_payment_reference_id ? (
+            <StateBadge tone="warn" icon={CreditCard}>
+              payment
+            </StateBadge>
+          ) : null}
+          {customer.pending_booking_id || customer.active_booking_id ? (
+            <StateBadge tone="good" icon={CalendarClock}>
+              booking
+            </StateBadge>
+          ) : null}
+          {customer.last_intent ? (
+            <Badge
+              variant="outline"
+              className="border-border bg-muted text-foreground/80 max-w-full truncate"
+            >
+              {customer.last_intent}
+            </Badge>
+          ) : null}
+          {customer.conversation_id ? (
+            <Link
+              href={`/inbox?conversation=${customer.conversation_id}`}
+              className="ops-focus-ring hover:border-primary/50 border-border bg-muted text-foreground/80 hover:text-foreground inline-flex min-h-11 items-center gap-1 rounded-md border px-3 text-xs lg:min-h-8 lg:px-2 lg:py-0.5"
+            >
+              <MessageSquareText className="h-3 w-3" />
+              open chat
+            </Link>
+          ) : null}
+          {idle ? (
+            <span className="text-muted-foreground text-sm">Idle</span>
+          ) : null}
+        </div>
       </div>
 
       <div className="text-muted-foreground text-sm">
+        <p className="text-foreground/70 mb-1 text-xs font-medium lg:hidden">
+          Last seen
+        </p>
         {customer.last_seen_at ? (
           <>
             <span className="text-muted-foreground block">
@@ -241,13 +285,11 @@ function CustomerRow({ customer }: { customer: SaluCustomerRow }) {
       </div>
 
       {customer.last_customer_message || customer.profile_summary ? (
-        <div className="min-w-0 lg:col-span-4">
-          <div className="border-border bg-background/50 text-muted-foreground flex items-start gap-2 rounded-lg border p-3 text-xs">
-            <MessageSquareText className="text-muted-foreground mt-0.5 h-3.5 w-3.5 shrink-0" />
-            <p className="line-clamp-2">
-              {customer.last_customer_message || customer.profile_summary}
-            </p>
-          </div>
+        <div className="border-border text-muted-foreground flex min-w-0 items-start gap-2 border-t pt-3 text-xs lg:col-span-4">
+          <MessageSquareText className="text-muted-foreground mt-0.5 h-3.5 w-3.5 shrink-0" />
+          <p className="line-clamp-2">
+            {customer.last_customer_message || customer.profile_summary}
+          </p>
         </div>
       ) : null}
     </div>
@@ -265,14 +307,14 @@ function StateBadge({
 }) {
   return (
     <Badge
-      variant="outline"
-      className={cn(
-        'gap-1',
-        tone === 'good' &&
-          'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
-        tone === 'warn' && 'border-amber-500/30 bg-amber-500/10 text-amber-300',
-        tone === 'danger' && 'border-red-500/30 bg-red-500/10 text-red-300'
-      )}
+      variant={
+        tone === 'good'
+          ? 'success'
+          : tone === 'warn'
+            ? 'warning'
+            : 'destructive'
+      }
+      className="gap-1"
     >
       <Icon className="h-3 w-3" />
       {children}

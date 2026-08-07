@@ -61,13 +61,11 @@ export default async function DashboardPage() {
     <div className="ops-page">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="ops-eyebrow">
-            <DaybookDate />
-          </p>
-          <h1 className="text-foreground mt-1 text-2xl font-bold tracking-tight sm:text-3xl">
-            Today at {salonName}
-          </h1>
-          <p className="text-muted-foreground mt-2 max-w-[32ch] text-sm leading-6 sm:max-w-xl">
+          <h1 className="ops-page-heading">Today at {salonName}</h1>
+          <p className="ops-page-description">
+            <span className="text-foreground font-medium">
+              <DaybookDate />.
+            </span>{' '}
             What needs attention now, followed by the rest of your shift.
           </p>
         </div>
@@ -332,17 +330,14 @@ function HandoffQueue({ rows }: { rows: SaluHandoffRow[] }) {
     return <EmptyLine text="No customer messages need your reply right now." />;
 
   return (
-    <div className="space-y-3">
+    <div className="divide-border divide-y">
       {rows.map((row) => (
         // The card used to be one big <Link>. It can't be any more:
         // the take-over control is a button, and nesting interactive
         // elements is invalid HTML — the click would also bubble
         // straight into a navigation. The link now wraps the title,
         // which is the part that actually means "open this thread".
-        <div
-          key={row.conversation_id}
-          className="border-border bg-background/50 rounded-lg border p-3"
-        >
+        <div key={row.conversation_id} className="py-3 first:pt-0 last:pb-0">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <Link
@@ -393,11 +388,11 @@ function PaymentQueue({ rows }: { rows: SaluPaymentQueueRow[] }) {
     return <EmptyLine text="No active payment or refund issues." />;
 
   return (
-    <div className="space-y-3">
+    <div className="divide-border divide-y">
       {rows.map((row) => (
         <div
           key={`${row.booking_id}-${row.reference_id}`}
-          className="border-border bg-background/50 rounded-lg border p-3"
+          className="py-3 first:pt-0 last:pb-0"
         >
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">

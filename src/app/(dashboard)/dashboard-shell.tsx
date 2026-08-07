@@ -26,43 +26,58 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!loading && !user) {
-      router.push('/login');
+      router.replace('/login');
     }
   }, [user, loading, router]);
 
   if (loading) {
-    return (
-      <div className="bg-background flex h-screen items-center justify-center">
-        <div
-          className="flex flex-col items-center gap-3"
-          role="status"
-          aria-live="polite"
-        >
-          <div className="border-primary h-8 w-8 animate-spin rounded-full border-2 border-t-transparent" />
-          <p className="text-muted-foreground text-sm">Loading...</p>
-        </div>
-      </div>
-    );
+    return <ShellStatus label="Opening your salon daybook…" />;
   }
 
-  if (!user) return null;
+  if (!user) return <ShellStatus label="Taking you to sign in…" />;
 
   return (
     <div className="bg-background flex h-dvh min-h-0 overflow-hidden">
       <NativeBridge />
+      <a
+        href="#main-content"
+        className="ops-focus-ring bg-primary text-primary-foreground fixed top-3 left-3 z-[100] -translate-y-24 rounded-lg px-3 py-2 text-sm font-semibold transition-transform focus:translate-y-0"
+      >
+        Skip to main content
+      </a>
       <Sidebar totalUnread={totalUnread} />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <Header />
         <main
+          id="main-content"
+          tabIndex={-1}
           className={
             isInbox
-              ? 'flex-1 overflow-hidden'
-              : 'flex-1 overflow-y-auto overscroll-y-contain p-3 min-[390px]:p-4 sm:p-6'
+              ? 'flex-1 overflow-hidden focus:outline-none'
+              : 'flex-1 overflow-y-auto overscroll-y-contain p-3 focus:outline-none min-[390px]:p-4 sm:p-6'
           }
         >
           {children}
         </main>
         <MobileNav totalUnread={totalUnread} />
+      </div>
+    </div>
+  );
+}
+
+function ShellStatus({ label }: { label: string }) {
+  return (
+    <div className="bg-background flex h-dvh items-center justify-center px-6">
+      <div
+        className="flex flex-col items-center gap-3 text-center"
+        role="status"
+        aria-live="polite"
+      >
+        <div
+          className="border-primary h-8 w-8 animate-spin rounded-full border-2 border-t-transparent"
+          aria-hidden
+        />
+        <p className="text-muted-foreground text-sm">{label}</p>
       </div>
     </div>
   );

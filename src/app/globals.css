@@ -400,16 +400,20 @@ html[data-theme='rose'] {
     @apply mx-auto w-full max-w-7xl space-y-4 sm:space-y-5;
   }
 
+  .ops-page-heading {
+    @apply text-foreground text-2xl font-bold tracking-[-0.025em] sm:text-3xl;
+  }
+
+  .ops-page-description {
+    @apply text-muted-foreground mt-1 max-w-[65ch] text-sm leading-6;
+  }
+
   .ops-surface {
     @apply border-border bg-card rounded-xl border shadow-sm shadow-black/10;
   }
 
   .ops-section-title {
     @apply text-foreground text-sm font-semibold tracking-tight;
-  }
-
-  .ops-eyebrow {
-    @apply text-muted-foreground text-xs font-semibold tracking-[0.14em] uppercase;
   }
 
   .ops-help {

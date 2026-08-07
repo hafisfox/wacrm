@@ -5,7 +5,16 @@ import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
 import type { Conversation, ConversationStatus } from '@/types';
-import { Search, ChevronDown } from 'lucide-react';
+import {
+  AlertTriangle,
+  CheckCheck,
+  ChevronDown,
+  CircleDot,
+  Clock3,
+  RefreshCw,
+  Search,
+  SearchX,
+} from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Input } from '@/components/ui/input';
 import { humanizeSaluTranscriptText } from '@/lib/salu/transcript';
@@ -38,10 +47,13 @@ interface ConversationListProps {
  */
 const CONVERSATION_PAGE_SIZE = 200;
 
-const STATUS_COLORS: Record<ConversationStatus, string> = {
-  open: 'bg-chat-accent',
-  pending: 'bg-amber-500',
-  closed: 'bg-chat-muted',
+const STATUS_META: Record<
+  ConversationStatus,
+  { label: string; icon: typeof CircleDot; className: string }
+> = {
+  open: { label: 'Open', icon: CircleDot, className: 'text-chat-accent' },
+  pending: { label: 'Pending', icon: Clock3, className: 'text-amber-300' },
+  closed: { label: 'Closed', icon: CheckCheck, className: 'text-chat-muted' },
 };
 
 const FILTER_OPTIONS: {
@@ -68,6 +80,8 @@ export function ConversationList({
     ConversationStatus | 'all' | 'unread' | 'needs_human'
   >('all');
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [retryToken, setRetryToken] = useState(0);
 
   // Keep the latest callback in a ref so the fetch effect below can
   // have a stable, empty-dep identity. Previously the fetch useCallback
@@ -110,10 +124,14 @@ export function ConversationList({
           hint: error.hint,
           code: error.code,
         });
+        setLoadError(
+          'Conversations could not be refreshed. Check your connection and try again.'
+        );
         setLoading(false);
         return;
       }
 
+      setLoadError('');
       onConversationsLoadedRef.current(data ?? []);
       setLoading(false);
     })();
@@ -124,7 +142,7 @@ export function ConversationList({
     // `resyncToken` is included so the parent can force a refetch when
     // the realtime channel reconnects or the tab regains focus — catches
     // up on any events sent while the WS was disconnected or throttled.
-  }, [resyncToken]);
+  }, [resyncToken, retryToken]);
 
   const filtered = useMemo(() => {
     let result = conversations;
@@ -171,21 +189,43 @@ export function ConversationList({
   );
 
   const activeFilter = FILTER_OPTIONS.find((o) => o.value === filter);
+  const hasActiveQuery = filter !== 'all' || Boolean(search.trim());
+
+  const clearQuery = useCallback(() => {
+    setSearch('');
+    setFilter('all');
+  }, []);
+
+  const retry = useCallback(() => {
+    setLoading(conversations.length === 0);
+    setLoadError('');
+    setRetryToken((token) => token + 1);
+  }, [conversations.length]);
 
   return (
     <div className="border-chat-line bg-chat-panel flex h-full w-full flex-col border-r lg:w-[360px]">
       <div className="border-chat-line flex h-[61px] shrink-0 items-center border-b px-4">
-        <div>
-          <p className="text-chat-muted text-[10px] font-semibold tracking-[0.14em] uppercase">
-            Customer conversations
-          </p>
+        <div className="flex min-w-0 flex-1 items-baseline justify-between gap-3">
           <h1 className="text-chat-ink text-lg font-semibold">Messages</h1>
+          {conversations.length ? (
+            <p className="text-chat-muted shrink-0 text-[11px] tabular-nums">
+              {conversations.length.toLocaleString('en-IN')}{' '}
+              {conversations.length === CONVERSATION_PAGE_SIZE
+                ? 'most recent'
+                : conversations.length === 1
+                  ? 'conversation'
+                  : 'conversations'}
+            </p>
+          ) : null}
         </div>
       </div>
       {/* Search + Filter */}
       <div className="border-chat-line shrink-0 space-y-3 border-b p-3">
         <div className="relative">
-          <Search className="text-chat-muted absolute top-1/2 left-4 h-4 w-4 -translate-y-1/2" />
+          <Search
+            className="text-chat-muted absolute top-1/2 left-4 h-4 w-4 -translate-y-1/2"
+            aria-hidden
+          />
           <Input
             value={search}
             onChange={handleSearchChange}
@@ -218,6 +258,23 @@ export function ConversationList({
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {loadError && conversations.length ? (
+          <div
+            className="border-chat-line bg-chat-canvas/40 text-chat-ink-3 flex items-start gap-2 rounded-lg border px-3 py-2 text-xs"
+            role="status"
+          >
+            <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-amber-300" />
+            <span className="min-w-0 flex-1">{loadError}</span>
+            <button
+              type="button"
+              onClick={retry}
+              className="text-chat-accent focus-visible:outline-chat-accent shrink-0 rounded font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+            >
+              Retry
+            </button>
+          </div>
+        ) : null}
       </div>
 
       {/* Conversation Items.
@@ -228,12 +285,57 @@ export function ConversationList({
           parent's overflow-hidden with no scrollbar (issue #229). */}
       <ScrollArea className="min-h-0 flex-1">
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="border-primary h-5 w-5 animate-spin rounded-full border-2 border-t-transparent" />
+          <div
+            className="text-chat-muted flex items-center justify-center gap-3 py-12 text-sm"
+            role="status"
+          >
+            <div
+              className="border-chat-accent h-5 w-5 animate-spin rounded-full border-2 border-t-transparent"
+              aria-hidden
+            />
+            Loading conversations…
+          </div>
+        ) : loadError && conversations.length === 0 ? (
+          <div className="flex flex-col items-center px-6 py-12 text-center">
+            <AlertTriangle className="size-6 text-amber-300" aria-hidden />
+            <p className="text-chat-ink mt-3 text-sm font-medium">
+              Conversations could not load
+            </p>
+            <p className="text-chat-muted mt-1 max-w-xs text-sm leading-6">
+              Check your connection, then try again. No conversation data has
+              been changed.
+            </p>
+            <button
+              type="button"
+              onClick={retry}
+              className="border-chat-line-strong text-chat-ink hover:bg-chat-surface focus-visible:outline-chat-accent mt-4 inline-flex min-h-11 items-center gap-2 rounded-lg border px-3 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+            >
+              <RefreshCw className="size-4" aria-hidden />
+              Try again
+            </button>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="px-4 py-12 text-center">
-            <p className="text-chat-muted text-sm">No conversations found</p>
+          <div className="flex flex-col items-center px-6 py-12 text-center">
+            <SearchX className="text-chat-muted size-6" aria-hidden />
+            <p className="text-chat-ink mt-3 text-sm font-medium">
+              {hasActiveQuery
+                ? 'No conversations match'
+                : 'No conversations yet'}
+            </p>
+            <p className="text-chat-muted mt-1 max-w-xs text-sm leading-6">
+              {hasActiveQuery
+                ? 'Clear the search and filter to return to every conversation.'
+                : 'New customer conversations will appear here automatically.'}
+            </p>
+            {hasActiveQuery ? (
+              <button
+                type="button"
+                onClick={clearQuery}
+                className="border-chat-line-strong text-chat-ink hover:bg-chat-surface focus-visible:outline-chat-accent mt-4 min-h-11 rounded-lg border px-3 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+              >
+                Clear search and filter
+              </button>
+            ) : null}
           </div>
         ) : (
           <div className="flex flex-col">
@@ -277,6 +379,8 @@ function ConversationItem({
       })
     : '';
   const preview = humanizeSaluTranscriptText(conversation.last_message_text);
+  const status = STATUS_META[conversation.status];
+  const StatusIcon = status.icon;
 
   return (
     <button
@@ -328,17 +432,17 @@ function ConversationItem({
           </p>
           <div className="flex shrink-0 items-center gap-1.5">
             {conversation.unread_count > 0 && (
-              <span className="bg-chat-accent text-chat-panel flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-bold">
+              <span
+                className="bg-chat-accent text-chat-panel flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-bold"
+                aria-label={`${conversation.unread_count} unread ${conversation.unread_count === 1 ? 'message' : 'messages'}`}
+              >
                 {conversation.unread_count}
               </span>
             )}
-            <span
-              className={cn(
-                'h-2 w-2 rounded-full',
-                STATUS_COLORS[conversation.status]
-              )}
-              title={conversation.status}
-            />
+            <span title={status.label} className="inline-flex">
+              <StatusIcon className={cn('size-3.5', status.className)} />
+              <span className="sr-only">{status.label}</span>
+            </span>
           </div>
         </div>
       </div>

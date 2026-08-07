@@ -27,6 +27,7 @@ import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
 import {
   Dialog,
   DialogContent,
@@ -487,7 +488,7 @@ export function SalonControlClient({
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <Scissors className="text-primary size-5" />
-              <h1 className="text-foreground text-2xl font-semibold">Salon</h1>
+              <h1 className="ops-page-heading">Salon</h1>
             </div>
             <p className="text-muted-foreground mt-1 text-sm">
               Manage the customer-facing services, team, and booking schedule in
@@ -511,13 +512,16 @@ export function SalonControlClient({
         </header>
 
         {blockers.length ? (
-          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
-            <p className="font-medium text-amber-100">
+          <div
+            className="border-warning/30 bg-warning/10 rounded-xl border p-4"
+            role="status"
+          >
+            <p className="text-foreground font-medium">
               Before customers can book
             </p>
-            <ul className="mt-2 grid gap-1 text-sm text-amber-200/85 sm:grid-cols-2">
+            <ul className="text-muted-foreground mt-2 grid list-disc gap-1 pl-5 text-sm sm:grid-cols-2">
               {blockers.map((blocker) => (
-                <li key={blocker}>• {blocker}</li>
+                <li key={blocker}>{blocker}</li>
               ))}
             </ul>
           </div>
@@ -565,25 +569,39 @@ export function SalonControlClient({
                 }
               />
               <div className="grid gap-3">
-                {data.services.map((service, index) => (
-                  <ServiceCard
-                    key={service.service_id}
-                    service={service}
-                    index={index}
-                    lastIndex={data.services.length - 1}
-                    disabled={!canEdit}
-                    onEdit={() => setServiceEditor(service)}
-                    onMove={(direction) =>
-                      reorder('services', service.service_id, direction)
-                    }
-                    onDeactivate={() =>
-                      setPendingRemoval({
-                        path: `${API}/services?service_id=${encodeURIComponent(service.service_id)}`,
-                        label: service.service_name,
-                      })
-                    }
-                  />
-                ))}
+                {data.services.length ? (
+                  data.services.map((service, index) => (
+                    <ServiceCard
+                      key={service.service_id}
+                      service={service}
+                      index={index}
+                      lastIndex={data.services.length - 1}
+                      disabled={!canEdit}
+                      onEdit={() => setServiceEditor(service)}
+                      onMove={(direction) =>
+                        reorder('services', service.service_id, direction)
+                      }
+                      onDeactivate={() =>
+                        setPendingRemoval({
+                          path: `${API}/services?service_id=${encodeURIComponent(service.service_id)}`,
+                          label: service.service_name,
+                        })
+                      }
+                    />
+                  ))
+                ) : (
+                  <div className="ops-surface">
+                    <EmptyState
+                      icon={Scissors}
+                      title="No services yet"
+                      description={
+                        canEdit
+                          ? 'Add the first service customers can choose while booking.'
+                          : 'An owner or admin can add the first bookable service.'
+                      }
+                    />
+                  </div>
+                )}
               </div>
             </section>
           </TabsContent>
@@ -604,31 +622,45 @@ export function SalonControlClient({
                 }
               />
               <div className="grid gap-4 lg:grid-cols-2">
-                {data.stylists.map((stylist, index) => (
-                  <StylistCard
-                    key={stylist.stylist_id}
-                    stylist={stylist}
-                    mappings={data.stylistServices.filter(
-                      (mapping) =>
-                        mapping.stylist_id === stylist.stylist_id &&
-                        mapping.active
-                    )}
-                    services={data.services}
-                    index={index}
-                    lastIndex={data.stylists.length - 1}
-                    disabled={!canEdit}
-                    onEdit={() => setStylistEditor(stylist)}
-                    onMove={(direction) =>
-                      reorder('stylists', stylist.stylist_id, direction)
-                    }
-                    onDeactivate={() =>
-                      setPendingRemoval({
-                        path: `${API}/stylists?stylist_id=${encodeURIComponent(stylist.stylist_id)}`,
-                        label: stylist.stylist_name,
-                      })
-                    }
-                  />
-                ))}
+                {data.stylists.length ? (
+                  data.stylists.map((stylist, index) => (
+                    <StylistCard
+                      key={stylist.stylist_id}
+                      stylist={stylist}
+                      mappings={data.stylistServices.filter(
+                        (mapping) =>
+                          mapping.stylist_id === stylist.stylist_id &&
+                          mapping.active
+                      )}
+                      services={data.services}
+                      index={index}
+                      lastIndex={data.stylists.length - 1}
+                      disabled={!canEdit}
+                      onEdit={() => setStylistEditor(stylist)}
+                      onMove={(direction) =>
+                        reorder('stylists', stylist.stylist_id, direction)
+                      }
+                      onDeactivate={() =>
+                        setPendingRemoval({
+                          path: `${API}/stylists?stylist_id=${encodeURIComponent(stylist.stylist_id)}`,
+                          label: stylist.stylist_name,
+                        })
+                      }
+                    />
+                  ))
+                ) : (
+                  <div className="ops-surface lg:col-span-2">
+                    <EmptyState
+                      icon={UserRound}
+                      title="No team members yet"
+                      description={
+                        canEdit
+                          ? 'Add a stylist, then assign the services they can perform.'
+                          : 'An owner or admin can add stylists and assign their services.'
+                      }
+                    />
+                  </div>
+                )}
               </div>
             </section>
           </TabsContent>
