@@ -465,8 +465,8 @@ export function InboxClient({ sendingAvailable }: InboxClientProps) {
 
       <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
         <SheetContent
-          side="right"
-          className="border-chat-line bg-chat-panel w-80 max-w-[92vw] gap-0 p-0 2xl:hidden"
+          side="bottom"
+          className="border-chat-line bg-chat-panel h-[min(88dvh,48rem)] w-full max-w-none gap-0 rounded-t-2xl p-0 2xl:hidden"
         >
           <SheetTitle className="sr-only">Customer details</SheetTitle>
           <SheetDescription className="sr-only">

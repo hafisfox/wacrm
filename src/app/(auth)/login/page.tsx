@@ -118,8 +118,8 @@ function LoginPageInner() {
   };
 
   return (
-    <div className="bg-background flex min-h-screen items-center justify-center px-4">
-      <Card className="w-full max-w-md">
+    <div className="bg-background flex min-h-dvh items-center justify-center px-3 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] sm:px-4">
+      <Card className="min-w-0 w-full max-w-[calc(100vw-1.5rem)] border-0 shadow-none sm:max-w-md sm:border sm:shadow-sm">
         <CardHeader className="items-center text-center">
           <div className="bg-primary/10 mb-2 flex h-12 w-12 items-center justify-center rounded-xl">
             {inviteToken ? (
@@ -137,8 +137,8 @@ function LoginPageInner() {
               : 'Sign in to manage bookings, customer conversations, and your salon team.'}
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleLogin} className="flex flex-col gap-4">
+        <CardContent className="min-w-0">
+          <form onSubmit={handleLogin} className="flex min-w-0 flex-col gap-4">
             {error && (
               <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
                 {error}
@@ -161,13 +161,13 @@ function LoginPageInner() {
             </div>
 
             <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between">
+              <div className="flex min-w-0 items-center justify-between gap-2">
                 <Label htmlFor="password" className="text-foreground/80">
                   Password
                 </Label>
                 <Link
                   href="/forgot-password"
-                  className="text-primary hover:text-primary/80 text-sm"
+                  className="text-primary hover:text-primary/80 shrink-0 text-sm"
                 >
                   Forgot password?
                 </Link>
@@ -186,7 +186,7 @@ function LoginPageInner() {
             <Button
               type="submit"
               disabled={loading}
-              className="bg-primary text-primary-foreground hover:bg-primary/90 mt-2 h-10 w-full disabled:opacity-50"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 mt-2 h-12 w-full sm:h-10 disabled:opacity-50"
             >
               {loading ? 'Signing in...' : 'Sign in'}
             </Button>

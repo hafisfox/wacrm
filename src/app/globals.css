@@ -365,9 +365,14 @@ html[data-theme='rose'] {
   }
   body {
     @apply bg-background text-foreground;
+    min-width: 320px;
+    overscroll-behavior-y: none;
+    -webkit-tap-highlight-color: transparent;
   }
   html {
     @apply font-sans;
+    background: var(--background);
+    text-size-adjust: 100%;
   }
 
   ::selection {
@@ -378,7 +383,7 @@ html[data-theme='rose'] {
 
 @layer components {
   .ops-page {
-    @apply mx-auto w-full max-w-7xl space-y-5;
+    @apply mx-auto w-full max-w-7xl space-y-4 sm:space-y-5;
   }
 
   .ops-surface {
@@ -406,6 +411,38 @@ html[data-theme='rose'] {
 
   .ops-focus-ring {
     @apply focus-visible:ring-primary/45 focus-visible:outline-primary focus-visible:ring-3 focus-visible:outline-1 focus-visible:outline-offset-2;
+  }
+}
+
+/* Phone interaction floor. The visual controls can stay compact on a
+ * keyboard-and-mouse desktop, but every tap target gets Android's 48dp
+ * minimum when the primary pointer is coarse. */
+@media (pointer: coarse) {
+  [data-slot='button'],
+  [data-slot='select-trigger'],
+  [data-slot='dropdown-menu-item'],
+  [data-slot='dropdown-menu-sub-trigger'],
+  [data-slot='tabs-trigger'],
+  [data-slot='accordion-trigger'] {
+    min-height: 3rem;
+  }
+
+  [data-slot='button'],
+  [data-slot='dialog-close'],
+  [data-slot='sheet-close'] {
+    min-width: 3rem;
+  }
+}
+
+@media (max-width: 639px) {
+  /* Keep horizontal filter/tab rails comfortably draggable without a
+   * desktop scrollbar stealing vertical space. */
+  [data-slot='tabs-list'] {
+    scroll-snap-type: x proximity;
+  }
+
+  [data-slot='tabs-trigger'] {
+    scroll-snap-align: start;
   }
 }
 

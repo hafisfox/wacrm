@@ -24,7 +24,7 @@ export function MobileNav({ totalUnread }: { totalUnread: number }) {
   return (
     <nav
       aria-label="Main navigation"
-      className="border-border bg-background/95 shrink-0 border-t px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur lg:hidden"
+      className="border-border bg-background/98 shrink-0 border-t px-2 pt-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] lg:hidden"
     >
       <div className="mx-auto flex max-w-lg items-stretch">
         {mobileNavItems.map((item) => {
@@ -39,17 +39,22 @@ export function MobileNav({ totalUnread }: { totalUnread: number }) {
               href={item.href}
               aria-current={active ? 'page' : undefined}
               className={cn(
-                'ops-focus-ring relative flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-1 text-[11px] font-medium transition-colors',
+                'ops-focus-ring relative flex min-h-14 flex-1 touch-manipulation flex-col items-center justify-center gap-0.5 rounded-xl px-1 text-[11px] font-semibold transition-colors',
                 active
-                  ? 'bg-primary/12 text-primary'
-                  : 'text-muted-foreground active:bg-muted'
+                  ? 'text-primary'
+                  : 'text-muted-foreground active:bg-muted/70 active:text-foreground'
               )}
             >
-              <span className="relative">
+              <span
+                className={cn(
+                  'relative flex h-8 min-w-12 items-center justify-center rounded-full transition-colors',
+                  active && 'bg-primary-soft-2'
+                )}
+              >
                 <item.icon className="size-5" aria-hidden />
                 {isMessages && totalUnread > 0 ? (
                   <span
-                    className="bg-primary text-primary-foreground absolute -top-2 -right-3 inline-flex min-h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold tabular-nums"
+                    className="bg-primary text-primary-foreground absolute -top-1 -right-0.5 inline-flex min-h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold tabular-nums"
                     aria-label={`${totalUnread} unread conversation${totalUnread === 1 ? '' : 's'}`}
                   >
                     {totalUnread > 99 ? '99+' : totalUnread}

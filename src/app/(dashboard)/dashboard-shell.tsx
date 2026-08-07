@@ -55,7 +55,7 @@ function DashboardShellInner({ children }: { children: React.ReactNode }) {
           className={
             isInbox
               ? 'flex-1 overflow-hidden'
-              : 'flex-1 overflow-y-auto p-4 sm:p-6'
+              : 'flex-1 overscroll-y-contain overflow-y-auto p-3 min-[390px]:p-4 sm:p-6'
           }
         >
           {children}

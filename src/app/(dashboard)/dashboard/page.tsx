@@ -74,15 +74,15 @@ export default async function DashboardPage() {
             Your appointments, customer messages, and deposits for today.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-          <AutoRefresh className="mr-auto sm:mr-1" />
-          <Button className="min-h-11" render={<Link href="/inbox" />}>
+        <div className="grid grid-cols-2 items-center gap-2 sm:flex sm:flex-wrap sm:justify-end">
+          <AutoRefresh className="col-span-2 mb-1 justify-between sm:mr-1 sm:mb-0" />
+          <Button className="min-h-11 w-full sm:w-auto" render={<Link href="/inbox" />}>
             <MessageSquareText className="h-4 w-4" />
             Messages
           </Button>
           <Button
             variant="outline"
-            className="min-h-11"
+            className="min-h-11 w-full sm:w-auto"
             render={<Link href="/contacts" />}
           >
             <UsersRound className="h-4 w-4" />
