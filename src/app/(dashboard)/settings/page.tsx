@@ -56,7 +56,7 @@ export default function SettingsPage() {
       </div>
 
       <Tabs value={tab} onValueChange={(v) => onChange(v as TabValue)}>
-        <TabsList className="border-border bg-card flex h-12 w-full [scrollbar-width:none] justify-start gap-1 overflow-x-auto border p-1 [&::-webkit-scrollbar]:hidden">
+        <TabsList className="ops-tab-list">
           <TabsTrigger
             value="profile"
             className="data-active:text-primary text-muted-foreground data-active:bg-muted min-w-24 shrink-0"

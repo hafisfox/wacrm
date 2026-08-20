@@ -22,7 +22,6 @@ import {
   History,
   Loader2,
   PauseCircle,
-  PlayCircle,
   ReceiptText,
   Sparkles,
 } from 'lucide-react';
@@ -35,7 +34,6 @@ import { fetchWithTimeout } from '@/lib/http';
 interface ContactSidebarProps {
   contact: Contact | null;
   refreshToken?: number;
-  onTakeoverChange?: () => void;
 }
 
 function formatMaybeDate(value?: string | null) {
@@ -68,7 +66,6 @@ function bookingTitle(details: SaluCustomerDetails | null) {
 export function ContactSidebar({
   contact,
   refreshToken = 0,
-  onTakeoverChange,
 }: ContactSidebarProps) {
   const { accountId } = useAuth();
   const [copied, setCopied] = useState(false);
@@ -79,40 +76,44 @@ export function ContactSidebar({
   const [saluDetails, setSaluDetails] = useState<SaluCustomerDetails | null>(
     null
   );
-  const [saluLoading, setSaluLoading] = useState(false);
-  const [takeoverSaving, setTakeoverSaving] = useState(false);
+  const [detailsPhone, setDetailsPhone] = useState<string | null>(null);
+  // Only expose the details that belong to the currently selected contact.
+  // This prevents the prior customer's booking or payment state flashing
+  // while the next request is in flight.
+  const customerDetails = detailsPhone === contact?.phone ? saluDetails : null;
+  const saluLoading = Boolean(contact?.phone && detailsPhone !== contact.phone);
 
-  const fetchContactData = useCallback(async () => {
-    if (!contact) return;
-
+  // Load notes when the selected customer changes. The update happens from
+  // Supabase's async completion, which also lets us ignore a late response
+  // for the conversation the operator has already left.
+  useEffect(() => {
+    if (!contact?.id) return;
+    let cancelled = false;
     const supabase = createClient();
-    const { data } = await supabase
+
+    supabase
       .from('contact_notes')
       .select('*')
       .eq('contact_id', contact.id)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .then(({ data }) => {
+        if (!cancelled && data) setNotes(data);
+      });
 
-    if (data) setNotes(data);
-  }, [contact]);
-
-  // Load on contact change. setNotes runs inside an async Supabase callback,
-  // not synchronously in the effect body.
-  useEffect(() => {
-    fetchContactData();
-  }, [fetchContactData]);
+    return () => {
+      cancelled = true;
+    };
+  }, [contact?.id]);
 
   useEffect(() => {
     if (!contact?.phone) {
-      setSaluDetails(null);
       return;
     }
 
+    const phone = contact.phone;
     let cancelled = false;
-    setSaluLoading(true);
 
-    fetchWithTimeout(
-      `/api/salu/customer?phone=${encodeURIComponent(contact.phone)}`
-    )
+    fetchWithTimeout(`/api/salu/customer?phone=${encodeURIComponent(phone)}`)
       .then(async (res) => {
         const payload = await res.json().catch(() => ({}));
         if (!res.ok) {
@@ -121,21 +122,21 @@ export function ContactSidebar({
         return payload.details as SaluCustomerDetails;
       })
       .then((details) => {
-        if (!cancelled) setSaluDetails(details);
+        if (cancelled) return;
+        setSaluDetails(details);
+        setDetailsPhone(phone);
       })
       .catch((err) => {
         if (cancelled) return;
         console.error('[contact-sidebar] Salu details failed:', err);
         setSaluDetails(null);
-      })
-      .finally(() => {
-        if (!cancelled) setSaluLoading(false);
+        setDetailsPhone(phone);
       });
 
     return () => {
       cancelled = true;
     };
-  }, [contact, refreshToken]);
+  }, [contact?.phone, refreshToken]);
 
   const handleCopyPhone = useCallback(async () => {
     if (!contact?.phone) return;
@@ -148,12 +149,12 @@ export function ContactSidebar({
   }, [contact]);
 
   const handleCopyPaymentLink = useCallback(async () => {
-    const link = saluDetails?.pending_payment?.payment_link;
+    const link = customerDetails?.pending_payment?.payment_link;
     if (!link) return;
     await navigator.clipboard.writeText(link);
     setCopiedPayment(true);
     setTimeout(() => setCopiedPayment(false), 2000);
-  }, [saluDetails?.pending_payment?.payment_link]);
+  }, [customerDetails?.pending_payment?.payment_link]);
 
   const handleAddNote = useCallback(async () => {
     if (!contact || !newNote.trim()) return;
@@ -191,39 +192,6 @@ export function ContactSidebar({
     setAddingNote(false);
   }, [contact, newNote, accountId]);
 
-  const handleTakeoverToggle = useCallback(
-    async (humanMode: boolean) => {
-      if (!contact?.phone || takeoverSaving) return;
-      setTakeoverSaving(true);
-      try {
-        const res = await fetchWithTimeout('/api/salu/takeover', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            phone: contact.phone,
-            human_mode: humanMode,
-            reason: humanMode ? 'dashboard_pause_bot' : 'dashboard_resume_bot',
-          }),
-        });
-        const payload = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(payload?.error || `HTTP ${res.status}`);
-        setSaluDetails(payload.details as SaluCustomerDetails);
-        onTakeoverChange?.();
-        toast.success(
-          humanMode
-            ? 'You are now handling this conversation'
-            : 'Automatic replies are back on'
-        );
-      } catch (err) {
-        console.error('[contact-sidebar] reply handling update failed:', err);
-        toast.error('Could not update reply handling. Please try again.');
-      } finally {
-        setTakeoverSaving(false);
-      }
-    },
-    [contact, onTakeoverChange, takeoverSaving]
-  );
-
   if (!contact) {
     return (
       <div className="border-chat-line bg-chat-panel flex h-full w-80 items-center justify-center border-l">
@@ -234,17 +202,17 @@ export function ContactSidebar({
 
   const displayName = contact.name || contact.phone;
   const initials = displayName.charAt(0).toUpperCase();
-  const humanMode = saluDetails?.session?.human_mode ?? false;
-  const activeBooking = saluDetails?.active_booking ?? null;
-  const pendingPayment = saluDetails?.pending_payment ?? null;
-  const profile = saluDetails?.profile ?? null;
-  const session = saluDetails?.session ?? null;
+  const humanMode = customerDetails?.session?.human_mode ?? false;
+  const activeBooking = customerDetails?.active_booking ?? null;
+  const pendingPayment = customerDetails?.pending_payment ?? null;
+  const profile = customerDetails?.profile ?? null;
+  const session = customerDetails?.session ?? null;
   const recentBookings =
-    saluDetails?.bookings
+    customerDetails?.bookings
       ?.filter((booking) => booking.booking_id !== activeBooking?.booking_id)
       .slice(0, 3) ?? [];
   const recentPayments =
-    saluDetails?.payments
+    customerDetails?.payments
       ?.filter(
         (payment) => payment.reference_id !== pendingPayment?.reference_id
       )
@@ -325,27 +293,6 @@ export function ContactSidebar({
             </div>
 
             <div className="mt-3 space-y-2">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={takeoverSaving || saluLoading}
-                onClick={() => handleTakeoverToggle(!humanMode)}
-                className={cn(
-                  'border-chat-surface-strong bg-chat-surface text-chat-ink hover:bg-chat-surface-strong min-h-11 w-full',
-                  humanMode && 'border-chat-accent/40 text-chat-accent'
-                )}
-              >
-                {takeoverSaving ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : humanMode ? (
-                  <PlayCircle className="mr-2 h-4 w-4" />
-                ) : (
-                  <PauseCircle className="mr-2 h-4 w-4" />
-                )}
-                {humanMode ? 'Turn on automatic replies' : 'Take over replies'}
-              </Button>
-
               <div className="grid grid-cols-2 gap-2">
                 <Button
                   type="button"
@@ -408,7 +355,7 @@ export function ContactSidebar({
                     {activeBooking ? (
                       <div className="mt-2 space-y-1 text-xs">
                         <p className="text-chat-ink font-medium">
-                          {bookingTitle(saluDetails)}
+                          {bookingTitle(customerDetails)}
                         </p>
                         <p className="text-chat-ink-2">
                           {activeBooking.appointment_date} at{' '}

@@ -190,6 +190,12 @@ export function ConversationList({
 
   const activeFilter = FILTER_OPTIONS.find((o) => o.value === filter);
   const hasActiveQuery = filter !== 'all' || Boolean(search.trim());
+  const needsReplyCount = conversations.filter(
+    (conversation) =>
+      conversation.bot_paused ||
+      conversation.handoff_state === 'requested' ||
+      conversation.handoff_state === 'active'
+  ).length;
 
   const clearQuery = useCallback(() => {
     setSearch('');
@@ -235,29 +241,59 @@ export function ConversationList({
           />
         </div>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger className="border-chat-surface-strong text-chat-ink-3 hover:bg-chat-surface hover:text-chat-ink focus-visible:outline-chat-accent inline-flex h-11 items-center justify-center gap-1 rounded-full border px-3 text-xs font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">
-            {activeFilter?.label ?? 'All'}
-            <ChevronDown className="h-3 w-3" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            align="start"
-            className="border-chat-line bg-chat-surface"
+        <div className="flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={() =>
+              setFilter((current) =>
+                current === 'needs_human' ? 'all' : 'needs_human'
+              )
+            }
+            aria-pressed={filter === 'needs_human'}
+            className={cn(
+              'focus-visible:outline-chat-accent inline-flex min-h-11 items-center gap-2 rounded-full border px-3 text-xs font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2',
+              filter === 'needs_human'
+                ? 'border-chat-accent/40 bg-chat-accent/10 text-chat-accent'
+                : 'border-amber-400/30 bg-amber-400/10 text-amber-100 hover:bg-amber-400/20'
+            )}
           >
-            {FILTER_OPTIONS.map((opt) => (
-              <DropdownMenuItem
-                key={opt.value}
-                onClick={() => setFilter(opt.value)}
-                className={cn(
-                  'min-h-11 text-sm',
-                  filter === opt.value ? 'text-chat-accent' : 'text-chat-ink-2'
-                )}
-              >
-                {opt.label}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+            Needs your reply
+            <span className="rounded-full bg-current/15 px-1.5 py-0.5 tabular-nums">
+              {needsReplyCount}
+            </span>
+          </button>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger className="border-chat-surface-strong text-chat-ink-3 hover:bg-chat-surface hover:text-chat-ink focus-visible:outline-chat-accent inline-flex min-h-11 items-center justify-center gap-1 rounded-full border px-3 text-xs font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">
+              {activeFilter?.label ?? 'All'}
+              <ChevronDown className="h-3 w-3" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              className="border-chat-line bg-chat-surface"
+            >
+              {FILTER_OPTIONS.map((opt) => (
+                <DropdownMenuItem
+                  key={opt.value}
+                  onClick={() => setFilter(opt.value)}
+                  className={cn(
+                    'min-h-11 text-sm',
+                    filter === opt.value
+                      ? 'text-chat-accent'
+                      : 'text-chat-ink-2'
+                  )}
+                >
+                  {opt.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        <p className="text-chat-muted text-[11px]" aria-live="polite">
+          {filtered.length.toLocaleString('en-IN')} shown
+          {hasActiveQuery ? ' for the current search and filter' : ''}
+        </p>
 
         {loadError && conversations.length ? (
           <div

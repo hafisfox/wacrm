@@ -458,10 +458,6 @@ export function InboxClient({ sendingAvailable }: InboxClientProps) {
           <ContactSidebar
             contact={activeContact}
             refreshToken={saluDetailsToken}
-            onTakeoverChange={() => {
-              setSaluDetailsToken((token) => token + 1);
-              setResyncToken((token) => token + 1);
-            }}
           />
         </div>
       </div>
@@ -479,10 +475,6 @@ export function InboxClient({ sendingAvailable }: InboxClientProps) {
           <ContactSidebar
             contact={activeContact}
             refreshToken={saluDetailsToken}
-            onTakeoverChange={() => {
-              setSaluDetailsToken((token) => token + 1);
-              setResyncToken((token) => token + 1);
-            }}
           />
         </SheetContent>
       </Sheet>

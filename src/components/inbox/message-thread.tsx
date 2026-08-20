@@ -1005,7 +1005,7 @@ export function MessageThread({
               onClick={onOpenDetails}
               aria-label="Open customer details"
               title="Customer details"
-              className="text-chat-ink-3 hover:bg-chat-surface hover:text-chat-ink focus-visible:outline-chat-accent hidden h-9 w-9 items-center justify-center rounded-md transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 md:inline-flex 2xl:hidden"
+              className="text-chat-ink-3 hover:bg-chat-surface hover:text-chat-ink focus-visible:outline-chat-accent inline-flex h-11 w-11 items-center justify-center rounded-md transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 sm:h-9 sm:w-9 2xl:hidden"
             >
               <PanelRightOpen className="h-3.5 w-3.5" />
             </button>

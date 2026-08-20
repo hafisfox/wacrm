@@ -65,7 +65,7 @@ export function ContactsClient({
 
   return (
     <div className="ops-page">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+      <header className="ops-page-header">
         <div>
           <h1 className="ops-page-heading">Customers</h1>
           <p className="ops-page-description">
@@ -74,13 +74,16 @@ export function ContactsClient({
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
           <AutoRefresh />
-          <dl className="border-border bg-card grid grid-cols-3 divide-x overflow-hidden rounded-lg border text-center">
-            <MiniStat label="7d seen" value={metrics.customers_seen_7d} />
+          <dl
+            className="border-border bg-card grid grid-cols-3 divide-x overflow-hidden rounded-lg border text-center"
+            aria-label="Customer work waiting today"
+          >
             <MiniStat label="needs reply" value={metrics.human_mode_sessions} />
             <MiniStat label="holds" value={metrics.pending_payment_holds} />
+            <MiniStat label="today" value={metrics.today_bookings} />
           </dl>
         </div>
-      </div>
+      </header>
 
       <section className="ops-surface p-3" aria-label="Customer filters">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -188,18 +191,9 @@ function CustomerRow({ customer }: { customer: SaluCustomerRow }) {
   return (
     <div className="border-border bg-background/30 m-2 grid gap-3 rounded-xl border p-4 lg:m-0 lg:grid-cols-[1.2fr_1fr_1fr_150px] lg:items-center lg:rounded-none lg:border-0 lg:bg-transparent lg:px-4 lg:py-4">
       <div className="min-w-0">
-        {customer.conversation_id ? (
-          <Link
-            href={`/inbox?conversation=${customer.conversation_id}`}
-            className="ops-focus-ring hover:text-primary text-foreground block truncate rounded-sm text-sm font-medium"
-          >
-            {displayName}
-          </Link>
-        ) : (
-          <p className="text-foreground truncate text-sm font-medium">
-            {displayName}
-          </p>
-        )}
+        <p className="text-foreground truncate text-sm font-medium">
+          {displayName}
+        </p>
         <a
           href={`https://wa.me/${customer.phone.replace(/\D/g, '')}`}
           target="_blank"
@@ -257,7 +251,7 @@ function CustomerRow({ customer }: { customer: SaluCustomerRow }) {
               className="ops-focus-ring hover:border-primary/50 border-border bg-muted text-foreground/80 hover:text-foreground inline-flex min-h-11 items-center gap-1 rounded-md border px-3 text-xs lg:min-h-8 lg:px-2 lg:py-0.5"
             >
               <MessageSquareText className="h-3 w-3" />
-              open chat
+              Open conversation
             </Link>
           ) : null}
           {idle ? (

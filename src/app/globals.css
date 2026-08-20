@@ -396,8 +396,31 @@ html[data-theme='rose'] {
     @apply bg-primary-soft mb-2 flex h-12 w-12 items-center justify-center rounded-xl;
   }
 
+  .auth-alert {
+    @apply rounded-lg border px-4 py-3 text-sm;
+  }
+
+  .auth-alert-error {
+    @apply border-destructive/30 bg-destructive/10 text-foreground;
+  }
+
+  .auth-alert-success {
+    @apply border-success/30 bg-success/10 text-foreground;
+  }
+
   .ops-page {
     @apply mx-auto w-full max-w-7xl space-y-4 sm:space-y-5;
+  }
+
+  /* Shared page frame for the operational routes. The title, context and
+   * actions retain one reading order on a phone and only become a row once
+   * there is enough room to keep every action label intact. */
+  .ops-page-header {
+    @apply flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between;
+  }
+
+  .ops-page-actions {
+    @apply grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end;
   }
 
   .ops-page-heading {
@@ -418,6 +441,31 @@ html[data-theme='rose'] {
 
   .ops-help {
     @apply text-muted-foreground text-sm leading-6;
+  }
+
+  /* Honest-state notices share a physical vocabulary across the daybook,
+   * customer memory and configuration work. Colour reinforces the icon and
+   * language; it is never the only indication of a state. */
+  .ops-status-notice {
+    @apply flex items-start gap-3 rounded-xl border p-4 text-sm;
+  }
+
+  .ops-status-notice-warning {
+    @apply border-warning/30 bg-warning/10;
+  }
+
+  .ops-status-notice-danger {
+    @apply border-destructive/30 bg-destructive/10;
+  }
+
+  .ops-status-notice-info {
+    @apply border-primary/25 bg-primary-soft;
+  }
+
+  /* Horizontal task tabs are intentionally scrollable on a phone. This
+   * keeps full labels visible instead of shrinking the action vocabulary. */
+  .ops-tab-list {
+    @apply border-border bg-card flex h-12 w-full [scrollbar-width:none] justify-start gap-1 overflow-x-auto overscroll-x-contain border p-1 [&::-webkit-scrollbar]:hidden;
   }
 
   /* Panel-inset surface: the recessed rows and tiles that sit *inside*

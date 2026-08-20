@@ -470,21 +470,36 @@ export function SalonControlClient({
   }
 
   const blockers = [
-    data.readiness.missing_stylist_images
-      ? `${data.readiness.missing_stylist_images} active stylist${data.readiness.missing_stylist_images === 1 ? '' : 's'} need a photo`
-      : '',
-    data.readiness.unmapped_active_stylists
-      ? `${data.readiness.unmapped_active_stylists} stylist${data.readiness.unmapped_active_stylists === 1 ? '' : 's'} need service coverage`
-      : '',
-    data.readiness.unmapped_active_services
-      ? `${data.readiness.unmapped_active_services} service${data.readiness.unmapped_active_services === 1 ? '' : 's'} need a stylist`
-      : '',
-  ].filter(Boolean);
+    ...(data.readiness.missing_stylist_images
+      ? [
+          {
+            tab: 'team' as const,
+            label: `${data.readiness.missing_stylist_images} active stylist${data.readiness.missing_stylist_images === 1 ? '' : 's'} need a photo`,
+          },
+        ]
+      : []),
+    ...(data.readiness.unmapped_active_stylists
+      ? [
+          {
+            tab: 'team' as const,
+            label: `${data.readiness.unmapped_active_stylists} stylist${data.readiness.unmapped_active_stylists === 1 ? '' : 's'} need service coverage`,
+          },
+        ]
+      : []),
+    ...(data.readiness.unmapped_active_services
+      ? [
+          {
+            tab: 'services' as const,
+            label: `${data.readiness.unmapped_active_services} service${data.readiness.unmapped_active_services === 1 ? '' : 's'} need a stylist`,
+          },
+        ]
+      : []),
+  ];
 
   return (
     <div className="ops-page text-foreground">
       <div className="mx-auto flex max-w-7xl flex-col gap-5">
-        <header className="border-border flex flex-col gap-3 border-b pb-5 lg:flex-row lg:items-center lg:justify-between">
+        <header className="ops-page-header border-border border-b pb-5">
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <Scissors className="text-primary size-5" />
@@ -513,29 +528,40 @@ export function SalonControlClient({
 
         {blockers.length ? (
           <div
-            className="border-warning/30 bg-warning/10 rounded-xl border p-4"
+            className="ops-status-notice ops-status-notice-warning"
             role="status"
           >
             <p className="text-foreground font-medium">
               Before customers can book
             </p>
-            <ul className="text-muted-foreground mt-2 grid list-disc gap-1 pl-5 text-sm sm:grid-cols-2">
+            <ul className="text-muted-foreground mt-2 grid gap-1 text-sm sm:grid-cols-2">
               {blockers.map((blocker) => (
-                <li key={blocker}>{blocker}</li>
+                <li key={blocker.label}>
+                  <button
+                    type="button"
+                    onClick={() => selectTab(blocker.tab)}
+                    className="ops-focus-ring hover:text-foreground decoration-warning/50 inline-flex min-h-11 items-center rounded-md text-left underline underline-offset-4"
+                  >
+                    {blocker.label}
+                  </button>
+                </li>
               ))}
             </ul>
           </div>
         ) : null}
 
         {!canEdit ? (
-          <div className="border-primary/25 bg-primary-soft text-foreground rounded-xl border px-4 py-3 text-sm">
+          <div
+            className="ops-status-notice ops-status-notice-info text-foreground"
+            role="status"
+          >
             You have read-only access. An owner or admin can change salon
             details, services, team members, and schedules.
           </div>
         ) : null}
 
         <Tabs value={activeTab} onValueChange={selectTab}>
-          <TabsList className="border-border bg-card flex h-12 w-full justify-start gap-1 overflow-x-auto border p-1">
+          <TabsList className="ops-tab-list">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="services">Services</TabsTrigger>
             <TabsTrigger value="team">Team</TabsTrigger>
@@ -891,14 +917,18 @@ function SalonDetails({
           </details>
           <div className="flex flex-col items-end gap-2 lg:col-span-2">
             <p className="text-muted-foreground text-xs" aria-live="polite">
-              {dirty ? 'Unsaved changes' : 'All details saved'}
+              {saving
+                ? 'Saving details…'
+                : dirty
+                  ? 'Unsaved changes'
+                  : 'All details saved'}
             </p>
             <Button
               className="min-h-11"
               disabled={disabled || saving || !dirty}
             >
-              {saving ? <Loader2 className="animate-spin" /> : <Check />} Save
-              details
+              {saving ? <Loader2 className="animate-spin" /> : <Check />}
+              {saving ? 'Saving details…' : 'Save details'}
             </Button>
           </div>
         </form>

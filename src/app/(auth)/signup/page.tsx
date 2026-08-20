@@ -134,7 +134,7 @@ function SignupPageInner() {
         <CardContent>
           <form onSubmit={handleSignup} className="flex flex-col gap-4">
             {error && (
-              <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+              <div className="auth-alert auth-alert-error" role="alert">
                 {error}
               </div>
             )}
@@ -204,7 +204,7 @@ function SignupPageInner() {
             <Button
               type="submit"
               disabled={loading}
-              className="bg-primary text-primary-foreground hover:bg-primary/90 mt-2 h-10 w-full disabled:opacity-50"
+              className="mt-2 min-h-12 w-full"
             >
               {loading ? 'Creating account...' : 'Create account'}
             </Button>

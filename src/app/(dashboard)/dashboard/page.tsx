@@ -59,7 +59,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="ops-page">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <header className="ops-page-header">
         <div>
           <h1 className="ops-page-heading">Today at {salonName}</h1>
           <p className="ops-page-description">
@@ -69,14 +69,14 @@ export default async function DashboardPage() {
             What needs attention now, followed by the rest of your shift.
           </p>
         </div>
-        <div className="grid grid-cols-2 items-center gap-2 sm:flex sm:flex-wrap sm:justify-end">
+        <div className="ops-page-actions items-center">
           <AutoRefresh className="col-span-2 mb-1 justify-between sm:mr-1 sm:mb-0" />
           <Button
             className="min-h-11 w-full sm:w-auto"
             render={<Link href="/inbox" />}
           >
             <MessageSquareText className="h-4 w-4" />
-            Messages
+            Open messages
           </Button>
           <Button
             variant="outline"
@@ -84,21 +84,23 @@ export default async function DashboardPage() {
             render={<Link href="/contacts" />}
           >
             <UsersRound className="h-4 w-4" />
-            Customers
+            Find customer
           </Button>
         </div>
-      </div>
+      </header>
 
       <PartialFailureNotice data={data} />
 
       <ShiftBrief data={data} />
 
       <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
-        <DaybookTimeline section={data.todaySchedule} />
+        <div className="order-2 xl:order-1">
+          <DaybookTimeline section={data.todaySchedule} />
+        </div>
 
         <aside
           aria-label="Shift exceptions"
-          className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1"
+          className="order-1 grid gap-4 sm:grid-cols-2 xl:order-2 xl:grid-cols-1"
         >
           <Panel
             title="Needs your reply"
@@ -193,10 +195,7 @@ function PartialFailureNotice({ data }: { data: SaluDashboardData }) {
   if (!broken.length) return null;
 
   return (
-    <div
-      role="status"
-      className="border-warning/30 bg-warning/10 flex items-start gap-3 rounded-xl border p-4"
-    >
+    <div role="status" className="ops-status-notice ops-status-notice-warning">
       <AlertTriangle className="text-warning mt-0.5 h-5 w-5 shrink-0" />
       <div className="min-w-0">
         <p className="text-foreground text-sm font-medium">

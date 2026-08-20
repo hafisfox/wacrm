@@ -157,10 +157,7 @@ export default function ResetPasswordPage() {
                 />
               </div>
               {error ? (
-                <p
-                  className="border-destructive/35 bg-destructive/10 text-foreground rounded-lg border px-3 py-2 text-sm"
-                  role="alert"
-                >
+                <p className="auth-alert auth-alert-error" role="alert">
                   {error}
                 </p>
               ) : null}

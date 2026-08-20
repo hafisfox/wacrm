@@ -143,15 +143,12 @@ function LoginPageInner() {
         <CardContent className="min-w-0">
           <form onSubmit={handleLogin} className="flex min-w-0 flex-col gap-4">
             {resetComplete ? (
-              <div
-                className="border-success/30 bg-success/10 text-foreground rounded-lg border px-4 py-3 text-sm"
-                role="status"
-              >
+              <div className="auth-alert auth-alert-success" role="status">
                 Password updated. Sign in with your new password.
               </div>
             ) : null}
             {error && (
-              <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+              <div className="auth-alert auth-alert-error" role="alert">
                 {error}
               </div>
             )}

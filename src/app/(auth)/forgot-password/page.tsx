@@ -97,10 +97,7 @@ function ForgotPasswordForm() {
         <CardContent>
           <form onSubmit={handleReset} className="flex flex-col gap-4">
             {error && (
-              <div
-                role="alert"
-                className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300"
-              >
+              <div role="alert" className="auth-alert auth-alert-error">
                 {error}
               </div>
             )}
@@ -123,7 +120,7 @@ function ForgotPasswordForm() {
             <Button
               type="submit"
               disabled={loading}
-              className="bg-primary text-primary-foreground hover:bg-primary/90 mt-2 h-10 w-full disabled:opacity-50"
+              className="mt-2 min-h-12 w-full"
             >
               {loading ? 'Sending...' : 'Send reset link'}
             </Button>

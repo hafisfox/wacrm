@@ -27,6 +27,7 @@ import {
   formatOpsCountdown,
   paymentQueueLabel,
 } from '@/lib/salu/ops';
+import { getShiftAttention, shiftAttentionLabel } from '@/lib/salu/attention';
 import { cn } from '@/lib/utils';
 
 const SALON_TIME_ZONE = 'Asia/Kolkata';
@@ -35,6 +36,14 @@ export function ShiftBrief({ data }: { data: SaluDashboardData }) {
   const handoff = data.handoffQueue.data[0];
   const deposit = data.opsQueue.data[0];
   const nextAppointment = findNextAppointment(data.todaySchedule.data);
+  const attention = getShiftAttention({
+    handoffOk: data.handoffQueue.ok,
+    handoffCount: data.handoffQueue.data.length,
+    depositOk: data.opsQueue.ok,
+    depositCount: data.opsQueue.data.length,
+    scheduleOk: data.todaySchedule.ok,
+    hasNextAppointment: Boolean(nextAppointment),
+  });
 
   const items = [
     {
@@ -95,9 +104,23 @@ export function ShiftBrief({ data }: { data: SaluDashboardData }) {
             Live shift brief
           </h2>
         </div>
-        <span className="text-muted-foreground text-xs tabular-nums">
-          {formatLiveTime()}
-        </span>
+        <div className="flex items-center gap-2 text-right">
+          <span
+            className={cn(
+              'hidden items-center gap-1.5 text-[11px] font-medium sm:inline-flex',
+              attention === 'reply' && 'text-destructive',
+              attention === 'deposit' && 'text-warning',
+              attention === 'appointment' && 'text-primary',
+              attention === 'clear' && 'text-success',
+              attention === 'unavailable' && 'text-warning'
+            )}
+          >
+            {shiftAttentionLabel(attention)}
+          </span>
+          <span className="text-muted-foreground text-xs tabular-nums">
+            {formatLiveTime()}
+          </span>
+        </div>
       </div>
       <div className="divide-border grid divide-y sm:grid-cols-3 sm:divide-x sm:divide-y-0">
         {items.map((item) => (
