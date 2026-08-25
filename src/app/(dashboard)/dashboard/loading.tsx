@@ -1,8 +1,9 @@
 import { Skeleton } from '@/components/ui/skeleton';
 
-// Mirrors the shipped daybook: heading and actions, live shift brief,
-// appointment ledger with exception rail, then shift totals. Matching
-// the real geometry keeps route transitions stable on phone and desktop.
+// Mirrors the shipped daybook: heading and actions, shift totals, live
+// shift brief, then the appointment ledger with its exception rail.
+// Matching the real geometry keeps route transitions stable on phone
+// and desktop.
 export default function DashboardLoading() {
   return (
     <div className="ops-page" aria-busy role="status" aria-label="Loading">
@@ -15,6 +16,20 @@ export default function DashboardLoading() {
           <Skeleton className="col-span-2 h-7 w-full sm:col-span-1 sm:w-32" />
           <Skeleton className="h-11 w-full sm:w-28" />
           <Skeleton className="h-11 w-full sm:w-28" />
+        </div>
+      </div>
+
+      <div className="ops-surface overflow-hidden">
+        <div className="border-border border-b px-4 py-3">
+          <Skeleton className="h-4 w-24" />
+        </div>
+        <div className="divide-border grid grid-cols-2 divide-x divide-y sm:grid-cols-4 sm:divide-y-0">
+          {Array.from({ length: 4 }, (_, i) => (
+            <div key={i} className="space-y-2 px-4 py-4">
+              <Skeleton className="h-3 w-20" />
+              <Skeleton className="h-6 w-16" />
+            </div>
+          ))}
         </div>
       </div>
 
@@ -42,20 +57,6 @@ export default function DashboardLoading() {
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
           <Skeleton className="h-52 rounded-xl" />
           <Skeleton className="h-52 rounded-xl" />
-        </div>
-      </div>
-
-      <div className="ops-surface overflow-hidden">
-        <div className="border-border border-b px-4 py-3">
-          <Skeleton className="h-4 w-24" />
-        </div>
-        <div className="divide-border grid grid-cols-2 divide-x divide-y sm:grid-cols-4 sm:divide-y-0">
-          {Array.from({ length: 4 }, (_, i) => (
-            <div key={i} className="space-y-2 px-4 py-4">
-              <Skeleton className="h-3 w-20" />
-              <Skeleton className="h-6 w-16" />
-            </div>
-          ))}
         </div>
       </div>
     </div>

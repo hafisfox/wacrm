@@ -12,6 +12,8 @@ import {
   CalendarClock,
   Check,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   ChevronUp,
   Clock3,
   ImagePlus,
@@ -19,6 +21,7 @@ import {
   Plus,
   Scissors,
   Trash2,
+  TrendingUp,
   UserRound,
   X,
 } from 'lucide-react';
@@ -53,6 +56,14 @@ import {
   WEEKDAYS,
   skillsFromSummary,
 } from '@/lib/salu/control-room-shared';
+import {
+  type EarningsPeriod,
+  type StylistEarningsReport,
+  type StylistEarningsRow,
+  earningsLabel,
+  salonToday,
+  shiftEarningsAnchor,
+} from '@/lib/salu/stylist-earnings-shared';
 import { cn } from '@/lib/utils';
 import { fetchWithTimeout } from '@/lib/http';
 
@@ -61,7 +72,17 @@ const INPUT =
   'h-11 w-full rounded-lg border border-border bg-background/50 px-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60 sm:h-9';
 const TEXTAREA = `${INPUT} h-auto py-2`;
 const WEEKDAY_SET = new Set<string>(WEEKDAYS);
-const SALON_TABS = ['overview', 'services', 'team', 'schedule'] as const;
+/* Team leads because it is the page operators open every day; salon
+ * details are a first-week task, so Overview sits last. `team` is the
+ * default, which is why it is the tab that carries no `?tab=` value. */
+const SALON_TABS = ['team', 'schedule', 'services', 'overview'] as const;
+const DEFAULT_SALON_TAB: SalonTab = 'team';
+const EARNINGS_SORTS = [
+  { value: 'earned', label: 'Highest earnings' },
+  { value: 'jobs', label: 'Most appointments' },
+  { value: 'name', label: 'Name (A–Z)' },
+] as const;
+type EarningsSort = (typeof EARNINGS_SORTS)[number]['value'];
 type SalonTab = (typeof SALON_TABS)[number];
 
 type Weekday = (typeof WEEKDAYS)[number];
@@ -215,8 +236,10 @@ function defaultRule(day: Weekday): DraftRule {
 
 export function SalonControlClient({
   initialData,
+  initialEarnings,
 }: {
   initialData: ControlRoomData;
+  initialEarnings: StylistEarningsReport | null;
 }) {
   const canEdit = useCan('edit-settings');
   const router = useRouter();
@@ -225,7 +248,7 @@ export function SalonControlClient({
   const requestedTab = searchParams.get('tab');
   const activeTab: SalonTab = SALON_TABS.includes(requestedTab as SalonTab)
     ? (requestedTab as SalonTab)
-    : 'overview';
+    : DEFAULT_SALON_TAB;
   const [data, setData] = useState(initialData);
   const [saving, setSaving] = useState('');
   const [serviceEditor, setServiceEditor] = useState<
@@ -238,8 +261,69 @@ export function SalonControlClient({
     path: string;
     label: string;
   } | null>(null);
+  const [earnings, setEarnings] = useState(initialEarnings);
+  const [earningsPeriod, setEarningsPeriod] = useState<EarningsPeriod>(
+    initialEarnings?.period ?? 'day'
+  );
+  // Falls back to the salon's own "today" so the picker is still usable
+  // when the server-side load failed and there is no report to read from.
+  const [earningsAnchor, setEarningsAnchor] = useState(
+    initialEarnings?.anchor || salonToday()
+  );
+  const [earningsSort, setEarningsSort] = useState<EarningsSort>('earned');
+  const [earningsBusy, setEarningsBusy] = useState(false);
+  const [earningsFailed, setEarningsFailed] = useState(!initialEarnings);
 
   useEffect(() => setData(initialData), [initialData]);
+
+  /* Refetch only when the window the operator asked for is not the one
+   * already in hand — which is why the server-rendered report costs no
+   * request on mount. A failed load leaves `earnings` untouched, so the
+   * guard cannot spin: nothing in the dependency list changes. */
+  useEffect(() => {
+    if (!earningsAnchor) return;
+    if (
+      earnings &&
+      earnings.period === earningsPeriod &&
+      earnings.anchor === earningsAnchor
+    )
+      return;
+
+    let cancelled = false;
+    setEarningsBusy(true);
+    fetchWithTimeout(
+      `${API}/earnings?period=${earningsPeriod}&anchor=${earningsAnchor}`
+    )
+      .then(async (response) => {
+        const result = (await response.json()) as
+          | StylistEarningsReport
+          | { error?: string };
+        if (!response.ok)
+          throw new Error(
+            'error' in result ? result.error : 'Could not load earnings'
+          );
+        if (cancelled) return;
+        setEarnings(result as StylistEarningsReport);
+        setEarningsFailed(false);
+      })
+      .catch((error) => {
+        console.error('[salon] earnings load failed:', error);
+        if (!cancelled) setEarningsFailed(true);
+      })
+      .finally(() => {
+        if (!cancelled) setEarningsBusy(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [earnings, earningsAnchor, earningsPeriod]);
+
+  const earningsByStylist = useMemo(() => {
+    const index = new Map<string, StylistEarningsRow>();
+    for (const row of earnings?.rows ?? []) index.set(row.stylist_id, row);
+    return index;
+  }, [earnings]);
 
   const activeServices = useMemo(
     () => data.services.filter((service) => service.active),
@@ -320,7 +404,7 @@ export function SalonControlClient({
   function selectTab(value: string) {
     if (!SALON_TABS.includes(value as SalonTab)) return;
     const next = new URLSearchParams(searchParams.toString());
-    if (value === 'overview') next.delete('tab');
+    if (value === DEFAULT_SALON_TAB) next.delete('tab');
     else next.set('tab', value);
     const query = next.toString();
     router.replace(query ? `${pathname}?${query}` : pathname, {
@@ -562,20 +646,103 @@ export function SalonControlClient({
 
         <Tabs value={activeTab} onValueChange={selectTab}>
           <TabsList className="ops-tab-list">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="services">Services</TabsTrigger>
             <TabsTrigger value="team">Team</TabsTrigger>
             <TabsTrigger value="schedule">Schedule</TabsTrigger>
+            <TabsTrigger value="services">Services</TabsTrigger>
+            <TabsTrigger value="overview">Overview</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview" className="mt-4">
-            <SalonDetails
-              config={data.config}
+          <TabsContent value="team" className="mt-4">
+            <section className="grid gap-4">
+              <SectionHeader
+                icon={UserRound}
+                title="Team"
+                description="Profiles, customer-facing specialties, and the services each stylist can perform."
+                action={
+                  <Button
+                    disabled={!canEdit}
+                    className="min-h-11"
+                    onClick={() => setStylistEditor('new')}
+                  >
+                    <Plus /> Add stylist
+                  </Button>
+                }
+              />
+              <TeamEarningsPanel
+                report={earnings}
+                period={earningsPeriod}
+                anchor={earningsAnchor}
+                sort={earningsSort}
+                busy={earningsBusy}
+                failed={earningsFailed}
+                onPeriodChange={(next) => {
+                  setEarningsPeriod(next);
+                  // A month window is anchored on its first day, so the
+                  // native month picker and the request agree.
+                  setEarningsAnchor((current) =>
+                    next === 'month'
+                      ? `${current.slice(0, 7)}-01`
+                      : current || salonToday()
+                  );
+                }}
+                onAnchorChange={setEarningsAnchor}
+                onSortChange={setEarningsSort}
+              />
+              <div className="grid gap-4 lg:grid-cols-2">
+                {data.stylists.length ? (
+                  data.stylists.map((stylist, index) => (
+                    <StylistCard
+                      key={stylist.stylist_id}
+                      stylist={stylist}
+                      mappings={data.stylistServices.filter(
+                        (mapping) =>
+                          mapping.stylist_id === stylist.stylist_id &&
+                          mapping.active
+                      )}
+                      services={data.services}
+                      earnings={earningsByStylist.get(stylist.stylist_id)}
+                      earningsWindowLabel={
+                        earnings?.label ||
+                        earningsLabel(earningsPeriod, earningsAnchor)
+                      }
+                      index={index}
+                      lastIndex={data.stylists.length - 1}
+                      disabled={!canEdit}
+                      onEdit={() => setStylistEditor(stylist)}
+                      onMove={(direction) =>
+                        reorder('stylists', stylist.stylist_id, direction)
+                      }
+                      onDeactivate={() =>
+                        setPendingRemoval({
+                          path: `${API}/stylists?stylist_id=${encodeURIComponent(stylist.stylist_id)}`,
+                          label: stylist.stylist_name,
+                        })
+                      }
+                    />
+                  ))
+                ) : (
+                  <div className="ops-surface lg:col-span-2">
+                    <EmptyState
+                      icon={UserRound}
+                      title="No team members yet"
+                      description={
+                        canEdit
+                          ? 'Add a stylist, then assign the services they can perform.'
+                          : 'An owner or admin can add stylists and assign their services.'
+                      }
+                    />
+                  </div>
+                )}
+              </div>
+            </section>
+          </TabsContent>
+          <TabsContent value="schedule" className="mt-4">
+            <SchedulePanel
+              data={data}
               disabled={!canEdit}
-              saving={saving === 'config'}
-              onSave={(payload) =>
-                request(`${API}/config`, 'PATCH', payload, 'config')
-              }
+              saving={saving}
+              onRequest={request}
+              activeStylists={activeStylists}
             />
           </TabsContent>
           <TabsContent value="services" className="mt-4">
@@ -631,72 +798,14 @@ export function SalonControlClient({
               </div>
             </section>
           </TabsContent>
-          <TabsContent value="team" className="mt-4">
-            <section className="grid gap-4">
-              <SectionHeader
-                icon={UserRound}
-                title="Team"
-                description="Profiles, customer-facing specialties, and the services each stylist can perform."
-                action={
-                  <Button
-                    disabled={!canEdit}
-                    className="min-h-11"
-                    onClick={() => setStylistEditor('new')}
-                  >
-                    <Plus /> Add stylist
-                  </Button>
-                }
-              />
-              <div className="grid gap-4 lg:grid-cols-2">
-                {data.stylists.length ? (
-                  data.stylists.map((stylist, index) => (
-                    <StylistCard
-                      key={stylist.stylist_id}
-                      stylist={stylist}
-                      mappings={data.stylistServices.filter(
-                        (mapping) =>
-                          mapping.stylist_id === stylist.stylist_id &&
-                          mapping.active
-                      )}
-                      services={data.services}
-                      index={index}
-                      lastIndex={data.stylists.length - 1}
-                      disabled={!canEdit}
-                      onEdit={() => setStylistEditor(stylist)}
-                      onMove={(direction) =>
-                        reorder('stylists', stylist.stylist_id, direction)
-                      }
-                      onDeactivate={() =>
-                        setPendingRemoval({
-                          path: `${API}/stylists?stylist_id=${encodeURIComponent(stylist.stylist_id)}`,
-                          label: stylist.stylist_name,
-                        })
-                      }
-                    />
-                  ))
-                ) : (
-                  <div className="ops-surface lg:col-span-2">
-                    <EmptyState
-                      icon={UserRound}
-                      title="No team members yet"
-                      description={
-                        canEdit
-                          ? 'Add a stylist, then assign the services they can perform.'
-                          : 'An owner or admin can add stylists and assign their services.'
-                      }
-                    />
-                  </div>
-                )}
-              </div>
-            </section>
-          </TabsContent>
-          <TabsContent value="schedule" className="mt-4">
-            <SchedulePanel
-              data={data}
+          <TabsContent value="overview" className="mt-4">
+            <SalonDetails
+              config={data.config}
               disabled={!canEdit}
-              saving={saving}
-              onRequest={request}
-              activeStylists={activeStylists}
+              saving={saving === 'config'}
+              onSave={(payload) =>
+                request(`${API}/config`, 'PATCH', payload, 'config')
+              }
             />
           </TabsContent>
         </Tabs>
@@ -1211,10 +1320,305 @@ function ServiceEditor({
   );
 }
 
+function formatWorkedMinutes(total: number) {
+  if (!total) return '0m';
+  const hours = Math.floor(total / 60);
+  const minutes = total % 60;
+  return [hours ? `${hours}h` : '', minutes ? `${minutes}m` : '']
+    .filter(Boolean)
+    .join(' ');
+}
+
+/**
+ * What the team produced in one day or one month.
+ *
+ * The stylist cards below stay in their configured order because their
+ * up/down controls set the order customers see while booking — sorting
+ * them by takings would quietly break that. So the comparison happens
+ * here instead, where ranking is the whole point.
+ */
+function TeamEarningsPanel({
+  report,
+  period,
+  anchor,
+  sort,
+  busy,
+  failed,
+  onPeriodChange,
+  onAnchorChange,
+  onSortChange,
+}: {
+  report: StylistEarningsReport | null;
+  period: EarningsPeriod;
+  anchor: string;
+  sort: EarningsSort;
+  busy: boolean;
+  failed: boolean;
+  onPeriodChange: (next: EarningsPeriod) => void;
+  onAnchorChange: (next: string) => void;
+  onSortChange: (next: EarningsSort) => void;
+}) {
+  const totals = report?.totals;
+  const windowLabel = report?.label || earningsLabel(period, anchor);
+  const today = salonToday();
+  const isCurrent =
+    period === 'day'
+      ? anchor === today
+      : anchor.slice(0, 7) === today.slice(0, 7);
+
+  const ranked = useMemo(() => {
+    // The booking database carries a nameless sentinel row that the
+    // workflows use to probe the schema. It is not a person, so it has no
+    // place in a ranking of people.
+    const rows = (report?.rows ?? []).filter((row) => row.stylist_name.trim());
+    rows.sort((a, b) => {
+      if (sort === 'name') return a.stylist_name.localeCompare(b.stylist_name);
+      if (sort === 'jobs')
+        return b.jobs_done - a.jobs_done || b.earned_paise - a.earned_paise;
+      return b.earned_paise - a.earned_paise || b.jobs_done - a.jobs_done;
+    });
+    return rows;
+  }, [report, sort]);
+
+  // Never divide by zero, and never let a quiet window draw a full bar.
+  const leader = Math.max(1, ...ranked.map((row) => row.earned_paise));
+  const worked = ranked.some((row) => row.jobs_booked > 0);
+
+  return (
+    <section
+      className="ops-surface overflow-hidden"
+      aria-labelledby="team-earnings-title"
+    >
+      <div className="border-border flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
+        <div className="flex items-center gap-2">
+          <TrendingUp className="text-primary size-4" />
+          <h3 id="team-earnings-title" className="ops-section-title">
+            Earnings
+          </h3>
+          <Badge variant="outline">{windowLabel}</Badge>
+        </div>
+        {busy ? (
+          <span className="text-muted-foreground flex items-center gap-1.5 text-xs">
+            <Loader2 className="size-3.5 animate-spin" />
+            Updating
+          </span>
+        ) : null}
+      </div>
+
+      <div className="border-border grid gap-3 border-b p-3 sm:grid-cols-[auto_1fr_auto] sm:items-end">
+        <div
+          className="border-border bg-background/40 flex rounded-lg border p-1"
+          role="group"
+          aria-label="Earnings period"
+        >
+          {(
+            [
+              ['day', 'Day'],
+              ['month', 'Month'],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={period === value}
+              onClick={() => onPeriodChange(value)}
+              className={cn(
+                'ops-focus-ring min-h-11 flex-1 rounded-md px-4 text-sm font-medium transition sm:min-h-9',
+                period === value
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-end gap-2">
+          <Button
+            variant="outline"
+            size="icon-sm"
+            className="size-11 shrink-0 sm:size-9"
+            title={period === 'day' ? 'Previous day' : 'Previous month'}
+            onClick={() =>
+              onAnchorChange(shiftEarningsAnchor(period, anchor, -1))
+            }
+          >
+            <ChevronLeft />
+          </Button>
+          {period === 'day' ? (
+            <input
+              className={INPUT}
+              type="date"
+              aria-label="Day"
+              value={anchor}
+              onChange={(event) =>
+                event.target.value && onAnchorChange(event.target.value)
+              }
+            />
+          ) : (
+            <input
+              className={INPUT}
+              type="month"
+              aria-label="Month"
+              value={anchor.slice(0, 7)}
+              onChange={(event) =>
+                event.target.value && onAnchorChange(`${event.target.value}-01`)
+              }
+            />
+          )}
+          <Button
+            variant="outline"
+            size="icon-sm"
+            className="size-11 shrink-0 sm:size-9"
+            title={period === 'day' ? 'Next day' : 'Next month'}
+            onClick={() =>
+              onAnchorChange(shiftEarningsAnchor(period, anchor, 1))
+            }
+          >
+            <ChevronRight />
+          </Button>
+          {isCurrent ? null : (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="min-h-11 shrink-0 sm:min-h-9"
+              onClick={() =>
+                onAnchorChange(
+                  period === 'month' ? `${today.slice(0, 7)}-01` : today
+                )
+              }
+            >
+              {period === 'month' ? 'This month' : 'Today'}
+            </Button>
+          )}
+        </div>
+
+        <Field label="Sort by">
+          <select
+            className={INPUT}
+            value={sort}
+            onChange={(event) =>
+              onSortChange(event.target.value as EarningsSort)
+            }
+          >
+            {EARNINGS_SORTS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </Field>
+      </div>
+
+      {busy && !totals ? (
+        <p className="text-muted-foreground px-4 py-5 text-sm">
+          Adding up the team&apos;s work…
+        </p>
+      ) : failed || !totals ? (
+        <p className="text-muted-foreground px-4 py-5 text-sm">
+          Earnings could not be loaded. The rest of the team setup below is
+          still up to date — try another day or refresh the page.
+        </p>
+      ) : (
+        <>
+          <dl className="divide-border grid grid-cols-2 divide-x divide-y sm:grid-cols-4 sm:divide-y-0">
+            <div className="px-4 py-3">
+              <dt className="text-muted-foreground text-xs">
+                Appointments done
+              </dt>
+              <dd className="text-foreground mt-1 text-lg font-semibold tabular-nums">
+                {totals.jobs_done}
+                <span className="text-muted-foreground text-sm font-normal">
+                  {' '}
+                  of {totals.jobs_booked}
+                </span>
+              </dd>
+            </div>
+            <div className="px-4 py-3">
+              <dt className="text-muted-foreground text-xs">Earned</dt>
+              <dd className="text-foreground mt-1 text-lg font-semibold tabular-nums">
+                {money(totals.earned_paise)}
+              </dd>
+            </div>
+            <div className="px-4 py-3">
+              <dt className="text-muted-foreground text-xs">
+                Still on the book
+              </dt>
+              <dd className="text-foreground mt-1 text-lg font-semibold tabular-nums">
+                {money(Math.max(0, totals.booked_paise - totals.earned_paise))}
+              </dd>
+            </div>
+            <div className="px-4 py-3">
+              <dt className="text-muted-foreground text-xs">Paid online</dt>
+              <dd className="text-foreground mt-1 text-lg font-semibold tabular-nums">
+                {money(totals.collected_paise)}
+              </dd>
+            </div>
+          </dl>
+
+          {worked ? (
+            <ul className="divide-border divide-y border-t">
+              {ranked.map((row, position) => (
+                <li key={row.stylist_id} className="px-4 py-3">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <div className="flex min-w-0 items-baseline gap-2">
+                      <span className="text-muted-foreground w-5 shrink-0 text-xs tabular-nums">
+                        {position + 1}
+                      </span>
+                      <span className="text-foreground truncate text-sm font-medium">
+                        {row.stylist_name}
+                      </span>
+                      {row.active ? null : (
+                        <Badge variant="outline" className="shrink-0">
+                          Inactive
+                        </Badge>
+                      )}
+                    </div>
+                    <span className="text-foreground shrink-0 text-sm font-semibold tabular-nums">
+                      {money(row.earned_paise)}
+                    </span>
+                  </div>
+                  <div className="mt-2 ml-7 flex items-center gap-3">
+                    <div
+                      className="bg-muted h-1.5 min-w-0 flex-1 overflow-hidden rounded-full"
+                      role="presentation"
+                    >
+                      <div
+                        className="bg-primary h-full rounded-full"
+                        style={{
+                          width: `${Math.round((row.earned_paise / leader) * 100)}%`,
+                        }}
+                      />
+                    </div>
+                    <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
+                      {row.jobs_done} of {row.jobs_booked} ·{' '}
+                      {formatWorkedMinutes(row.minutes_done)}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-muted-foreground border-t px-4 py-5 text-sm">
+              No appointments{' '}
+              {period === 'month' ? 'this month' : 'on this day'}. Pick another{' '}
+              {period === 'month' ? 'month' : 'day'} to see what the team
+              earned.
+            </p>
+          )}
+        </>
+      )}
+    </section>
+  );
+}
+
 function StylistCard({
   stylist,
   mappings,
   services,
+  earnings,
+  earningsWindowLabel,
   index,
   lastIndex,
   disabled,
@@ -1225,6 +1629,10 @@ function StylistCard({
   stylist: SalonStylistRow;
   mappings: StylistServiceRow[];
   services: SalonServiceRow[];
+  /** Absent while the earnings query is unavailable — the profile still
+   *  renders, it just carries no numbers. */
+  earnings?: StylistEarningsRow;
+  earningsWindowLabel: string;
   index: number;
   lastIndex: number;
   disabled: boolean;
@@ -1274,6 +1682,30 @@ function StylistCard({
             </div>
           </div>
         </div>
+        {earnings ? (
+          <dl className="border-border divide-border grid grid-cols-2 divide-x border-t">
+            <div className="px-4 py-3">
+              <dt className="text-muted-foreground text-xs">
+                Appointments done
+              </dt>
+              <dd className="text-foreground mt-1 text-base font-semibold tabular-nums">
+                {earnings.jobs_done}
+                <span className="text-muted-foreground text-sm font-normal">
+                  {' '}
+                  of {earnings.jobs_booked}
+                </span>
+              </dd>
+            </div>
+            <div className="px-4 py-3">
+              <dt className="text-muted-foreground truncate text-xs">
+                Earned · {earningsWindowLabel}
+              </dt>
+              <dd className="text-foreground mt-1 text-base font-semibold tabular-nums">
+                {money(earnings.earned_paise)}
+              </dd>
+            </div>
+          </dl>
+        ) : null}
         <div className="border-border border-t px-4 py-3">
           <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
             Bookable services

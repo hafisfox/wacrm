@@ -10,13 +10,19 @@ function source(relative: string) {
 }
 
 describe('authenticated surface security contract', () => {
-  it('authorizes Salon before loading control-room data', () => {
+  it('authorizes Salon before loading any of its data', () => {
     const page = source('../../app/(dashboard)/salon-control/page.tsx');
     const authorization = page.search(/await requireRole\(['"]viewer['"]\)/);
     expect(authorization).toBeGreaterThan(-1);
-    expect(authorization).toBeLessThan(
-      page.indexOf('await loadControlRoomData()')
-    );
+
+    // Every loader on the page, not just the first one — the setup data
+    // and the team earnings are both operational and must sit behind the
+    // same gate.
+    for (const loader of ['loadControlRoomData(', 'loadStylistEarnings(']) {
+      const call = page.indexOf(loader);
+      expect(call).toBeGreaterThan(-1);
+      expect(authorization).toBeLessThan(call);
+    }
   });
 
   it('does not install a blanket public HTML cache policy', () => {

@@ -66,7 +66,8 @@ export default async function DashboardPage() {
             <span className="text-foreground font-medium">
               <DaybookDate />.
             </span>{' '}
-            What needs attention now, followed by the rest of your shift.
+            Your totals so far, what needs attention now, then the rest of your
+            shift.
           </p>
         </div>
         <div className="ops-page-actions items-center">
@@ -89,7 +90,14 @@ export default async function DashboardPage() {
         </div>
       </header>
 
+      {/* The notice stays above the numbers on purpose: when a query has
+          failed it is the thing that explains what the totals are missing. */}
       <PartialFailureNotice data={data} />
+
+      {/* Owners and managers open this page for the day's headline numbers,
+          so they are the first thing on it — the queues that need acting on
+          follow immediately underneath. */}
+      <OperationalSummary metrics={data.metrics} />
 
       <ShiftBrief data={data} />
 
@@ -130,8 +138,6 @@ export default async function DashboardPage() {
           </Panel>
         </aside>
       </div>
-
-      <OperationalSummary metrics={data.metrics} />
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <Panel
